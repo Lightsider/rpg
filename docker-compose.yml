@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: mmo_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - "8080:8080" # Reverb
+      - "5173:5173" # Vite
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+    networks:
+      - mmo_network
+
+  web:
+    image: nginx:alpine
+    container_name: mmo_web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/web/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - mmo_network
+
+  db:
+    image: postgres:15-alpine
+    container_name: mmo_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-laravel}
+      POSTGRES_USER: ${DB_USERNAME:-sail}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    volumes:
+      - mmo_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - mmo_network
+
+  redis:
+    image: redis:alpine
+    container_name: mmo_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - mmo_redisdata:/data
+    networks:
+      - mmo_network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: mmo_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - mmo_rabbitmqdata:/var/lib/rabbitmq
+    networks:
+      - mmo_network
+
+networks:
+  mmo_network:
+    driver: bridge
+
+volumes:
+  mmo_pgdata:
+  mmo_redisdata:
+  mmo_rabbitmqdata:
