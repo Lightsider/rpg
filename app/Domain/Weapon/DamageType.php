@@ -10,6 +10,8 @@ namespace App\Domain\Weapon;
 enum DamageType: string
 {
     case SLASH = 'slash';
+    case SLASHING = 'slashing';
+    case CHOPPING = 'chopping';
     case BLUNT = 'blunt';
     case PIERCE = 'pierce';
     case CRUSH = 'crush';

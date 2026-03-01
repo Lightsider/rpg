@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Application\Battle;
 
+use App\Domain\Battle\BattleState;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\RoundResolverInterface;
+
+use Illuminate\Support\Facades\DB;
 
 /**
  * Service tasked with detecting and resolving battles where the round time has run out.
@@ -23,19 +26,23 @@ class RoundExpirationHandler
      */
     public function handleExpiredRounds(): void
     {
-        $activeBattles = $this->battleRepository->findActive();
+        DB::transaction(function () {
+            $activeBattles = $this->battleRepository->findActive();
 
-        foreach ($activeBattles as $battle) {
-            if ($battle->isRoundExpired() && !$battle->isFinished()) {
-                // Resolve all collected actions including default actions for inactive players
-                $this->roundResolver->resolve($battle);
+            foreach ($activeBattles as $battle) {
+                if ($battle->getState() === BattleState::ACTIVE && $battle->isRoundExpired()) {
+                    // Resolve all collected actions including default actions for inactive players
+                    $this->roundResolver->resolve($battle);
 
-                // Prepare for the next round
-                $battle->startNewRound();
+                    // Prepare for the next round (if not finished)
+                    if ($battle->getState() !== BattleState::FINISHED) {
+                        $battle->startNewRound();
+                    }
 
-                // Persist the changes
-                $this->battleRepository->save($battle);
+                    // Persist the changes
+                    $this->battleRepository->save($battle);
+                }
             }
-        }
+        });
     }
 }

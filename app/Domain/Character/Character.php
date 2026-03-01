@@ -30,12 +30,13 @@ class Character
         private readonly int $wit,
         private readonly int $maxHp,
         private int $currentHp,
-        private readonly Weapon $weapon,
+        private readonly \App\Domain\Weapon\Weapon $weapon,
         private readonly int $maxActionPoints = self::DEFAULT_MAX_AP,
         private int $currentActionPoints = self::DEFAULT_MAX_AP,
         private int $attackPointsUsed = 0,
         private int $x = 0,
-        private int $y = 0
+        private int $y = 0,
+        private bool $isCommitted = false
     ) {
     }
 
@@ -57,23 +58,31 @@ class Character
 
     public function canQueueAttack(): bool
     {
-        return $this->currentActionPoints > 0 && $this->attackPointsUsed < self::MAX_ATTACKS_PER_TURN;
+        return !$this->isCommitted && $this->currentActionPoints > 0 && $this->attackPointsUsed < self::MAX_ATTACKS_PER_TURN;
     }
 
     public function canQueueDefense(): bool
     {
-        return $this->currentActionPoints > 0;
+        return !$this->isCommitted && $this->currentActionPoints > 0;
     }
 
     public function canSpendAP(int $cost): bool
     {
-        return $this->currentActionPoints >= $cost;
+        return !$this->isCommitted && $this->currentActionPoints >= $cost;
     }
 
     public function spendAP(int $cost): void
     {
+        if ($this->isCommitted) {
+            throw new \App\Domain\DomainException('Cannot spend AP after commitment.');
+        }
+
         if ($cost < 0) {
-            throw new \InvalidArgumentException('Cost cannot be negative.');
+            throw new \App\Domain\DomainException('Cannot spend negative AP.');
+        }
+
+        if ($this->currentActionPoints < $cost) {
+            throw new \App\Domain\DomainException('Not enough Action Points.');
         }
 
         $this->currentActionPoints -= $cost;
@@ -81,13 +90,32 @@ class Character
 
     public function registerAttackUsage(): void
     {
+        if ($this->isCommitted) {
+            throw new \App\Domain\DomainException('Cannot register attack after commitment.');
+        }
+
+        if ($this->attackPointsUsed >= self::MAX_ATTACKS_PER_TURN) {
+            throw new \App\Domain\DomainException('Maximum attacks per round reached.');
+        }
+
         $this->attackPointsUsed++;
+    }
+
+    public function commit(): void
+    {
+        $this->isCommitted = true;
+    }
+
+    public function isCommitted(): bool
+    {
+        return $this->isCommitted;
     }
 
     public function resetRoundState(): void
     {
         $this->currentActionPoints = $this->maxActionPoints;
         $this->attackPointsUsed = 0;
+        $this->isCommitted = false;
     }
 
     public function calculateDodgeChance(): float

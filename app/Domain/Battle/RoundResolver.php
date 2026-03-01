@@ -17,13 +17,10 @@ class RoundResolver implements RoundResolverInterface
     ) {
     }
 
-    /**
-     * Resolves all queued actions in the battle.
-     *
-     * @throws Exception
-     */
     public function resolve(Battle $battle): void
     {
+        $battle->startResolving();
+
         $queuedActions = $battle->getQueuedActions();
         $participants = $battle->getParticipants();
 
@@ -92,7 +89,7 @@ class RoundResolver implements RoundResolverInterface
 
         // 5. Finalize round state
         $battle->clearQueuedActions();
-        $battle->checkIfFinished();
+        $battle->finishResolving();
     }
 
     /**

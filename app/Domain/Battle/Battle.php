@@ -26,7 +26,7 @@ class Battle
         private int $roundNumber = 1,
         private DateTimeImmutable $roundStartedAt = new DateTimeImmutable(),
         private int $roundDurationSeconds = self::DEFAULT_ROUND_DURATION,
-        private bool $isFinished = false,
+        private BattleState $state = BattleState::ACTIVE,
         private array $queuedActions = [],
         private array $committedCharacterIds = []
     ) {
@@ -37,7 +37,7 @@ class Battle
      */
     public function startNewRound(): void
     {
-        if ($this->isFinished) {
+        if ($this->state === BattleState::FINISHED) {
             throw new Exception('Cannot start a new round in a finished battle.');
         }
 
@@ -45,6 +45,7 @@ class Battle
         $this->roundStartedAt = new DateTimeImmutable();
         $this->committedCharacterIds = [];
         $this->queuedActions = [];
+        $this->state = BattleState::ACTIVE;
 
         foreach ($this->participants as $participant) {
             $participant->resetRoundState();
@@ -62,11 +63,17 @@ class Battle
         return $now >= $expiryTime;
     }
 
-    /**
-     * Commits a character's actions for the current round.
-     */
     public function commitCharacter(int $characterId): void
     {
+        if ($this->state !== BattleState::ACTIVE) {
+            throw new Exception('Can only commit actions in ACTIVE state.');
+        }
+
+        $character = $this->getParticipantById($characterId);
+        if ($character) {
+            $character->commit();
+        }
+
         if (!in_array($characterId, $this->committedCharacterIds, true)) {
             $this->committedCharacterIds[] = $characterId;
         }
@@ -87,8 +94,8 @@ class Battle
 
     public function queueAction(TurnAction $action): void
     {
-        if ($this->isFinished) {
-            throw new Exception('Cannot queue action for a finished battle.');
+        if ($this->state !== BattleState::ACTIVE) {
+            throw new Exception('Cannot queue action: battle is not in ACTIVE state.');
         }
 
         if (in_array($action->getCharacterId(), $this->committedCharacterIds, true)) {
@@ -114,8 +121,29 @@ class Battle
         $this->queuedActions = [];
     }
 
+    public function startResolving(): void
+    {
+        if ($this->state !== BattleState::ACTIVE) {
+            throw new Exception('Round can resolve ONLY if state is ACTIVE.');
+        }
+        $this->state = BattleState::RESOLVING;
+    }
+
+    public function finishResolving(): void
+    {
+        if ($this->state !== BattleState::RESOLVING) {
+            throw new Exception('Cannot finish resolving: not in RESOLVING state.');
+        }
+
+        $this->checkIfFinished();
+
+        if ($this->state !== BattleState::FINISHED) {
+            $this->state = BattleState::ACTIVE;
+        }
+    }
+
     /**
-     * Sets isFinished to true if only one character (or zero) has HP > 0.
+     * Sets state to FINISHED if only one character (or zero) has HP > 0.
      */
     public function checkIfFinished(): void
     {
@@ -125,7 +153,7 @@ class Battle
         ));
 
         if ($aliveCount <= 1) {
-            $this->isFinished = true;
+            $this->state = BattleState::FINISHED;
         }
     }
 
@@ -163,9 +191,19 @@ class Battle
         return $this->roundStartedAt;
     }
 
+    public function getRoundDurationSeconds(): int
+    {
+        return $this->roundDurationSeconds;
+    }
+
     public function isFinished(): bool
     {
-        return $this->isFinished;
+        return $this->state === BattleState::FINISHED;
+    }
+
+    public function getState(): BattleState
+    {
+        return $this->state;
     }
 
     /**
