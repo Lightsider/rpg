@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Auth\Events\Registered;
+use App\Infrastructure\Eloquent\Models\User;
+use App\Application\User\Actions\RegisterUserAction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,7 +27,7 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request, \App\Services\Auth\RegisterUserAction $registerUserAction): RedirectResponse
+    public function store(Request $request, RegisterUserAction $registerUserAction): RedirectResponse
     {
         $request->validate([
             'name' => 'required|string|max:255',
@@ -38,7 +37,10 @@ class RegisteredUserController extends Controller
 
         $dto = \App\DTOs\UserRegistrationDTO::fromArray($request->only(['name', 'email', 'password']));
 
-        $user = $registerUserAction->execute($dto);
+        $userEntity = $registerUserAction->execute($dto);
+
+        // For Laravel's Auth facade, we need the Eloquent model
+        $user = User::findOrFail($userEntity->id);
 
         Auth::login($user);
 
