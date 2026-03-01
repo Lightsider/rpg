@@ -4,15 +4,19 @@ namespace App\Domain\User\Entities;
 
 class UserEntity
 {
+    public const int DEFAULT_HP = 100;
+    public const int DEFAULT_STRENGTH = 10;
+    public const int DEFAULT_DEXTERITY = 10;
+
     public function __construct(
         public readonly ?int $id,
         public readonly string $name,
         public readonly string $email,
         public readonly string $password,
-        public readonly ?int $hp = 100,
-        public readonly ?int $maxHp = 100,
-        public readonly ?int $strength = 10,
-        public readonly ?int $dexterity = 10,
+        public readonly ?int $hp = self::DEFAULT_HP,
+        public readonly ?int $maxHp = self::DEFAULT_HP,
+        public readonly ?int $strength = self::DEFAULT_STRENGTH,
+        public readonly ?int $dexterity = self::DEFAULT_DEXTERITY,
         public readonly ?string $weapon = null
     ) {
     }
@@ -24,10 +28,10 @@ class UserEntity
             name: $data['name'],
             email: $data['email'],
             password: $data['password'],
-            hp: $data['hp'] ?? 100,
-            maxHp: $data['max_hp'] ?? 100,
-            strength: $data['strength'] ?? 10,
-            dexterity: $data['dexterity'] ?? 10,
+            hp: $data['hp'] ?? self::DEFAULT_HP,
+            maxHp: $data['max_hp'] ?? self::DEFAULT_HP,
+            strength: $data['strength'] ?? self::DEFAULT_STRENGTH,
+            dexterity: $data['dexterity'] ?? self::DEFAULT_DEXTERITY,
             weapon: $data['weapon'] ?? null,
         );
     }

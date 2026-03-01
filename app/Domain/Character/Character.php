@@ -1,0 +1,172 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Character;
+
+use App\Domain\Weapon\Weapon;
+
+/**
+ * Pure PHP Domain Model for a Character.
+ */
+class Character
+{
+    public const int DEFAULT_MAX_AP = 3;
+
+    public const int MAX_ATTACKS_PER_TURN = 2;
+
+    private const float DODGE_CHANCE_PER_AGILITY = 0.02;
+    private const float CRIT_CHANCE_PER_WIT = 0.02;
+    private const float BASE_CRIT_MULTIPLIER = 1.5;
+    private const float CRIT_MULTIPLIER_PER_WIT = 0.05;
+    private const float STRENGTH_BONUS_MULTIPLIER = 0.5;
+
+    public function __construct(
+        private readonly int $id,
+        private readonly string $name,
+        private readonly int $strength,
+        private readonly int $agility,
+        private readonly int $constitution,
+        private readonly int $wit,
+        private readonly int $maxHp,
+        private int $currentHp,
+        private readonly Weapon $weapon,
+        private readonly int $maxActionPoints = self::DEFAULT_MAX_AP,
+        private int $currentActionPoints = self::DEFAULT_MAX_AP,
+        private int $attackPointsUsed = 0,
+        private int $x = 0,
+        private int $y = 0
+    ) {
+    }
+
+    public function getX(): int
+    {
+        return $this->x;
+    }
+
+    public function getY(): int
+    {
+        return $this->y;
+    }
+
+    public function setPosition(int $x, int $y): void
+    {
+        $this->x = $x;
+        $this->y = $y;
+    }
+
+    public function canQueueAttack(): bool
+    {
+        return $this->currentActionPoints > 0 && $this->attackPointsUsed < self::MAX_ATTACKS_PER_TURN;
+    }
+
+    public function canQueueDefense(): bool
+    {
+        return $this->currentActionPoints > 0;
+    }
+
+    public function canSpendAP(int $cost): bool
+    {
+        return $this->currentActionPoints >= $cost;
+    }
+
+    public function spendAP(int $cost): void
+    {
+        if ($cost < 0) {
+            throw new \InvalidArgumentException('Cost cannot be negative.');
+        }
+
+        $this->currentActionPoints -= $cost;
+    }
+
+    public function registerAttackUsage(): void
+    {
+        $this->attackPointsUsed++;
+    }
+
+    public function resetRoundState(): void
+    {
+        $this->currentActionPoints = $this->maxActionPoints;
+        $this->attackPointsUsed = 0;
+    }
+
+    public function calculateDodgeChance(): float
+    {
+        return $this->agility * self::DODGE_CHANCE_PER_AGILITY;
+    }
+
+    public function calculateCritChance(): float
+    {
+        return $this->wit * self::CRIT_CHANCE_PER_WIT;
+    }
+
+    public function calculateCritMultiplier(): float
+    {
+        return self::BASE_CRIT_MULTIPLIER + ($this->wit * self::CRIT_MULTIPLIER_PER_WIT);
+    }
+
+    public function calculateStrengthBonus(): float
+    {
+        return $this->strength * self::STRENGTH_BONUS_MULTIPLIER;
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getStrength(): int
+    {
+        return $this->strength;
+    }
+
+    public function getAgility(): int
+    {
+        return $this->agility;
+    }
+
+    public function getConstitution(): int
+    {
+        return $this->constitution;
+    }
+
+    public function getWit(): int
+    {
+        return $this->wit;
+    }
+
+    public function getMaxHp(): int
+    {
+        return $this->maxHp;
+    }
+
+    public function getCurrentHp(): int
+    {
+        return $this->currentHp;
+    }
+
+    public function getWeapon(): Weapon
+    {
+        return $this->weapon;
+    }
+
+    public function getMaxActionPoints(): int
+    {
+        return $this->maxActionPoints;
+    }
+
+    public function getCurrentActionPoints(): int
+    {
+        return $this->currentActionPoints;
+    }
+
+    public function setCurrentHp(int $hp): void
+    {
+        $this->currentHp = $hp;
+    }
+}

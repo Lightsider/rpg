@@ -30,7 +30,11 @@ class User extends Authenticatable
         'max_hp',
         'strength',
         'dexterity',
+        'constitution',
+        'wit',
         'weapon',
+        'x',
+        'y',
     ];
 
     /**

@@ -1,9 +1,12 @@
 <?php
 
+use App\Http\Controllers\BattleController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+Route::post('/attack', [BattleController::class, 'attack']);
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -24,4 +27,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

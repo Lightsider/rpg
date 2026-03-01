@@ -12,4 +12,5 @@ enum DamageType: string
     case SLASH = 'slash';
     case BLUNT = 'blunt';
     case PIERCE = 'pierce';
+    case CRUSH = 'crush';
 }
