@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domain\Character;
 
+use App\Domain\Equipment\Equipment;
+use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Weapon\Weapon;
 
 /**
  * Pure PHP Domain Model for a Character.
  */
-class Character
+class Character implements \JsonSerializable
 {
     public const int DEFAULT_MAX_AP = 3;
 
@@ -23,6 +25,7 @@ class Character
 
     public function __construct(
         private readonly int $id,
+        private readonly int $userId,
         private readonly string $name,
         private readonly int $strength,
         private readonly int $agility,
@@ -30,14 +33,26 @@ class Character
         private readonly int $wit,
         private readonly int $maxHp,
         private int $currentHp,
-        private readonly \App\Domain\Weapon\Weapon $weapon,
+        public readonly \App\Domain\Equipment\Equipment $equipment,
+        private readonly int $locationId = 1,
         private readonly int $maxActionPoints = self::DEFAULT_MAX_AP,
         private int $currentActionPoints = self::DEFAULT_MAX_AP,
         private int $attackPointsUsed = 0,
         private int $x = 0,
         private int $y = 0,
-        private bool $isCommitted = false
+        private bool $isCommitted = false,
+        private readonly int $blockResistRating = 0,
     ) {
+    }
+
+    public function getUserId(): int
+    {
+        return $this->userId;
+    }
+
+    public function getLocationId(): int
+    {
+        return $this->locationId;
     }
 
     public function getX(): int
@@ -180,7 +195,16 @@ class Character
 
     public function getWeapon(): Weapon
     {
-        return $this->weapon;
+        $weapon = $this->equipment->getItem(EquipmentSlot::MAIN_HAND);
+        if (!$weapon instanceof Weapon) {
+            throw new \App\Domain\DomainException('Character has no valid weapon equipped in main hand.');
+        }
+        return $weapon;
+    }
+
+    public function getEquipment(): Equipment
+    {
+        return $this->equipment;
     }
 
     public function getMaxActionPoints(): int
@@ -196,5 +220,37 @@ class Character
     public function setCurrentHp(int $hp): void
     {
         $this->currentHp = $hp;
+    }
+
+    /**
+     * Block resistance rating from equipped shield (0 until shields are implemented).
+     * Armor deliberately does NOT contribute to this value.
+     */
+    public function getBlockResistRating(): int
+    {
+        return $this->blockResistRating;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'user_id' => $this->getUserId(),
+            'name' => $this->getName(),
+            'stats' => [
+                'strength' => $this->getStrength(),
+                'agility' => $this->getAgility(),
+                'constitution' => $this->getConstitution(),
+                'wit' => $this->getWit(),
+            ],
+            'hp' => $this->getCurrentHp(),
+            'max_hp' => $this->getMaxHp(),
+            'location_id' => $this->getLocationId(),
+            'position' => [
+                'x' => $this->getX(),
+                'y' => $this->getY(),
+            ],
+            'weapon' => $this->getWeapon()->getName(),
+        ];
     }
 }

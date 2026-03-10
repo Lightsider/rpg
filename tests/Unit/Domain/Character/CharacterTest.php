@@ -14,7 +14,10 @@ class CharacterTest extends TestCase
 {
     private function createCharacter(int $ap = 3): Character
     {
-        $weapon = new Weapon(1, "Sword", 10, 20, DamageType::SLASHING, 0.9, 0.1);
+        $weapon = new Weapon(1, "Sword", 10, 20, DamageType::SLASHING, 0.9, 0, 0.0);
+        $equipment = new \App\Domain\Equipment\Equipment();
+        $equipment->setItem(\App\Domain\Equipment\EquipmentSlot::MAIN_HAND, $weapon);
+
         return new Character(
             id: 1,
             name: "Hero",
@@ -24,7 +27,7 @@ class CharacterTest extends TestCase
             wit: 10,
             maxHp: 100,
             currentHp: 100,
-            weapon: $weapon,
+            equipment: $equipment,
             maxActionPoints: $ap,
             currentActionPoints: $ap
         );

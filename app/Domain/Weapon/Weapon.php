@@ -4,20 +4,26 @@ declare(strict_types=1);
 
 namespace App\Domain\Weapon;
 
+use App\Domain\Item\Item;
+use App\Domain\Item\ItemType;
+
 /**
  * Pure PHP Domain Model for a Weapon.
  */
-class Weapon
+class Weapon extends Item
 {
     public function __construct(
-        private readonly int $id,
-        private readonly string $name,
+        int $id,
+        string $name,
         private readonly int $minDamage,
         private readonly int $maxDamage,
         private readonly DamageType $damageType,
         private readonly float $accuracyBonus,
-        private readonly float $blockBreakChance
+        private readonly int $blockBreakRating,
+        private readonly float $pierceMultiplier,
+        private readonly int $maxDamageRating = 0,
     ) {
+        parent::__construct($id, $name, ItemType::WEAPON);
     }
 
     /**
@@ -26,16 +32,6 @@ class Weapon
     public function rollBaseDamage(): int
     {
         return mt_rand($this->minDamage, $this->maxDamage);
-    }
-
-    public function getId(): int
-    {
-        return $this->id;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
     }
 
     public function getMinDamage(): int
@@ -58,8 +54,27 @@ class Weapon
         return $this->accuracyBonus;
     }
 
-    public function getBlockBreakChance(): float
+    /**
+     * Raw block-break rating contributed by this weapon.
+     * Combined with defender.block_resist_rating in BlockPenetrationService
+     * to derive effective penetration probability.
+     */
+    public function getBlockBreakRating(): int
     {
-        return $this->blockBreakChance;
+        return $this->blockBreakRating;
+    }
+
+    /**
+     * Fraction of base damage dealt on a successful block penetration.
+     * e.g. 0.50 → 50% of base damage.
+     */
+    public function getPierceMultiplier(): float
+    {
+        return $this->pierceMultiplier;
+    }
+
+    public function getMaxDamageRating(): int
+    {
+        return $this->maxDamageRating;
     }
 }

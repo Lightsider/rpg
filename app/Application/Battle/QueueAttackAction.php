@@ -62,21 +62,21 @@ class QueueAttackAction
                 throw new DomainException('Character cannot queue more attacks or lacks AP.');
             }
 
-            // 5. Spend 1 AP
-            $character->spendAP(self::ATTACK_AP_COST);
-
-            // 6. Register attack usage
-            $character->registerAttackUsage();
-
-            // 7. Create TurnAction of type ATTACK
+            // 5. Create TurnAction of type ATTACK
             $action = new TurnAction(
                 $characterId,
                 ActionType::ATTACK,
                 TargetZone::from($targetZone)
             );
 
-            // 8. Add to battle queue
+            // 6. Add to battle queue (performs spatial validation: attacker/target alive and adjacent)
             $battle->queueAction($action);
+
+            // 7. Spend 1 AP (only if queueAction didn't throw)
+            $character->spendAP(self::ATTACK_AP_COST);
+
+            // 8. Register attack usage
+            $character->registerAttackUsage();
 
             // 9. Save battle
             $this->battleRepository->save($battle);

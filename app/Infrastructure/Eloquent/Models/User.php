@@ -33,6 +33,7 @@ class User extends Authenticatable
         'constitution',
         'wit',
         'weapon',
+        'weapon_id',
         'x',
         'y',
     ];
@@ -58,5 +59,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function weaponItem()
+    {
+        return $this->belongsTo(ItemModel::class, 'weapon_id');
     }
 }

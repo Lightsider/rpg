@@ -16,7 +16,8 @@ class AttackResult
         public readonly bool $isCritical,
         public readonly bool $isDodged,
         public readonly bool $isMiss,
-        public readonly DamageType $damageType
+        public readonly DamageType $damageType,
+        public readonly bool $isPierced = false,
     ) {
     }
 }

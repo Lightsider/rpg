@@ -4,17 +4,25 @@ declare(strict_types=1);
 
 namespace App\Domain\Battle;
 
+use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
+use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Character\Character;
 
 /**
  * Stateless service to resolve combat attacks.
+ *
+ * Block handling is fully delegated to BlockPenetrationService —
+ * CombatResolver itself contains no block-penetration logic.
  */
 class CombatResolver
 {
     private const float BASE_HIT_CHANCE = 0.8;
-    private const float BLOCK_REDUCED_DAMAGE_MULTIPLIER = 0.5;
-    private const float MIN_RANDOM = 0.0;
-    private const float MAX_RANDOM = 1.0;
+
+    public function __construct(
+        private readonly BlockPenetrationService $blockPenetrationService,
+        private readonly MaxDamageService $maxDamageService,
+    ) {
+    }
 
     /**
      * Resolves a single attack from attacker to defender.
@@ -35,8 +43,11 @@ class CombatResolver
             return new AttackResult(0, false, false, true, $damageType);
         }
 
-        // 3. Roll base damage
-        $damage = (float) $weapon->rollBaseDamage();
+        // 3. Roll damage
+        $maxDamageProc = $this->maxDamageService->checkMaxDamage($attacker);
+        $damage = (float) ($maxDamageProc->triggered
+            ? $weapon->getMaxDamage()
+            : $weapon->rollBaseDamage());
 
         // 4. Add strength bonus
         $damage += $attacker->calculateStrengthBonus();
@@ -48,22 +59,34 @@ class CombatResolver
             $isCritical = true;
         }
 
-        // 6. If blocked
+        $baseDamage = (int) round($damage);
+
+        // 6. If blocked – delegate entirely to BlockPenetrationService
         if ($isBlocked) {
-            if ($this->getRandom() < $weapon->getBlockBreakChance()) {
-                $damage *= self::BLOCK_REDUCED_DAMAGE_MULTIPLIER;
-            } else {
-                $damage = 0.0;
-            }
+            $penetrationResult = $this->blockPenetrationService->checkBlockBreak(
+                $attacker,
+                $defender,
+                $baseDamage,
+            );
+
+            return new AttackResult(
+                damage: $penetrationResult->damage,
+                isCritical: $isCritical,
+                isDodged: false,
+                isMiss: false,
+                damageType: $damageType,
+                isPierced: $penetrationResult->penetrated,
+            );
         }
 
-        return new AttackResult((int) round($damage), $isCritical, false, false, $damageType);
+        return new AttackResult($baseDamage, $isCritical, false, false, $damageType);
     }
 
     /**
      * Helper to get random float between 0 and 1.
+     * Protected so tests can override it.
      */
-    private function getRandom(): float
+    protected function getRandom(): float
     {
         return mt_rand() / mt_getrandmax();
     }

@@ -11,7 +11,7 @@ use Exception;
 /**
  * Pure PHP Domain Model for a Battle.
  */
-class Battle
+class Battle implements \JsonSerializable
 {
     private const int DEFAULT_ROUND_DURATION = 60;
 
@@ -22,7 +22,9 @@ class Battle
      */
     public function __construct(
         private readonly int $id,
-        private readonly array $participants,
+        private readonly int $locationId,
+        private array $participants,
+        private readonly Map $map,
         private int $roundNumber = 1,
         private DateTimeImmutable $roundStartedAt = new DateTimeImmutable(),
         private int $roundDurationSeconds = self::DEFAULT_ROUND_DURATION,
@@ -30,6 +32,32 @@ class Battle
         private array $queuedActions = [],
         private array $committedCharacterIds = []
     ) {
+    }
+
+    public function addParticipant(Character $character): void
+    {
+        if ($this->state !== BattleState::WAITING) {
+            throw new Exception('Can only join a battle in WAITING state.');
+        }
+
+        if (count($this->participants) >= 2) {
+            throw new Exception('Battle is already full.');
+        }
+
+        if (array_key_exists($character->getId(), $this->participants)) {
+            throw new Exception('Character already in battle.');
+        }
+
+        $this->participants[$character->getId()] = $character;
+
+        if (count($this->participants) === 2) {
+            $this->state = BattleState::ACTIVE;
+            $this->roundStartedAt = new DateTimeImmutable();
+            // Assign initial positions for 1v1
+            $chars = array_values($this->participants);
+            $chars[0]->setPosition(0, 0);
+            $chars[1]->setPosition(9, 9);
+        }
     }
 
     /**
@@ -102,7 +130,74 @@ class Battle
             throw new Exception('Character has already committed their actions.');
         }
 
+        $character = $this->getParticipantById($action->getCharacterId());
+        if (!$character) {
+            throw new Exception('Character not found in this battle.');
+        }
+
+        if ($character->getCurrentHp() <= 0) {
+            throw new \App\Domain\DomainException('Cannot queue action: character is dead.');
+        }
+
+        if ($action->getType() === ActionType::MOVE) {
+            $toX = $action->getToX();
+            $toY = $action->getToY();
+
+            if (!$this->map->isWithinBounds($toX, $toY)) {
+                throw new \App\Domain\DomainException('Target cell is outside the map.');
+            }
+
+            $dx = abs($character->getX() - $toX);
+            $dy = abs($character->getY() - $toY);
+            if ($dx > 1 || $dy > 1) {
+                throw new \App\Domain\DomainException('Target cell is not adjacent.');
+            }
+
+            if ($this->isOccupied($toX, $toY)) {
+                throw new \App\Domain\DomainException('Target cell is occupied.');
+            }
+        }
+
+        if ($action->getType() === ActionType::ATTACK) {
+            // Find opponent (Assuming 1v1 as per rules)
+            $opponent = $this->getOpponent($action->getCharacterId());
+            if (!$opponent) {
+                throw new \App\Domain\DomainException('No opponent found to attack.');
+            }
+
+            if ($opponent->getCurrentHp() <= 0) {
+                throw new \App\Domain\DomainException('Target is already dead.');
+            }
+
+            $dx = abs($character->getX() - $opponent->getX());
+            $dy = abs($character->getY() - $opponent->getY());
+
+            if ($dx > 1 || $dy > 1) {
+                throw new \App\Domain\DomainException("Target is not adjacent.");
+            }
+        }
+
         $this->queuedActions[] = $action;
+    }
+
+    private function isOccupied(int $x, int $y): bool
+    {
+        foreach ($this->participants as $participant) {
+            if ($participant->getCurrentHp() > 0 && $participant->getX() === $x && $participant->getY() === $y) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function getOpponent(int $characterId): ?Character
+    {
+        foreach ($this->participants as $participant) {
+            if ($participant->getId() !== $characterId) {
+                return $participant;
+            }
+        }
+        return null;
     }
 
     /**
@@ -222,8 +317,26 @@ class Battle
         return $this->committedCharacterIds;
     }
 
+    public function getLocationId(): int
+    {
+        return $this->locationId;
+    }
+
     public function isCharacterCommitted(int $characterId): bool
     {
         return in_array($characterId, $this->committedCharacterIds, true);
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'location_id' => $this->getLocationId(),
+            'participants' => array_map(fn(Character $p) => $p->getName(), array_values($this->getParticipants())),
+            'participant_ids' => array_keys($this->getParticipants()),
+            'round_number' => $this->getRoundNumber(),
+            'state' => $this->getState()->value,
+            'committed_character_ids' => $this->getCommittedCharacterIds(),
+        ];
     }
 }

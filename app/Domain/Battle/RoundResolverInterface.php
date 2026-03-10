@@ -12,5 +12,5 @@ interface RoundResolverInterface
     /**
      * Resolves all queued actions in the battle.
      */
-    public function resolve(Battle $battle): void;
+    public function resolve(Battle $battle): RoundResolutionResult;
 }

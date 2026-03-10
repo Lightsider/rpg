@@ -6,92 +6,113 @@ namespace App\Infrastructure\Eloquent\Repositories;
 
 use App\Domain\Character\Character;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
+use App\Domain\Equipment\Equipment;
+use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Weapon\DamageType;
 use App\Domain\Weapon\Weapon;
+use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Infrastructure\Eloquent\Models\User as EloquentUser;
+use App\Infrastructure\Eloquent\Models\ItemModel;
 
 class EloquentCharacterRepository implements CharacterRepositoryInterface
 {
-    private const int DEFAULT_WEAPON_ID = 0;
-    private const int DEFAULT_MIN_DAMAGE = 5;
-    private const int DEFAULT_MAX_DAMAGE = 10;
     private const float DEFAULT_ACCURACY_BONUS = 0.0;
-    private const float DEFAULT_BLOCK_BREAK_CHANCE = 0.0;
+    private const int DEFAULT_BLOCK_BREAK_RATING = 0;
+    private const float DEFAULT_PIERCE_MULTIPLIER = 0.1;
+    private const int DEFAULT_MAX_DAMAGE_RATING = 0;
 
     public function findById(int $id): ?Character
     {
-        $model = EloquentUser::find($id);
+        $model = CharacterModel::with('user.weaponItem')->find($id);
         if (!$model) {
             return null;
         }
 
-        return $this->mapToDomain($model);
+        return $this->mapModelToDomain($model);
+    }
+
+    public function findByUserId(int $userId): ?Character
+    {
+        $model = CharacterModel::with('user.weaponItem')
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$model) {
+            return null;
+        }
+
+        return $this->mapModelToDomain($model);
+    }
+
+    public function create(Character $character): Character
+    {
+        $model = CharacterModel::create([
+            'user_id' => $character->getUserId(),
+            'name' => $character->getName(),
+            'hp' => $character->getCurrentHp(),
+            'max_hp' => $character->getMaxHp(),
+            'location_id' => $character->getLocationId()
+        ]);
+
+        return $this->mapModelToDomain($model);
     }
 
     public function updateHp(int $id, int $currentHp): void
     {
-        EloquentUser::where('id', $id)->update(['hp' => $currentHp]);
+        CharacterModel::where('id', $id)->update(['hp' => $currentHp]);
     }
 
-    private function mapToDomain(EloquentUser $model): Character
+    private function mapModelToDomain(CharacterModel $model): Character
     {
-        // For now, we create a default weapon based on the string in the database
-        // This logic should ideally be in a WeaponRepository
-        $weapon = $this->resolveWeapon($model->weapon);
+        $userModel = $model->user;
+        $weapon = $userModel && $userModel->weaponItem
+            ? $this->resolveWeaponFromItem($userModel->weaponItem)
+            : $this->resolveWeaponByLegacyName($userModel ? $userModel->weapon : null);
+
+        $equipment = new Equipment();
+        $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
 
         return new Character(
             id: $model->id,
+            userId: $model->user_id,
             name: $model->name,
-            strength: (int) $model->strength,
-            agility: (int) $model->dexterity, // Mapping dexterity to agility
-            constitution: (int) $model->constitution ?? 10,
-            wit: (int) $model->wit ?? 10,
+            strength: (int) ($userModel->strength ?? 10),
+            agility: (int) ($userModel->dexterity ?? 10),
+            constitution: (int) ($userModel->constitution ?? 10),
+            wit: (int) ($userModel->wit ?? 10),
             maxHp: (int) $model->max_hp,
             currentHp: (int) $model->hp,
-            weapon: $weapon,
-            maxActionPoints: Character::DEFAULT_MAX_AP,
-            currentActionPoints: Character::DEFAULT_MAX_AP,
-            attackPointsUsed: 0,
-            x: (int) $model->x,
-            y: (int) $model->y
+            equipment: $equipment,
+            locationId: $model->location_id,
         );
     }
 
-    private function resolveWeapon(?string $weaponType): Weapon
+    private function resolveWeaponFromItem(ItemModel $item): Weapon
     {
+        return new Weapon(
+            id: $item->id,
+            name: $item->name,
+            minDamage: $item->min_damage,
+            maxDamage: $item->max_damage,
+            damageType: DamageType::from(strtolower($item->damage_type ?? 'blunt')),
+            accuracyBonus: $item->accuracy_bonus,
+            blockBreakRating: $item->block_break_rating,
+            pierceMultiplier: $item->pierce_multiplier,
+            maxDamageRating: $item->max_damage_rating
+        );
+    }
+
+    private function resolveWeaponByLegacyName(?string $weaponType): Weapon
+    {
+        // Fallback
         if ($weaponType === 'sword') {
-            return new Weapon(
-                1,
-                'Sword',
-                6,
-                12,
-                DamageType::SLASH,
-                0.1, // Improved accuracy
-                0.0
-            );
+            return new Weapon(1, 'Sword', 8, 14, DamageType::SLASHING, 0.0, 20, 0.50, 90);
         }
 
         if ($weaponType === 'axe') {
-            return new Weapon(
-                2,
-                'Axe',
-                8,
-                14,
-                DamageType::SLASH, // Using SLASH for now
-                0.0,
-                0.2 // Improved block break
-            );
+            return new Weapon(2, 'Axe', 8, 14, DamageType::CHOPPING, 0.0, 60, 0.65);
         }
 
-        // Default unarmed/basic weapon
-        return new Weapon(
-            self::DEFAULT_WEAPON_ID,
-            'Fists',
-            self::DEFAULT_MIN_DAMAGE,
-            self::DEFAULT_MAX_DAMAGE,
-            DamageType::BLUNT,
-            self::DEFAULT_ACCURACY_BONUS,
-            self::DEFAULT_BLOCK_BREAK_CHANCE
-        );
+        return new Weapon(0, 'Fists', 5, 10, DamageType::BLUNT, 0.0, 0, 0.10);
     }
 }

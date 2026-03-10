@@ -57,20 +57,12 @@ class QueueMoveAction
                 throw new DomainException('Character has already committed their actions.');
             }
 
-            // 6. Ensure 1 AP available
+            // 6. Ensure enough AP
             if (!$character->canSpendAP(self::MOVE_AP_COST)) {
                 throw new DomainException('Not enough Action Points to move.');
             }
 
-            // 7. Ensure target cell is adjacent
-            if (!$this->isAdjacent($character->getX(), $character->getY(), $toX, $toY)) {
-                throw new DomainException('Target cell is not adjacent.');
-            }
-
-            // 8. Spend 1 AP
-            $character->spendAP(self::MOVE_AP_COST);
-
-            // 9. Create MOVE TurnAction
+            // 7. Create MOVE TurnAction
             $action = new TurnAction(
                 characterId: $characterId,
                 type: ActionType::MOVE,
@@ -80,24 +72,14 @@ class QueueMoveAction
                 toY: $toY
             );
 
-            // 10. Add to queue
+            // 8. Add to queue (performs spatial validation: bounds, adjacency, occupancy)
             $battle->queueAction($action);
+
+            // 9. Spend AP (only if queueAction didn't throw)
+            $character->spendAP(self::MOVE_AP_COST);
 
             // 11. Save battle
             $this->battleRepository->save($battle);
         });
-    }
-
-    /**
-     * Checks if two cells are adjacent (including diagonals or only cardinal?)
-     * Rules say "Атаковать можно только соседнюю клетку" and "За ход можно перемещаться".
-     * Usually in grid games adjacent means distance <= 1 in both coordinates (King's move).
-     */
-    private function isAdjacent(int $fromX, int $fromY, int $toX, int $toY): bool
-    {
-        $dx = abs($fromX - $toX);
-        $dy = abs($fromY - $toY);
-
-        return ($dx <= 1 && $dy <= 1) && !($dx === 0 && $dy === 0);
     }
 }

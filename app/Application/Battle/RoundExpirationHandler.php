@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Battle;
 
 use App\Domain\Battle\BattleState;
+use App\Domain\Battle\Repositories\BattleLogRepositoryInterface;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\RoundResolverInterface;
 
@@ -17,6 +18,7 @@ class RoundExpirationHandler
 {
     public function __construct(
         private readonly BattleRepositoryInterface $battleRepository,
+        private readonly BattleLogRepositoryInterface $battleLogRepository,
         private readonly RoundResolverInterface $roundResolver
     ) {
     }
@@ -32,7 +34,10 @@ class RoundExpirationHandler
             foreach ($activeBattles as $battle) {
                 if ($battle->getState() === BattleState::ACTIVE && $battle->isRoundExpired()) {
                     // Resolve all collected actions including default actions for inactive players
-                    $this->roundResolver->resolve($battle);
+                    $result = $this->roundResolver->resolve($battle);
+
+                    // Save combat log
+                    $this->battleLogRepository->saveBatch($battle->getId(), $result->logs);
 
                     // Prepare for the next round (if not finished)
                     if ($battle->getState() !== BattleState::FINISHED) {

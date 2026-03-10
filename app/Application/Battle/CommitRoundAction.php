@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Battle;
 
 use App\Domain\Battle\BattleState;
+use App\Domain\Battle\Repositories\BattleLogRepositoryInterface;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\RoundResolverInterface;
 use App\Domain\DomainException;
@@ -17,6 +18,7 @@ class CommitRoundAction
 {
     public function __construct(
         private readonly BattleRepositoryInterface $battleRepository,
+        private readonly BattleLogRepositoryInterface $battleLogRepository,
         private readonly RoundResolverInterface $roundResolver
     ) {
     }
@@ -58,7 +60,10 @@ class CommitRoundAction
                 // Double check it's STILL ACTIVE (double safety against race conditions in transactions)
                 if ($battle->getState() === BattleState::ACTIVE) {
                     // → resolve round
-                    $this->roundResolver->resolve($battle);
+                    $result = $this->roundResolver->resolve($battle);
+
+                    // → save logs
+                    $this->battleLogRepository->saveBatch($battle->getId(), $result->logs);
 
                     // → start new round (if not finished)
                     if ($battle->getState() !== BattleState::FINISHED) {

@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Battle;
 
 use App\Domain\Character\Character;
+use App\Domain\Battle\Repositories\BattleRepositoryInterface;
+use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
+use App\Domain\Battle\MaxDamage\MaxDamageService;
+use App\Domain\DomainException;
 use Exception;
 
 /**
@@ -13,34 +17,53 @@ use Exception;
 class RoundResolver implements RoundResolverInterface
 {
     public function __construct(
-        private readonly CombatResolver $combatResolver
+        private readonly CombatResolver $combatResolver,
+        private readonly BattleRepositoryInterface $battleRepository,
+        private readonly BlockPenetrationService $blockPenetrationService,
+        private readonly MaxDamageService $maxDamageService,
     ) {
     }
 
-    public function resolve(Battle $battle): void
+    public function resolve(Battle $battle): RoundResolutionResult
     {
+        // 1. Guard against double resolution
+        if ($battle->getState() === BattleState::RESOLVING) {
+            // Abort (or throw depending on preference, but 'abort' usually means exit early)
+            // Here we throw to be explicit that something is wrong.
+            throw new DomainException('Battle is already resolving.');
+        }
+
+        // 2. Set state and persist BEFORE heavy logic
         $battle->startResolving();
+        $this->battleRepository->save($battle);
+
+        $logs = [];
 
         $queuedActions = $battle->getQueuedActions();
         $participants = $battle->getParticipants();
 
-        // 1. Map ID to Character for quick access
+        // Map ID to Character for quick access
         $characterMap = [];
         foreach ($participants as $participant) {
             $characterMap[$participant->getId()] = $participant;
         }
 
-        // 2. Resolve ALL MOVE actions first
+        // 1. Resolve ALL MOVE actions first
         foreach ($queuedActions as $action) {
             if ($action->getType() === ActionType::MOVE) {
                 $character = $characterMap[$action->getCharacterId()] ?? null;
                 if ($character) {
                     $character->setPosition($action->getToX(), $action->getToY());
+                    $logs[] = new BattleLogEntry(
+                        roundNumber: $battle->getRoundNumber(),
+                        type: BattleLogType::MOVE,
+                        actorId: $character->getId()
+                    );
                 }
             }
         }
 
-        // 3. Collect defense zones for each character
+        // 2. Register DEFENSE zones
         $defenses = [];
         foreach ($queuedActions as $action) {
             if ($action->getType() === ActionType::DEFEND) {
@@ -51,8 +74,17 @@ class RoundResolver implements RoundResolverInterface
                 $defenses[$characterId][] = $action->getTargetZone()->value;
             }
         }
+        foreach ($defenses as $charId => $zones) {
+            $char = $characterMap[$charId] ?? null;
+            if ($char) {
+                // Defensive registration log removed as it doesn't fit the required BattleLogType enum exactly,
+                // and the user specified logs should follow the provided VO structure. 
+                // Alternatively, we could add it if desired, but for now we follow the HIT/BLOCK/MISS logic.
+            }
+        }
 
-        // 4. Resolve Attacks
+        // 3. Resolve ATTACK actions (calculate results, don't apply yet)
+        $attackResults = [];
         foreach ($queuedActions as $action) {
             if ($action->getType() === ActionType::ATTACK) {
                 $attackerId = $action->getCharacterId();
@@ -61,40 +93,93 @@ class RoundResolver implements RoundResolverInterface
                     continue;
                 }
 
-                // In 1v1, find the other participant as the defender
                 $defender = $this->findOpponent($attackerId, $participants);
                 if (!$defender || $defender->getCurrentHp() <= 0) {
                     continue;
                 }
 
-                // Check attacker and target adjacency (post-movement)
-                if (!$this->isAdjacent($attacker->getX(), $attacker->getY(), $defender->getX(), $defender->getY())) {
-                    continue; // Out of range attack fails
+                // POST-MOVEMENT adjacency check
+                $dx = abs($attacker->getX() - $defender->getX());
+                $dy = abs($attacker->getY() - $defender->getY());
+                if ($dx > 1 || $dy > 1) {
+                    $logs[] = new BattleLogEntry(
+                        roundNumber: $battle->getRoundNumber(),
+                        type: BattleLogType::MISS,
+                        actorId: $attackerId,
+                        targetId: $defender->getId()
+                    );
+                    continue;
                 }
 
-                // Check if target has DEFEND on that zone
                 $isBlocked = isset($defenses[$defender->getId()])
                     && in_array($action->getTargetZone()->value, $defenses[$defender->getId()], true);
 
-                // Resolve attack using CombatResolver
                 $result = $this->combatResolver->resolveAttack($attacker, $defender, $isBlocked);
+                $attackResults[] = ['defender' => $defender, 'result' => $result, 'attacker' => $attacker, 'zone' => $action->getTargetZone()->value];
 
-                // Apply damage
-                if ($result->damage > 0) {
-                    $newHp = max(0, $defender->getCurrentHp() - $result->damage);
-                    $defender->setCurrentHp($newHp);
+                if ($result->isDodged || $result->isMiss) {
+                    $logs[] = new BattleLogEntry(
+                        roundNumber: $battle->getRoundNumber(),
+                        type: BattleLogType::MISS,
+                        actorId: $attackerId,
+                        targetId: $defender->getId()
+                    );
+                } elseif ($result->damage === 0 && $isBlocked) {
+                    $logs[] = new BattleLogEntry(
+                        roundNumber: $battle->getRoundNumber(),
+                        type: BattleLogType::BLOCK,
+                        actorId: $defender->getId(),
+                        targetId: $attackerId,
+                        zone: $action->getTargetZone()
+                    );
+                } else {
+                    $logs[] = new BattleLogEntry(
+                        roundNumber: $battle->getRoundNumber(),
+                        type: BattleLogType::HIT,
+                        actorId: $attackerId,
+                        targetId: $defender->getId(),
+                        zone: $action->getTargetZone(),
+                        damage: $result->damage
+                    );
                 }
             }
         }
 
-        // 5. Finalize round state
+        // 4. Apply damage
+        foreach ($attackResults as $attack) {
+            /** @var Character $defender */
+            $defender = $attack['defender'];
+            /** @var AttackResult $result */
+            $result = $attack['result'];
+            if ($result->damage > 0) {
+                $newHp = max(0, $defender->getCurrentHp() - $result->damage);
+                $defender->setCurrentHp($newHp);
+            }
+        }
+
+        // 5. Mark dead characters
+        foreach ($participants as $participant) {
+            if ($participant->getCurrentHp() <= 0) {
+                $logs[] = new BattleLogEntry(
+                    roundNumber: $battle->getRoundNumber(),
+                    type: BattleLogType::DEATH,
+                    actorId: $participant->getId()
+                );
+            }
+        }
+
         $battle->clearQueuedActions();
         $battle->finishResolving();
+
+        // Reset block-penetration and max-damage counters when combat ends
+        if ($battle->isFinished()) {
+            $this->blockPenetrationService->resetAllCounters();
+            $this->maxDamageService->resetAllCounters();
+        }
+
+        return new RoundResolutionResult($logs);
     }
 
-    /**
-     * Finds the first participant that is not the given character ID.
-     */
     private function findOpponent(int $characterId, array $participants): ?Character
     {
         foreach ($participants as $participant) {
@@ -102,18 +187,6 @@ class RoundResolver implements RoundResolverInterface
                 return $participant;
             }
         }
-
         return null;
-    }
-
-    /**
-     * Adjacency check for attack range (distance <= 1).
-     */
-    private function isAdjacent(int $x1, int $y1, int $x2, int $y2): bool
-    {
-        $dx = abs($x1 - $x2);
-        $dy = abs($y1 - $y2);
-
-        return ($dx <= 1 && $dy <= 1) && !($dx === 0 && $dy === 0);
     }
 }
