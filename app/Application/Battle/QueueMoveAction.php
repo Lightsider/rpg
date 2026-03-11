@@ -6,6 +6,7 @@ namespace App\Application\Battle;
 
 use App\Domain\Battle\ActionType;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
+use App\Domain\Battle\TargetZone;
 use App\Domain\Battle\TurnAction;
 use App\Domain\DomainException;
 use Illuminate\Support\Facades\DB;
@@ -25,11 +26,12 @@ class QueueMoveAction
     /**
      * Executes the queue move logic.
      *
+     * @param array<int, string> $blocks
      * @throws DomainException If battle or character not found, or cannot queue move.
      */
-    public function execute(int $battleId, int $characterId, int $toX, int $toY): void
+    public function execute(int $battleId, int $characterId, int $toX, int $toY, array $blocks = []): void
     {
-        DB::transaction(function () use ($battleId, $characterId, $toX, $toY) {
+        DB::transaction(function () use ($battleId, $characterId, $toX, $toY, $blocks) {
             // 1. Load battle
             $battle = $this->battleRepository->findById($battleId);
             if (!$battle) {
@@ -58,8 +60,18 @@ class QueueMoveAction
             }
 
             // 6. Ensure enough AP
-            if (!$character->canSpendAP(self::MOVE_AP_COST)) {
-                throw new DomainException('Not enough Action Points to move.');
+            $uniqueBlocks = array_values(array_unique($blocks));
+            if (count($blocks) !== count($uniqueBlocks)) {
+                throw new DomainException('Duplicate block zones are not allowed.');
+            }
+
+            foreach ($blocks as $zone) {
+                TargetZone::from($zone);
+            }
+
+            $totalCost = self::MOVE_AP_COST + count($blocks);
+            if (!$character->canSpendAP($totalCost)) {
+                throw new DomainException('Not enough Action Points to move with blocks.');
             }
 
             // 7. Create MOVE TurnAction
@@ -69,14 +81,15 @@ class QueueMoveAction
                 fromX: $character->getX(),
                 fromY: $character->getY(),
                 toX: $toX,
-                toY: $toY
+                toY: $toY,
+                blocks: $blocks
             );
 
             // 8. Add to queue (performs spatial validation: bounds, adjacency, occupancy)
             $battle->queueAction($action);
 
             // 9. Spend AP (only if queueAction didn't throw)
-            $character->spendAP(self::MOVE_AP_COST);
+            $character->spendAP($totalCost);
 
             // 11. Save battle
             $this->battleRepository->save($battle);

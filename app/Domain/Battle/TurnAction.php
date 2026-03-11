@@ -9,6 +9,9 @@ namespace App\Domain\Battle;
  */
 class TurnAction
 {
+    /**
+     * @param array<int, string> $blocks
+     */
     public function __construct(
         private readonly int $characterId,
         private readonly ActionType $type,
@@ -16,7 +19,8 @@ class TurnAction
         private readonly ?int $fromX = null,
         private readonly ?int $fromY = null,
         private readonly ?int $toX = null,
-        private readonly ?int $toY = null
+        private readonly ?int $toY = null,
+        private readonly array $blocks = []
     ) {
     }
 
@@ -53,5 +57,13 @@ class TurnAction
     public function getToY(): ?int
     {
         return $this->toY;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getBlocks(): array
+    {
+        return $this->blocks;
     }
 }

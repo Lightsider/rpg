@@ -33,4 +33,6 @@ interface BattleRepositoryInterface
     public function findJoinableByLocation(int $locationId): array;
 
     public function isCharacterInBattle(int $characterId): bool;
+
+    public function findActiveBattleForCharacter(int $characterId): ?Battle;
 }

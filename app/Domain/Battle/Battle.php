@@ -14,6 +14,10 @@ use Exception;
 class Battle implements \JsonSerializable
 {
     private const int DEFAULT_ROUND_DURATION = 60;
+    private const int STARTING_LEFT_X = 0;
+    private const int STARTING_RIGHT_OFFSET = 1;
+    private const int STARTING_ROW_DIVISOR = 2;
+    private const int MAX_PARTICIPANTS = 2;
 
     /**
      * @param array<int, Character> $participants
@@ -40,7 +44,7 @@ class Battle implements \JsonSerializable
             throw new Exception('Can only join a battle in WAITING state.');
         }
 
-        if (count($this->participants) >= 2) {
+        if (count($this->participants) >= self::MAX_PARTICIPANTS) {
             throw new Exception('Battle is already full.');
         }
 
@@ -50,13 +54,16 @@ class Battle implements \JsonSerializable
 
         $this->participants[$character->getId()] = $character;
 
-        if (count($this->participants) === 2) {
+        if (count($this->participants) === self::MAX_PARTICIPANTS) {
             $this->state = BattleState::ACTIVE;
             $this->roundStartedAt = new DateTimeImmutable();
-            // Assign initial positions for 1v1
+            // Assign initial positions for 1v1 based on the current map size.
             $chars = array_values($this->participants);
-            $chars[0]->setPosition(0, 0);
-            $chars[1]->setPosition(9, 9);
+            $startY = intdiv($this->map->getHeight(), self::STARTING_ROW_DIVISOR);
+            $leftX = self::STARTING_LEFT_X;
+            $rightX = $this->map->getWidth() - self::STARTING_RIGHT_OFFSET;
+            $chars[0]->setPosition($leftX, $startY);
+            $chars[1]->setPosition($rightX, $startY);
         }
     }
 
@@ -152,10 +159,6 @@ class Battle implements \JsonSerializable
             if ($dx > 1 || $dy > 1) {
                 throw new \App\Domain\DomainException('Target cell is not adjacent.');
             }
-
-            if ($this->isOccupied($toX, $toY)) {
-                throw new \App\Domain\DomainException('Target cell is occupied.');
-            }
         }
 
         if ($action->getType() === ActionType::ATTACK) {
@@ -173,21 +176,11 @@ class Battle implements \JsonSerializable
             $dy = abs($character->getY() - $opponent->getY());
 
             if ($dx > 1 || $dy > 1) {
-                throw new \App\Domain\DomainException("Target is not adjacent.");
+                throw new \App\Domain\DomainException('Target is not adjacent.');
             }
         }
 
         $this->queuedActions[] = $action;
-    }
-
-    private function isOccupied(int $x, int $y): bool
-    {
-        foreach ($this->participants as $participant) {
-            if ($participant->getCurrentHp() > 0 && $participant->getX() === $x && $participant->getY() === $y) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private function getOpponent(int $characterId): ?Character
@@ -320,6 +313,11 @@ class Battle implements \JsonSerializable
     public function getLocationId(): int
     {
         return $this->locationId;
+    }
+
+    public function getMap(): Map
+    {
+        return $this->map;
     }
 
     public function isCharacterCommitted(int $characterId): bool

@@ -7,6 +7,7 @@ namespace App\Infrastructure\Eloquent\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class BattleModel extends Model
 {
@@ -40,5 +41,15 @@ class BattleModel extends Model
     public function actions(): HasMany
     {
         return $this->hasMany(BattleActionModel::class, 'battle_id');
+    }
+
+    public function map(): HasOne
+    {
+        return $this->hasOne(FightMapModel::class, 'fight_id');
+    }
+
+    public function fighterPositions(): HasMany
+    {
+        return $this->hasMany(FighterPositionModel::class, 'fight_id');
     }
 }

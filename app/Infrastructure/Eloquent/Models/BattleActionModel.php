@@ -21,6 +21,7 @@ class BattleActionModel extends Model
         'to_x',
         'to_y',
         'round_number',
+        'blocks',
     ];
 
     protected $casts = [
@@ -31,6 +32,7 @@ class BattleActionModel extends Model
         'to_x' => 'integer',
         'to_y' => 'integer',
         'round_number' => 'integer',
+        'blocks' => 'array',
     ];
 
     public function battle(): BelongsTo
@@ -43,3 +45,5 @@ class BattleActionModel extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 }
+
+

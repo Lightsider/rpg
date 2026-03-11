@@ -49,8 +49,8 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $model->round_started_at = $battle->getRoundStartedAt();
         $model->round_duration_seconds = $battle->getRoundDurationSeconds();
         $model->committed_character_ids = $battle->getCommittedCharacterIds();
-        $model->map_width = 10; // Default or from VO if available
-        $model->map_height = 10; // Default or from VO if available
+        $model->map_width = $battle->getMap()->getWidth();
+        $model->map_height = $battle->getMap()->getHeight();
         $model->save();
 
         // Sync participants
@@ -70,6 +70,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                 'to_x' => $action->getToX(),
                 'to_y' => $action->getToY(),
                 'round_number' => $battle->getRoundNumber(),
+                'blocks' => $action->getBlocks(),
             ]);
         }
 
@@ -130,6 +131,22 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             ->exists();
     }
 
+    public function findActiveBattleForCharacter(int $characterId): ?Battle
+    {
+        $battleId = DB::table('battle_participants')
+            ->join('battles', 'battle_participants.battle_id', '=', 'battles.id')
+            ->where('battle_participants.user_id', $characterId)
+            ->where('battles.state', '!=', BattleState::FINISHED->value)
+            ->orderBy('battles.id')
+            ->value('battles.id');
+
+        if (!$battleId) {
+            return null;
+        }
+
+        return $this->findById((int) $battleId);
+    }
+
     private function mapToDomain(BattleModel $model): Battle
     {
         $participants = $model->participants->map(function (EloquentUser $user) {
@@ -153,7 +170,8 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                     $actionModel->from_x,
                     $actionModel->from_y,
                     $actionModel->to_x,
-                    $actionModel->to_y
+                    $actionModel->to_y,
+                    $actionModel->blocks ?? []
                 );
             })->toArray();
 

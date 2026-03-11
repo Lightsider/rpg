@@ -9,19 +9,30 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::post('/attack', [BattleController::class, 'attack']);
-
 Route::middleware(['auth'])->group(function () {
-    Route::get('/game', [GameController::class, 'index'])->name('game.index');
-    Route::get('/locations', [LocationController::class, 'index'])->name('locations.index');
-    Route::get('/locations/{id}', [LocationController::class, 'show'])->name('locations.show');
+    // Vue Inertia Shell Routes
+    Route::get('/game', function () {
+        return Inertia::render('GameView');
+    })->name('game.index');
 
-    Route::get('/fights', [FightController::class, 'index'])->name('fights.index');
-    Route::post('/fights', [FightController::class, 'create'])->name('fights.create');
-    Route::get('/fights/{id}', [FightController::class, 'show'])->name('fights.show');
-    Route::post('/fights/{id}/join', [FightController::class, 'join'])->name('fights.join');
-    Route::post('/fights/{id}/actions', [FightController::class, 'submitActions'])->name('fights.submit_actions');
-    Route::get('/fights/{id}/log', [FightController::class, 'log'])->name('fights.log');
+    Route::get('/fight/{id}', function ($id) {
+        return Inertia::render('FightView', ['fightId' => (int) $id]);
+    })->name('fight.view');
+
+    // JSON API Endpoints
+    Route::prefix('api')->group(function () {
+        Route::get('/game', [GameController::class, 'index'])->name('api.game.index');
+        Route::get('/locations', [LocationController::class, 'index'])->name('api.locations.index');
+        Route::get('/locations/{id}', [LocationController::class, 'show'])->name('api.locations.show');
+
+        Route::get('/fights', [FightController::class, 'index'])->name('api.fights.index');
+        Route::post('/fights', [FightController::class, 'create'])->name('api.fights.create');
+        Route::get('/fights/{id}', [FightController::class, 'show'])->name('api.fights.show');
+        Route::post('/fights/{id}/join', [FightController::class, 'join'])->name('api.fights.join');
+        Route::post('/fights/{id}/cancel', [FightController::class, 'cancel'])->name('api.fights.cancel');
+        Route::post('/fights/{id}/actions', [FightController::class, 'submitActions'])->name('api.fights.submit_actions');
+        Route::get('/fights/{id}/log', [FightController::class, 'log'])->name('api.fights.log');
+    });
 });
 
 Route::get('/', function () {
@@ -42,5 +53,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+Route::get('/ping', fn() => 'pong');
 
 require __DIR__ . '/auth.php';

@@ -6,7 +6,9 @@ use App\Domain\Character\Character;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\Location\Repositories\LocationRepositoryInterface;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
+use App\Domain\Battle\BattleState;
 use App\Domain\Equipment\Equipment;
+use App\Services\WeaponAssigner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,13 +18,16 @@ class GameController extends Controller
     public function __construct(
         private readonly CharacterRepositoryInterface $characterRepository,
         private readonly LocationRepositoryInterface $locationRepository,
-        private readonly BattleRepositoryInterface $battleRepository
+        private readonly BattleRepositoryInterface $battleRepository,
+        private readonly WeaponAssigner $weaponAssigner
     ) {
     }
 
     public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
+
+        $this->weaponAssigner->ensureUserHasWeapon($user);
 
         // Load or create character
         $character = $this->characterRepository->findByUserId($user->id);
@@ -48,13 +53,19 @@ class GameController extends Controller
         // Load current location
         $location = $this->locationRepository->findById($character->getLocationId());
 
+        $currentFight = $this->battleRepository->findActiveBattleForCharacter($character->getId());
+        $isWaiting = $currentFight && $currentFight->getState() === BattleState::WAITING;
+
         // Load available fights in the location
         $availableFights = $this->battleRepository->findActiveByLocation($character->getLocationId());
 
         return response()->json([
             'character' => $character,
             'location' => $location,
-            'availableFights' => $availableFights
+            'availableFights' => $availableFights,
+            'currentFight' => $currentFight,
+            'canCreateFight' => !$isWaiting,
+            'canLeaveLocation' => !$isWaiting,
         ]);
     }
 }

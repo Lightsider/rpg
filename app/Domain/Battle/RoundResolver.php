@@ -9,6 +9,7 @@ use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\DomainException;
+use App\Services\MovementResolver;
 use Exception;
 
 /**
@@ -21,6 +22,7 @@ class RoundResolver implements RoundResolverInterface
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly BlockPenetrationService $blockPenetrationService,
         private readonly MaxDamageService $maxDamageService,
+        private readonly MovementResolver $movementResolver,
     ) {
     }
 
@@ -49,11 +51,12 @@ class RoundResolver implements RoundResolverInterface
         }
 
         // 1. Resolve ALL MOVE actions first
+        $this->movementResolver->resolveMovement($battle);
+
         foreach ($queuedActions as $action) {
             if ($action->getType() === ActionType::MOVE) {
                 $character = $characterMap[$action->getCharacterId()] ?? null;
                 if ($character) {
-                    $character->setPosition($action->getToX(), $action->getToY());
                     $logs[] = new BattleLogEntry(
                         roundNumber: $battle->getRoundNumber(),
                         type: BattleLogType::MOVE,
@@ -63,7 +66,7 @@ class RoundResolver implements RoundResolverInterface
             }
         }
 
-        // 2. Register DEFENSE zones
+        // 2. Register DEFENSE zones (including blocks attached to move actions)
         $defenses = [];
         foreach ($queuedActions as $action) {
             if ($action->getType() === ActionType::DEFEND) {
@@ -73,7 +76,18 @@ class RoundResolver implements RoundResolverInterface
                 }
                 $defenses[$characterId][] = $action->getTargetZone()->value;
             }
+
+            if ($action->getType() === ActionType::MOVE) {
+                $characterId = $action->getCharacterId();
+                if (!isset($defenses[$characterId])) {
+                    $defenses[$characterId] = [];
+                }
+                foreach ($action->getBlocks() as $blockZone) {
+                    $defenses[$characterId][] = $blockZone;
+                }
+            }
         }
+
         foreach ($defenses as $charId => $zones) {
             $char = $characterMap[$charId] ?? null;
             if ($char) {

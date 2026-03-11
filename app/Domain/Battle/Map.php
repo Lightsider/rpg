@@ -9,6 +9,13 @@ namespace App\Domain\Battle;
  */
 class Map
 {
+    public const int DEFAULT_WIDTH = 5;
+    public const int DEFAULT_HEIGHT = 3;
+
+    public static function default(): self
+    {
+        return new self(self::DEFAULT_WIDTH, self::DEFAULT_HEIGHT);
+    }
     public function __construct(
         private readonly int $width,
         private readonly int $height
@@ -44,3 +51,4 @@ class Map
         return ($dx <= 1 && $dy <= 1) && !($dx === 0 && $dy === 0);
     }
 }
+

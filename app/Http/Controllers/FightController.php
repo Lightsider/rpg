@@ -7,16 +7,21 @@ namespace App\Http\Controllers;
 use App\Domain\Battle\Repositories\BattleLogRepositoryInterface;
 use App\Application\Battle\QueueAttackAction;
 use App\Application\Battle\QueueDefenseAction;
+use App\Application\Battle\QueueMoveAction;
 use App\Application\Battle\CommitRoundAction;
+use App\Application\Battle\LeaveWaitingBattleAction;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\BattleState;
 use App\Domain\Battle\Map;
+use App\Infrastructure\Eloquent\Models\FightMapModel;
+use App\Infrastructure\Eloquent\Models\FighterPositionModel;
+use App\Services\MapGenerator;
 use App\Domain\Character\Character;
 use App\Domain\DomainException;
+use App\Http\Requests\SubmitActionsRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class FightController extends Controller
@@ -27,7 +32,10 @@ class FightController extends Controller
         private readonly BattleLogRepositoryInterface $battleLogRepository,
         private readonly QueueAttackAction $queueAttackAction,
         private readonly QueueDefenseAction $queueDefenseAction,
-        private readonly CommitRoundAction $commitRoundAction
+        private readonly QueueMoveAction $queueMoveAction,
+        private readonly CommitRoundAction $commitRoundAction,
+        private readonly LeaveWaitingBattleAction $leaveWaitingBattleAction,
+        private readonly MapGenerator $mapGenerator
     ) {
     }
 
@@ -62,11 +70,16 @@ class FightController extends Controller
             id: 0,
             locationId: $character->getLocationId(),
             participants: [$character->getId() => $character],
-            map: new Map(10, 10),
+            map: Map::default(),
             state: BattleState::WAITING
         );
 
         $fightId = $this->battleRepository->save($battle);
+
+        $battle = $this->battleRepository->findById($fightId);
+        if ($battle) {
+            $this->mapGenerator->generateForFight($battle);
+        }
 
         return response()->json(['fight_id' => $fightId], 201);
     }
@@ -102,9 +115,33 @@ class FightController extends Controller
             $battle->addParticipant($character);
             $this->battleRepository->save($battle);
 
+            $battle = $this->battleRepository->findById($battle->getId());
+            if ($battle) {
+                $this->mapGenerator->generateForFight($battle);
+            }
+
             return response()->json($battle);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function cancel(int $id): JsonResponse
+    {
+        $user = Auth::user();
+        $character = $this->characterRepository->findByUserId($user->id);
+
+        if (!$character) {
+            return response()->json(['error' => 'Character not found.'], 404);
+        }
+
+        try {
+            $this->leaveWaitingBattleAction->execute($id, $character->getId());
+            return response()->json(['success' => true]);
+        } catch (DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to cancel fight.'], 500);
         }
     }
 
@@ -125,6 +162,18 @@ class FightController extends Controller
 
         $timerRemaining = $this->calculateTimerRemaining($battle);
 
+        $mapModel = FightMapModel::where('fight_id', $battle->getId())->first();
+        $mapWidth = $mapModel?->width ?? $battle->getMap()->getWidth();
+        $mapHeight = $mapModel?->height ?? $battle->getMap()->getHeight();
+
+        $positions = FighterPositionModel::where('fight_id', $battle->getId())
+            ->get()
+            ->map(fn(FighterPositionModel $pos) => [
+                'character_id' => $pos->user_id,
+                'x' => $pos->x,
+                'y' => $pos->y,
+            ])->toArray();
+
         return response()->json([
             'fight_id' => $battle->getId(),
             'status' => $battle->getState()->value,
@@ -135,6 +184,11 @@ class FightController extends Controller
                 'hp' => $p->getCurrentHp(),
                 'max_hp' => $p->getMaxHp()
             ], array_values($battle->getParticipants())),
+            'map' => [
+                'width' => $mapWidth,
+                'height' => $mapHeight,
+            ],
+            'positions' => $positions,
             'timer_remaining' => $timerRemaining,
             'actions_submitted' => $battle->getCommittedCharacterIds()
         ]);
@@ -160,13 +214,9 @@ class FightController extends Controller
         return response()->json($logs);
     }
 
-    public function submitActions(int $id, Request $request): JsonResponse
+    public function submitActions(int $id, SubmitActionsRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'actions' => 'required|array|max:3',
-            'actions.*.type' => 'required|string|in:attack,block,move',
-            'actions.*.zone' => 'required_if:actions.*.type,attack,block|string|in:head,torso,left_arm,right_arm,legs,body',
-        ]);
+        $validated = $request->validated();
 
         $battle = $this->battleRepository->findById($id);
         if (!$battle) {
@@ -190,13 +240,18 @@ class FightController extends Controller
                 $type = $actionData['type'];
                 // Normalize "block" to "defend" if needed, and "body" to "torso"
                 $zone = $actionData['zone'] ?? null;
-                if ($zone === 'body')
+                if ($zone === 'body') {
                     $zone = 'torso';
+                }
 
                 if ($type === 'attack') {
                     $this->queueAttackAction->execute($id, $character->getId(), $zone);
                 } elseif ($type === 'block') {
                     $this->queueDefenseAction->execute($id, $character->getId(), $zone);
+                } elseif ($type === 'move') {
+                    $target = $actionData['target'];
+                    $blocks = $actionData['blocks'] ?? [];
+                    $this->queueMoveAction->execute($id, $character->getId(), (int) $target['x'], (int) $target['y'], $blocks);
                 }
                 // Move implementation could be added here if needed, 
                 // but the prompt focus is on attack/block example.
@@ -230,3 +285,4 @@ class FightController extends Controller
         return max(0, $expiryTime->getTimestamp() - $now->getTimestamp());
     }
 }
+
