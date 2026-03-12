@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Battle\BattleState;
+use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Character;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
-use App\Domain\Location\Repositories\LocationRepositoryInterface;
-use App\Domain\Battle\Repositories\BattleRepositoryInterface;
-use App\Domain\Battle\BattleState;
+use App\Domain\DomainException;
 use App\Domain\Equipment\Equipment;
+use App\Domain\Location\Repositories\LocationRepositoryInterface;
+use App\Services\CharacterStatService;
+use App\Services\CharacterStatValidator;
 use App\Services\WeaponAssigner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +22,9 @@ class GameController extends Controller
         private readonly CharacterRepositoryInterface $characterRepository,
         private readonly LocationRepositoryInterface $locationRepository,
         private readonly BattleRepositoryInterface $battleRepository,
-        private readonly WeaponAssigner $weaponAssigner
+        private readonly WeaponAssigner $weaponAssigner,
+        private readonly CharacterStatValidator $statValidator,
+        private readonly CharacterStatService $statService
     ) {
     }
 
@@ -33,17 +38,37 @@ class GameController extends Controller
         $character = $this->characterRepository->findByUserId($user->id);
 
         if (!$character) {
+            $defaultStats = [
+                'str' => 5,
+                'con' => 5,
+                'dex' => 5,
+                'wit' => 5,
+            ];
+
+            try {
+                $this->statValidator->validateStats($defaultStats);
+            } catch (DomainException $e) {
+                return response()->json(['error' => $e->getMessage()], 422);
+            }
+
+            $computedHp = $this->statService->calculateHp($defaultStats['con']);
+
+            $user->update([
+                'hp' => $computedHp,
+                'max_hp' => $computedHp,
+            ]);
+
             // Create default character for new user
             $newCharacter = new Character(
                 id: 0, // Auto-generated
                 userId: $user->id,
                 name: $user->name,
-                strength: 10,
-                agility: 10,
-                constitution: 10,
-                wit: 10,
-                maxHp: 100,
-                currentHp: 100,
+                strength: $defaultStats['str'],
+                agility: $defaultStats['dex'],
+                constitution: $defaultStats['con'],
+                wit: $defaultStats['wit'],
+                maxHp: $computedHp,
+                currentHp: $computedHp,
                 equipment: new Equipment(),
                 locationId: 1 // Training Grounds
             );

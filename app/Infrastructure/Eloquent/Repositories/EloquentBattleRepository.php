@@ -14,6 +14,7 @@ use App\Domain\Battle\TurnAction;
 use App\Domain\Character\Character;
 use App\Infrastructure\Eloquent\Models\BattleActionModel;
 use App\Infrastructure\Eloquent\Models\BattleModel;
+use App\Infrastructure\Eloquent\Models\ItemModel;
 use App\Infrastructure\Eloquent\Models\User as EloquentUser;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
@@ -192,13 +193,16 @@ class EloquentBattleRepository implements BattleRepositoryInterface
     private function mapUserToCharacter(EloquentUser $model): Character
     {
         // Copy-pasted/shared logic from EloquentCharacterRepository for now
-        $weaponType = $model->weapon;
-        if ($weaponType === 'sword') {
-            $weapon = new Weapon(1, 'Sword', 8, 14, DamageType::SLASHING, 0.0, 20, 0.50, 90);
-        } elseif ($weaponType === 'axe') {
-            $weapon = new Weapon(2, 'Axe', 8, 14, DamageType::CHOPPING, 0.0, 60, 0.65);
-        } else {
-            $weapon = new Weapon(0, 'Fists', 5, 10, DamageType::BLUNT, 0.0, 0, 0.10);
+        $weapon = null;
+        if ($model->weapon_id) {
+            $item = ItemModel::find($model->weapon_id);
+            if ($item && $item->type === 'weapon') {
+                $weapon = $this->resolveWeaponFromItem($item);
+            }
+        }
+
+        if (!$weapon) {
+            $weapon = $this->resolveWeaponByLegacyName($model->weapon);
         }
 
         $equipment = new Equipment();
@@ -221,4 +225,43 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             blockResistRating: 0, // populated from shield once that system exists
         );
     }
+
+    private function resolveWeaponFromItem(ItemModel $item): Weapon
+    {
+        return new Weapon(
+            id: $item->id,
+            name: $item->name,
+            minDamage: $item->min_damage,
+            maxDamage: $item->max_damage,
+            damageType: DamageType::from(strtolower($item->damage_type ?? 'blunt')),
+            accuracyBonus: $item->accuracy_bonus,
+            blockBreakRating: $item->block_break_rating,
+            pierceMultiplier: $item->pierce_multiplier,
+            maxDamageRating: $item->max_damage_rating
+        );
+    }
+
+    private function resolveWeaponByLegacyName(?string $weaponType): Weapon
+    {
+        if ($weaponType === 'sword') {
+            return new Weapon(1, 'Sword', 8, 14, DamageType::SLASHING, 0.0, 20, 0.50, 90);
+        }
+
+        if ($weaponType === 'axe') {
+            return new Weapon(2, 'Axe', 8, 14, DamageType::CHOPPING, 0.0, 60, 0.65);
+        }
+
+        return new Weapon(0, 'Fists', 5, 10, DamageType::BLUNT, 0.0, 0, 0.10);
+    }
+
+
+
+
+
+
+
+
+
+
+
 }

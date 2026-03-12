@@ -27,6 +27,7 @@ class BattleTest extends TestCase
 
         return new Character(
             id: $id,
+            userId: $id,
             name: "Char $id",
             strength: 10,
             agility: 10,
@@ -47,7 +48,7 @@ class BattleTest extends TestCase
 
     public function test_initial_state_is_active(): void
     {
-        $battle = new Battle(1, [
+        $battle = new Battle(1, 1, [
             $this->createMockCharacter(1),
             $this->createMockCharacter(2)
         ], $this->createDefaultMap());
@@ -59,7 +60,7 @@ class BattleTest extends TestCase
 
     public function test_start_resolving_transitions_to_resolving(): void
     {
-        $battle = new Battle(1, [
+        $battle = new Battle(1, 1, [
             $this->createMockCharacter(1),
             $this->createMockCharacter(2)
         ], $this->createDefaultMap());
@@ -70,7 +71,7 @@ class BattleTest extends TestCase
 
     public function test_start_resolving_fails_if_already_resolving(): void
     {
-        $battle = new Battle(1, [
+        $battle = new Battle(1, 1, [
             $this->createMockCharacter(1),
             $this->createMockCharacter(2)
         ], $this->createDefaultMap());
@@ -84,7 +85,7 @@ class BattleTest extends TestCase
 
     public function test_finish_resolving_transitions_back_to_active(): void
     {
-        $battle = new Battle(1, [
+        $battle = new Battle(1, 1, [
             $this->createMockCharacter(1),
             $this->createMockCharacter(2)
         ], $this->createDefaultMap());
@@ -100,7 +101,7 @@ class BattleTest extends TestCase
         $char1 = $this->createMockCharacter(1, 100);
         $char2 = $this->createMockCharacter(2, 0); // Already dead
 
-        $battle = new Battle(1, [$char1, $char2], $this->createDefaultMap());
+        $battle = new Battle(1, 1, [$char1, $char2], $this->createDefaultMap());
 
         $battle->startResolving();
         $battle->finishResolving();
@@ -111,7 +112,7 @@ class BattleTest extends TestCase
 
     public function test_cannot_commit_if_resolving(): void
     {
-        $battle = new Battle(1, [
+        $battle = new Battle(1, 1, [
             $this->createMockCharacter(1),
             $this->createMockCharacter(2)
         ], $this->createDefaultMap());
@@ -124,7 +125,7 @@ class BattleTest extends TestCase
 
     public function test_start_new_round_resets_state(): void
     {
-        $battle = new Battle(1, [
+        $battle = new Battle(1, 1, [
             $this->createMockCharacter(1),
             $this->createMockCharacter(2)
         ], $this->createDefaultMap());
@@ -143,7 +144,7 @@ class BattleTest extends TestCase
         $char1 = $this->createMockCharacter(1, 100);
         $char2 = $this->createMockCharacter(2, 0);
 
-        $battle = new Battle(1, [$char1, $char2], $this->createDefaultMap());
+        $battle = new Battle(1, 1, [$char1, $char2], $this->createDefaultMap());
         $battle->startResolving();
         $battle->finishResolving(); // FINISHED
 
@@ -154,7 +155,7 @@ class BattleTest extends TestCase
     public function test_cannot_move_outside_bounds(): void
     {
         $char = $this->createMockCharacter(1, 100, 0, 0);
-        $battle = new Battle(1, [$char, $this->createMockCharacter(2)], new Map(2, 2));
+        $battle = new Battle(1, 1, [$char, $this->createMockCharacter(2)], new Map(2, 2));
 
         $action = new TurnAction(1, ActionType::MOVE, null, 0, 0, -1, 0);
 
@@ -166,7 +167,7 @@ class BattleTest extends TestCase
     public function test_cannot_move_to_non_adjacent_tile(): void
     {
         $char = $this->createMockCharacter(1, 100, 0, 0);
-        $battle = new Battle(1, [$char, $this->createMockCharacter(2)], $this->createDefaultMap());
+        $battle = new Battle(1, 1, [$char, $this->createMockCharacter(2)], $this->createDefaultMap());
 
         $action = new TurnAction(1, ActionType::MOVE, null, 0, 0, 2, 0);
 
@@ -179,7 +180,7 @@ class BattleTest extends TestCase
     {
         $char1 = $this->createMockCharacter(1, 100, 0, 0);
         $char2 = $this->createMockCharacter(2, 100, 1, 0);
-        $battle = new Battle(1, [$char1, $char2], $this->createDefaultMap());
+        $battle = new Battle(1, 1, [$char1, $char2], $this->createDefaultMap());
 
         $action = new TurnAction(1, ActionType::MOVE, null, 0, 0, 1, 0);
 
@@ -192,7 +193,7 @@ class BattleTest extends TestCase
     {
         $char1 = $this->createMockCharacter(1, 100, 0, 0);
         $char2 = $this->createMockCharacter(2, 100, 5, 5);
-        $battle = new Battle(1, [$char1, $char2], $this->createDefaultMap());
+        $battle = new Battle(1, 1, [$char1, $char2], $this->createDefaultMap());
 
         $action = new TurnAction(1, ActionType::ATTACK, \App\Domain\Battle\TargetZone::HEAD);
 
@@ -205,7 +206,7 @@ class BattleTest extends TestCase
     {
         $char1 = $this->createMockCharacter(1, 100, 0, 0);
         $char2 = $this->createMockCharacter(2, 0, 1, 0); // Dead but adjacent
-        $battle = new Battle(1, [$char1, $char2], $this->createDefaultMap());
+        $battle = new Battle(1, 1, [$char1, $char2], $this->createDefaultMap());
 
         $action = new TurnAction(1, ActionType::ATTACK, \App\Domain\Battle\TargetZone::HEAD);
 
@@ -214,3 +215,5 @@ class BattleTest extends TestCase
         $battle->queueAction($action);
     }
 }
+
+

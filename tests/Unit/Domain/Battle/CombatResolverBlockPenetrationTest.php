@@ -27,7 +27,7 @@ class CombatResolverBlockPenetrationTest extends TestCase
      */
     private function makeResolver(
         BlockPenetrationService $bps,
-        MaxDamageService $mds = null,
+        ?MaxDamageService $mds = null,
         float $randomRoll = 0.5,
     ): CombatResolver {
         $mds = $mds ?? $this->createMock(MaxDamageService::class);
@@ -73,6 +73,7 @@ class CombatResolverBlockPenetrationTest extends TestCase
 
         return new Character(
             id: $id,
+            userId: $id,
             name: "Char$id",
             strength: 0,
             agility: 0,
@@ -161,3 +162,4 @@ class CombatResolverBlockPenetrationTest extends TestCase
         $this->assertFalse($result->isMiss);
     }
 }
+

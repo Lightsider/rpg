@@ -44,6 +44,7 @@ class EquipmentServiceTest extends TestCase
     {
         return new Character(
             id: 1,
+            userId: 1,
             name: "Hero",
             strength: 10,
             agility: 10,
@@ -99,3 +100,6 @@ class EquipmentServiceTest extends TestCase
         $this->assertCount(0, $this->service->getEquippedItems($character));
     }
 }
+
+
+

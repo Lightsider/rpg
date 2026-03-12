@@ -45,3 +45,18 @@ export const getFightLogs = async (fightId) => {
     const response = await api.get(`/fights/${fightId}/log`);
     return response.data;
 };
+
+export const getWeapons = async () => {
+    const response = await api.get('/weapons');
+    return response.data;
+};
+
+export const getCharacterLoadout = async () => {
+    const response = await api.get('/character/loadout');
+    return response.data;
+};
+
+export const updateCharacterLoadout = async (payload) => {
+    const response = await api.put('/character/loadout', payload);
+    return response.data;
+};

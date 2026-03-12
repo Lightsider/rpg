@@ -20,6 +20,7 @@ class CharacterTest extends TestCase
 
         return new Character(
             id: 1,
+            userId: 1,
             name: "Hero",
             strength: 10,
             agility: 10,
@@ -102,3 +103,6 @@ class CharacterTest extends TestCase
         $this->assertTrue($character->canQueueAttack());
     }
 }
+
+
+

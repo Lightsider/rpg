@@ -17,6 +17,7 @@ use App\Domain\Battle\BlockPenetration\BlockPenetrationConfig;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageConfig;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
+use App\Services\MovementResolver;
 use App\Domain\Character\Character;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
@@ -42,7 +43,8 @@ class CombatBalanceTest extends TestCase
         $combatResolver = new CombatResolver($bps, $mds);
 
         $repoMock = $this->createMock(BattleRepositoryInterface::class);
-        $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds);
+        $movementResolver = $this->createMock(MovementResolver::class);
+        $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds, $movementResolver);
     }
 
     private function createFighter(string $name, int $id, Weapon $weapon, int $x = 0, int $y = 0): Character
@@ -52,6 +54,7 @@ class CombatBalanceTest extends TestCase
 
         return new Character(
             id: $id,
+            userId: $id,
             name: $name,
             strength: 10,
             agility: 10,
@@ -105,7 +108,7 @@ class CombatBalanceTest extends TestCase
             $swordFighter = $this->createFighter('Sword', 1, $swordTemplate, 0, 0);
             $axeFighter = $this->createFighter('Axe', 2, $axeTemplate, 1, 0); // Start adjacent
 
-            $battle = new Battle($i + 1, [$swordFighter, $axeFighter], new Map(10, 10));
+            $battle = new Battle($i + 1, 1, [$swordFighter, $axeFighter], new Map(10, 10));
 
             // Loop until battle finishes
             while (!$battle->isFinished()) {
@@ -229,3 +232,5 @@ class CombatBalanceTest extends TestCase
         $this->assertTrue(true); // Dummy assertion to fulfill PHPUnit test requirement
     }
 }
+
+

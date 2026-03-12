@@ -24,7 +24,9 @@ const logRef = ref(null);
 const actionPanelRef = ref(null);
 
 const selectedTile = ref(null);
+const selectedEnemy = ref(null);
 const selectedBlocks = ref([]);
+const actionMode = ref('none');
 
 let pollInterval = null;
 
@@ -54,8 +56,32 @@ const moveCost = computed(() => {
 });
 
 const apAvailableForQueue = computed(() => {
-    return Math.max(0, apAvailable.value - moveCost.value);
+    if (actionMode.value === 'move') {
+        return Math.max(0, apAvailable.value - moveCost.value);
+    }
+    return apAvailable.value;
 });
+
+const positionsMap = computed(() => {
+    const map = new Map();
+    if (!fightState.value?.positions) return map;
+    for (const pos of fightState.value.positions) {
+        map.set(`${pos.x},${pos.y}`, pos.character_id);
+    }
+    return map;
+});
+
+const getCharacterAt = (tile) => {
+    if (!tile) return null;
+    return positionsMap.value.get(`${tile.x},${tile.y}`) || null;
+};
+
+const isAdjacentToMe = (tile) => {
+    if (!myPosition.value || !tile) return false;
+    const dx = Math.abs(myPosition.value.x - tile.x);
+    const dy = Math.abs(myPosition.value.y - tile.y);
+    return dx <= 1 && dy <= 1 && (dx + dy > 0);
+};
 
 const fetchState = async () => {
     try {
@@ -67,7 +93,9 @@ const fetchState = async () => {
         if (oldRound !== undefined && oldRound !== data.round) {
             if (logRef.value) logRef.value.refresh();
             selectedTile.value = null;
+            selectedEnemy.value = null;
             selectedBlocks.value = [];
+            actionMode.value = 'none';
             if (actionPanelRef.value) actionPanelRef.value.clearQueue();
         }
 
@@ -92,7 +120,13 @@ const fetchState = async () => {
 };
 
 const handleQueueSubmit = async (queuedActions) => {
-    const moveAction = selectedTile.value
+    const attackCount = queuedActions.filter(action => action.type === 'attack').length;
+    if (attackCount > 2) {
+        alert('Maximum 2 attacks per round.');
+        return;
+    }
+
+    const moveAction = actionMode.value === 'move' && selectedTile.value
         ? {
             type: 'move',
             target: { x: selectedTile.value.x, y: selectedTile.value.y },
@@ -120,7 +154,9 @@ const handleQueueSubmit = async (queuedActions) => {
 
         if (actionPanelRef.value) actionPanelRef.value.clearQueue();
         selectedTile.value = null;
+        selectedEnemy.value = null;
         selectedBlocks.value = [];
+        actionMode.value = 'none';
 
         setTimeout(() => {
             if (logRef.value) logRef.value.refresh();
@@ -144,12 +180,43 @@ const handleCancelFight = async () => {
     }
 };
 
+const clearSelection = () => {
+    selectedTile.value = null;
+    selectedEnemy.value = null;
+    selectedBlocks.value = [];
+    actionMode.value = 'none';
+};
+
 const handleTileSelected = (tile) => {
     if (!myPosition.value) return;
-    const dx = Math.abs(myPosition.value.x - tile.x);
-    const dy = Math.abs(myPosition.value.y - tile.y);
-    if (dx <= 1 && dy <= 1 && (dx + dy > 0)) {
+
+    if (selectedTile.value && selectedTile.value.x === tile.x && selectedTile.value.y === tile.y) {
+        clearSelection();
+        return;
+    }
+
+    if (selectedEnemy.value && selectedEnemy.value.x === tile.x && selectedEnemy.value.y === tile.y) {
+        clearSelection();
+        return;
+    }
+
+    if (!isAdjacentToMe(tile)) {
+        return;
+    }
+
+    const characterId = getCharacterAt(tile);
+    if (characterId && characterId !== myCharacterId.value) {
+        selectedEnemy.value = tile;
+        selectedTile.value = null;
+        selectedBlocks.value = [];
+        actionMode.value = 'attack';
+        return;
+    }
+
+    if (!characterId) {
         selectedTile.value = tile;
+        selectedEnemy.value = null;
+        actionMode.value = 'move';
     }
 };
 
@@ -279,12 +346,13 @@ const formatTime = (seconds) => {
                             </div>
                             
                             <div v-else class="space-y-6">
-                                <div class="bg-white rounded-lg p-4 shadow-sm border">
+                                <div v-if="actionMode === 'move'" class="bg-white rounded-lg p-4 shadow-sm border">
                                     <h3 class="font-bold text-lg mb-3">Movement</h3>
                                     <div class="text-sm text-gray-600">Selected move</div>
-                                    <div class="text-lg font-semibold mb-3">
+                                    <div class="text-lg font-semibold mb-3 flex items-center gap-3">
                                         <span v-if="selectedTile">({{ selectedTile.x }}, {{ selectedTile.y }})</span>
                                         <span v-else class="text-gray-400">No tile selected</span>
+                                        <button v-if="selectedTile" @click="clearSelection" class="text-xs text-blue-600 hover:underline">Clear Move</button>
                                     </div>
 
                                     <div class="text-sm text-gray-600 mb-2">Blocks during move (optional)</div>
@@ -296,12 +364,26 @@ const formatTime = (seconds) => {
                                     </div>
                                 </div>
 
+                                <div v-else-if="actionMode === 'attack'" class="bg-white rounded-lg p-4 shadow-sm border">
+                                    <h3 class="font-bold text-lg mb-3">Attack / Defense</h3>
+                                    <div class="text-sm text-gray-600 mb-2">Target</div>
+                                    <div class="text-lg font-semibold flex items-center gap-3">
+                                        <span v-if="selectedEnemy">Enemy at ({{ selectedEnemy.x }}, {{ selectedEnemy.y }})</span>
+                                        <button v-if="selectedEnemy" @click="clearSelection" class="text-xs text-blue-600 hover:underline">Clear Target</button>
+                                    </div>
+                                </div>
+
                                 <FightActionPanel
+                                    v-if="actionMode !== 'none'"
                                     ref="actionPanelRef"
                                     :apAvailable="apAvailableForQueue"
                                     :disabled="submitting"
                                     @submitActions="handleQueueSubmit"
                                 />
+
+                                <div v-else class="text-sm text-gray-500 bg-gray-50 border border-dashed rounded p-4">
+                                    Select an empty adjacent tile to move, or click an adjacent enemy to attack/defend.
+                                </div>
                             </div>
                         </template>
 

@@ -5,6 +5,7 @@ use App\Http\Controllers\GameController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\FightController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CharacterLoadoutController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -22,6 +23,9 @@ Route::middleware(['auth'])->group(function () {
     // JSON API Endpoints
     Route::prefix('api')->group(function () {
         Route::get('/game', [GameController::class, 'index'])->name('api.game.index');
+        Route::get('/character/loadout', [CharacterLoadoutController::class, 'loadout'])->name('api.character.loadout');
+        Route::put('/character/loadout', [CharacterLoadoutController::class, 'update'])->name('api.character.update_loadout');
+        Route::get('/weapons', [CharacterLoadoutController::class, 'weapons'])->name('api.weapons.index');
         Route::get('/locations', [LocationController::class, 'index'])->name('api.locations.index');
         Route::get('/locations/{id}', [LocationController::class, 'show'])->name('api.locations.show');
 
@@ -57,3 +61,6 @@ Route::middleware('auth')->group(function () {
 Route::get('/ping', fn() => 'pong');
 
 require __DIR__ . '/auth.php';
+
+
+

@@ -57,6 +57,7 @@ class BlockPenetrationServiceTest extends TestCase
 
         return new Character(
             id: $id,
+            userId: $id,
             name: "Char$id",
             strength: 0,
             agility: 0,
@@ -289,3 +290,4 @@ class BlockPenetrationServiceTest extends TestCase
         $this->assertInstanceOf(BlockPenetrationResult::class, $result);
     }
 }
+

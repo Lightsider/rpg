@@ -62,6 +62,23 @@ class QueueDefenseAction
                 throw new DomainException('Character lacks Action Points to defend.');
             }
 
+            $existingBlockZones = [];
+            foreach ($battle->getQueuedActionsForCharacter($characterId) as $queuedAction) {
+                if ($queuedAction->getType() === ActionType::DEFEND && $queuedAction->getTargetZone() !== null) {
+                    $existingBlockZones[] = $queuedAction->getTargetZone()->value;
+                }
+
+                if ($queuedAction->getType() === ActionType::MOVE) {
+                    foreach ($queuedAction->getBlocks() as $blockZone) {
+                        $existingBlockZones[] = $blockZone;
+                    }
+                }
+            }
+
+            if (in_array($targetZone, $existingBlockZones, true)) {
+                throw new DomainException('Duplicate block zones are not allowed.');
+            }
+
             // 5. Spend 1 AP
             $character->spendAP(self::DEFENSE_AP_COST);
 
@@ -80,3 +97,7 @@ class QueueDefenseAction
         });
     }
 }
+
+
+
+

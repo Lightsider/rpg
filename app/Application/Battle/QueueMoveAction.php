@@ -64,9 +64,26 @@ class QueueMoveAction
             if (count($blocks) !== count($uniqueBlocks)) {
                 throw new DomainException('Duplicate block zones are not allowed.');
             }
-
             foreach ($blocks as $zone) {
                 TargetZone::from($zone);
+            }
+
+            $existingBlockZones = [];
+            foreach ($battle->getQueuedActionsForCharacter($characterId) as $queuedAction) {
+                if ($queuedAction->getType() === ActionType::DEFEND && $queuedAction->getTargetZone() !== null) {
+                    $existingBlockZones[] = $queuedAction->getTargetZone()->value;
+                }
+
+                if ($queuedAction->getType() === ActionType::MOVE) {
+                    foreach ($queuedAction->getBlocks() as $blockZone) {
+                        $existingBlockZones[] = $blockZone;
+                    }
+                }
+            }
+            foreach ($blocks as $zone) {
+                if (in_array($zone, $existingBlockZones, true)) {
+                    throw new DomainException('Duplicate block zones are not allowed.');
+                }
             }
 
             $totalCost = self::MOVE_AP_COST + count($blocks);
@@ -96,3 +113,8 @@ class QueueMoveAction
         });
     }
 }
+
+
+
+
+

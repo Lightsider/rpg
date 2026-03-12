@@ -159,6 +159,16 @@ class Battle implements \JsonSerializable
             if ($dx > 1 || $dy > 1) {
                 throw new \App\Domain\DomainException('Target cell is not adjacent.');
             }
+
+            foreach ($this->participants as $participant) {
+                if ($participant->getId() === $character->getId()) {
+                    continue;
+                }
+
+                if ($participant->getX() === $toX && $participant->getY() === $toY) {
+                    throw new \App\Domain\DomainException('Target cell is occupied.');
+                }
+            }
         }
 
         if ($action->getType() === ActionType::ATTACK) {
@@ -338,3 +348,5 @@ class Battle implements \JsonSerializable
         ];
     }
 }
+
+

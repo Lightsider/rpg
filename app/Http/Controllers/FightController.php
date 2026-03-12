@@ -10,6 +10,7 @@ use App\Application\Battle\QueueDefenseAction;
 use App\Application\Battle\QueueMoveAction;
 use App\Application\Battle\CommitRoundAction;
 use App\Application\Battle\LeaveWaitingBattleAction;
+use App\Application\Battle\RoundExpirationHandler;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\Battle;
@@ -35,6 +36,7 @@ class FightController extends Controller
         private readonly QueueMoveAction $queueMoveAction,
         private readonly CommitRoundAction $commitRoundAction,
         private readonly LeaveWaitingBattleAction $leaveWaitingBattleAction,
+        private readonly RoundExpirationHandler $roundExpirationHandler,
         private readonly MapGenerator $mapGenerator
     ) {
     }
@@ -147,6 +149,8 @@ class FightController extends Controller
 
     public function show(int $id): JsonResponse
     {
+        $this->roundExpirationHandler->handleExpiredRounds();
+
         $battle = $this->battleRepository->findById($id);
 
         if (!$battle) {
@@ -216,6 +220,8 @@ class FightController extends Controller
 
     public function submitActions(int $id, SubmitActionsRequest $request): JsonResponse
     {
+        $this->roundExpirationHandler->handleExpiredRounds();
+
         $validated = $request->validated();
 
         $battle = $this->battleRepository->findById($id);

@@ -2,10 +2,42 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
-import { getGameState, getAvailableFights, createFight, joinFight, cancelFight } from '@/api/gameApi';
+import {
+    getGameState,
+    getAvailableFights,
+    createFight,
+    joinFight,
+    cancelFight,
+    getWeapons,
+    getCharacterLoadout,
+    updateCharacterLoadout,
+} from '@/api/gameApi';
 
 const gameState = ref(null);
 const fights = ref([]);
+const weapons = ref([]);
+const loadout = ref({
+    stats: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        wit: 10,
+    },
+    weapon_id: null,
+    can_edit: true,
+    blocked_reason: null,
+});
+const loadoutForm = ref({
+    strength: 10,
+    dexterity: 10,
+    constitution: 10,
+    wit: 10,
+    weapon_id: null,
+});
+const loadoutErrors = ref({});
+const loadoutMessage = ref('');
+const savingLoadout = ref(false);
+
 const loading = ref(true);
 const error = ref('');
 
@@ -23,6 +55,66 @@ const fetchGameData = async () => {
         }
     } finally {
         loading.value = false;
+    }
+};
+
+const fetchLoadoutData = async () => {
+    try {
+        const [weaponList, loadoutData] = await Promise.all([
+            getWeapons(),
+            getCharacterLoadout(),
+        ]);
+        weapons.value = weaponList;
+        loadout.value = loadoutData;
+        loadoutForm.value = {
+            strength: loadoutData.stats.strength,
+            dexterity: loadoutData.stats.dexterity,
+            constitution: loadoutData.stats.constitution,
+            wit: loadoutData.stats.wit,
+            weapon_id: loadoutData.weapon_id,
+        };
+    } catch (e) {
+        loadoutErrors.value = { general: e.response?.data?.error || 'Failed to load loadout data.' };
+    }
+};
+
+const handleSaveLoadout = async () => {
+    loadoutErrors.value = {};
+    loadoutMessage.value = '';
+    savingLoadout.value = true;
+
+    try {
+        const payload = {
+            strength: loadoutForm.value.strength,
+            dexterity: loadoutForm.value.dexterity,
+            constitution: loadoutForm.value.constitution,
+            wit: loadoutForm.value.wit,
+            weapon_id: loadoutForm.value.weapon_id,
+        };
+
+        const response = await updateCharacterLoadout(payload);
+        if (response.character) {
+            gameState.value.character = response.character;
+        }
+
+        loadoutForm.value = {
+            strength: response.stats.strength,
+            dexterity: response.stats.dexterity,
+            constitution: response.stats.constitution,
+            wit: response.stats.wit,
+            weapon_id: response.weapon_id,
+        };
+
+        loadoutMessage.value = 'Loadout updated.';
+        await fetchGameData();
+    } catch (e) {
+        if (e.response?.status === 422) {
+            loadoutErrors.value = e.response.data.errors || {};
+        } else {
+            loadoutErrors.value = { general: e.response?.data?.error || 'Failed to update loadout.' };
+        }
+    } finally {
+        savingLoadout.value = false;
     }
 };
 
@@ -49,6 +141,7 @@ const handleCancelFight = async () => {
     try {
         await cancelFight(gameState.value.currentFight.id);
         await fetchGameData();
+        await fetchLoadoutData();
     } catch (e) {
         alert(e.response?.data?.error || 'Failed to cancel fight');
     }
@@ -59,8 +152,9 @@ const openCurrentFight = () => {
     router.visit(route('fight.view', gameState.value.currentFight.id));
 };
 
-onMounted(() => {
-    fetchGameData();
+onMounted(async () => {
+    await fetchGameData();
+    await fetchLoadoutData();
 });
 
 </script>
@@ -103,7 +197,100 @@ onMounted(() => {
                                 </div>
                                 <div>
                                     <span class="text-gray-500 text-sm">Weapon</span>
-                                    <div class="capitalize">{{ gameState.character.weapon.name }}</div>
+                                    <div class="capitalize">{{ typeof gameState.character.weapon === 'string' ? gameState.character.weapon : gameState.character.weapon?.name }}</div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 border-t pt-4">
+                                <h4 class="text-sm font-semibold uppercase text-gray-500 mb-2">Edit Loadout</h4>
+
+                                <div v-if="!loadout.can_edit" class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3 mb-3">
+                                    {{ loadout.blocked_reason || 'Loadout editing is unavailable right now.' }}
+                                </div>
+
+                                <div v-if="loadoutErrors.general" class="text-sm text-red-600 mb-2">
+                                    {{ loadoutErrors.general }}
+                                </div>
+
+                                <div v-if="loadoutMessage" class="text-sm text-green-600 mb-2">
+                                    {{ loadoutMessage }}
+                                </div>
+
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Strength</label>
+                                        <input
+                                            v-model.number="loadoutForm.strength"
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            class="w-full rounded border-gray-300 text-sm"
+                                            :disabled="!loadout.can_edit || savingLoadout"
+                                        />
+                                        <div v-if="loadoutErrors.strength" class="text-xs text-red-600 mt-1">{{ loadoutErrors.strength[0] }}</div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Dexterity</label>
+                                        <input
+                                            v-model.number="loadoutForm.dexterity"
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            class="w-full rounded border-gray-300 text-sm"
+                                            :disabled="!loadout.can_edit || savingLoadout"
+                                        />
+                                        <div v-if="loadoutErrors.dexterity" class="text-xs text-red-600 mt-1">{{ loadoutErrors.dexterity[0] }}</div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Constitution</label>
+                                        <input
+                                            v-model.number="loadoutForm.constitution"
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            class="w-full rounded border-gray-300 text-sm"
+                                            :disabled="!loadout.can_edit || savingLoadout"
+                                        />
+                                        <div v-if="loadoutErrors.constitution" class="text-xs text-red-600 mt-1">{{ loadoutErrors.constitution[0] }}</div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Wit</label>
+                                        <input
+                                            v-model.number="loadoutForm.wit"
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            class="w-full rounded border-gray-300 text-sm"
+                                            :disabled="!loadout.can_edit || savingLoadout"
+                                        />
+                                        <div v-if="loadoutErrors.wit" class="text-xs text-red-600 mt-1">{{ loadoutErrors.wit[0] }}</div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Weapon</label>
+                                        <select
+                                            v-model="loadoutForm.weapon_id"
+                                            class="w-full rounded border-gray-300 text-sm"
+                                            :disabled="!loadout.can_edit || savingLoadout"
+                                        >
+                                            <option :value="null">Unarmed</option>
+                                            <option v-for="weapon in weapons" :key="weapon.id" :value="weapon.id">
+                                                {{ weapon.name }} ({{ weapon.min_damage }}-{{ weapon.max_damage }})
+                                            </option>
+                                        </select>
+                                        <div v-if="loadoutErrors.weapon_id" class="text-xs text-red-600 mt-1">{{ loadoutErrors.weapon_id[0] }}</div>
+                                    </div>
+
+                                    <button
+                                        @click="handleSaveLoadout"
+                                        class="w-full bg-gray-900 hover:bg-gray-800 text-white py-2 rounded text-sm font-semibold disabled:opacity-60"
+                                        :disabled="!loadout.can_edit || savingLoadout"
+                                    >
+                                        {{ savingLoadout ? 'Saving...' : 'Save Loadout' }}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -188,4 +375,3 @@ onMounted(() => {
         </div>
     </AuthenticatedLayout>
 </template>
-
