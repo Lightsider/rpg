@@ -40,11 +40,13 @@ const getZoneDisplay = (zone) => {
 
 const getActionIcon = (type) => {
     switch (type) {
-        case 'hit': return 'HIT';
-        case 'miss': return 'MISS';
-        case 'block': return 'BLOCK';
-        case 'move': return 'MOVE';
-        case 'death': return 'DEATH';
+        case 'hit': return '💥';
+        case 'max_damage': return '⚡';
+        case 'miss': return '❌';
+        case 'block': return '🛡️';
+        case 'block_break': return '💢';
+        case 'move': return '👟';
+        case 'death': return '💀';
         default: return 'EVENT';
     }
 };
@@ -65,8 +67,16 @@ const getActionIcon = (type) => {
                 <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Round {{ roundGroup.round }}</div>
                 
                 <ul class="space-y-1">
-                    <li v-for="event in roundGroup.events" :key="event.occurred_at + '-' + event.actor_id" class="text-sm p-2 bg-white rounded shadow-sm border border-gray-100 flex items-start gap-2">
-                        <span class="text-xs leading-none font-semibold text-gray-500" :title="event.type">{{ getActionIcon(event.type) }}</span>
+                    <li v-for="event in roundGroup.events" :key="event.occurred_at + '-' + event.actor_id" 
+                        class="text-sm p-2 bg-white rounded shadow-sm border flex items-start gap-2"
+                        :class="{
+                            'border-red-300 bg-red-50': event.type === 'hit' || event.type === 'max_damage',
+                            'border-orange-300 bg-orange-50': event.type === 'block_break',
+                            'border-green-300 bg-green-50': event.type === 'block',
+                            'border-gray-200': event.type === 'miss' || event.type === 'move',
+                            'border-purple-300 bg-purple-50': event.type === 'death'
+                        }">
+                        <span class="text-lg leading-none font-semibold" :title="event.type">{{ getActionIcon(event.type) }}</span>
                         <div class="flex-1">
                             <span v-if="event.type === 'hit'">
                                 Player <span class="font-bold">{{ event.actor_id }}</span> hit Player <span class="font-bold">{{ event.target_id }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
@@ -76,6 +86,12 @@ const getActionIcon = (type) => {
                             </span>
                             <span v-else-if="event.type === 'block'">
                                 Player <span class="font-bold">{{ event.actor_id }}</span> blocked an attack from Player <span class="font-bold">{{ event.target_id }}</span>. <span v-if="event.damage > 0">(Took {{ event.damage }} partial damage)</span>
+                            </span>
+                            <span v-else-if="event.type === 'block_break'">
+                                Player <span class="font-bold">{{ event.actor_id }}</span> <span class="text-orange-600 font-bold">BROKE BLOCK</span> of Player <span class="font-bold">{{ event.target_id }}</span>! Dealt <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
+                            </span>
+                            <span v-else-if="event.type === 'max_damage'">
+                                Player <span class="font-bold">{{ event.actor_id }}</span> landed a <span class="text-yellow-600 font-bold">MAX DAMAGE</span> hit on Player <span class="font-bold">{{ event.target_id }}</span> for <span class="text-red-600 font-bold text-lg">{{ event.damage }}</span> damage!
                             </span>
                             <span v-else-if="event.type === 'move'">
                                 Player <span class="font-bold">{{ event.actor_id }}</span> moved.

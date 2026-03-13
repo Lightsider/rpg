@@ -16,8 +16,6 @@ use App\Domain\Character\Character;
  */
 class CombatResolver
 {
-    private const float BASE_HIT_CHANCE = 0.8;
-
     public function __construct(
         private readonly BlockPenetrationService $blockPenetrationService,
         private readonly MaxDamageService $maxDamageService,
@@ -37,22 +35,16 @@ class CombatResolver
             return new AttackResult(0, false, true, false, $damageType);
         }
 
-        // 2. Calculate hit chance
-        $hitChance = self::BASE_HIT_CHANCE + $weapon->getAccuracyBonus();
-        if ($this->getRandom() > $hitChance) {
-            return new AttackResult(0, false, false, true, $damageType);
-        }
-
-        // 3. Roll damage
+        // 2. Roll damage
         $maxDamageProc = $this->maxDamageService->checkMaxDamage($attacker);
         $damage = (float) ($maxDamageProc->triggered
             ? $weapon->getMaxDamage()
             : $weapon->rollBaseDamage());
 
-        // 4. Add strength bonus
+        // 3. Add strength bonus
         $damage += $attacker->calculateStrengthBonus();
 
-        // 5. Check critical
+        // 4. Check critical
         $isCritical = false;
         if ($this->getRandom() < $attacker->calculateCritChance()) {
             $damage *= $attacker->calculateCritMultiplier();
@@ -61,7 +53,7 @@ class CombatResolver
 
         $baseDamage = (int) round($damage);
 
-        // 6. If blocked – delegate entirely to BlockPenetrationService
+        // 5. If blocked – delegate entirely to BlockPenetrationService
         if ($isBlocked) {
             $penetrationResult = $this->blockPenetrationService->checkBlockBreak(
                 $attacker,
@@ -76,10 +68,11 @@ class CombatResolver
                 isMiss: false,
                 damageType: $damageType,
                 isPierced: $penetrationResult->penetrated,
+                isMaxDamage: $maxDamageProc->triggered,
             );
         }
 
-        return new AttackResult($baseDamage, $isCritical, false, false, $damageType);
+        return new AttackResult($baseDamage, $isCritical, false, false, $damageType, false, $maxDamageProc->triggered);
     }
 
     /**

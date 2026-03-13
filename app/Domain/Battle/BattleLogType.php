@@ -12,6 +12,8 @@ enum BattleLogType: string
     case MOVE = 'move';
     case HIT = 'hit';
     case BLOCK = 'block';
+    case BLOCK_BREAK = 'block_break';
+    case MAX_DAMAGE = 'max_damage';
     case MISS = 'miss';
     case DEATH = 'death';
 }

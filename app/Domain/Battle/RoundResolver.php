@@ -146,10 +146,32 @@ class RoundResolver implements RoundResolverInterface
                         targetId: $attackerId,
                         zone: $action->getTargetZone()
                     );
-                } else {
+                } elseif ($result->isPierced) {
+                    // Block was broken (penetrated)
                     $logs[] = new BattleLogEntry(
                         roundNumber: $battle->getRoundNumber(),
-                        type: BattleLogType::HIT,
+                        type: BattleLogType::BLOCK_BREAK,
+                        actorId: $attackerId,
+                        targetId: $defender->getId(),
+                        zone: $action->getTargetZone(),
+                        damage: $result->damage
+                    );
+                    // Also log max_damage if it triggered
+                    if ($result->isMaxDamage) {
+                        $logs[] = new BattleLogEntry(
+                            roundNumber: $battle->getRoundNumber(),
+                            type: BattleLogType::MAX_DAMAGE,
+                            actorId: $attackerId,
+                            targetId: $defender->getId(),
+                            zone: $action->getTargetZone(),
+                            damage: $result->damage
+                        );
+                    }
+                } else {
+                    $logType = $result->isMaxDamage ? BattleLogType::MAX_DAMAGE : BattleLogType::HIT;
+                    $logs[] = new BattleLogEntry(
+                        roundNumber: $battle->getRoundNumber(),
+                        type: $logType,
                         actorId: $attackerId,
                         targetId: $defender->getId(),
                         zone: $action->getTargetZone(),

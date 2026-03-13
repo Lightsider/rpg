@@ -37,7 +37,7 @@ class CombatBalanceTest extends TestCase
         $bpsConfig = new BlockPenetrationConfig(120, 0.95, 0.3);
         $bps = new BlockPenetrationService($bpsConfig);
 
-        $mdsConfig = new MaxDamageConfig(150, 0.80, 0.25);
+        $mdsConfig = new MaxDamageConfig(300, 0.80, 0.20);
         $mds = new MaxDamageService($mdsConfig);
 
         $combatResolver = new CombatResolver($bps, $mds);
@@ -57,25 +57,24 @@ class CombatBalanceTest extends TestCase
             userId: $id,
             name: $name,
             strength: 10,
-            agility: 10,
+            agility: 0,
             constitution: 10,
-            wit: 10,
-            maxHp: 200,
-            currentHp: 200, // Make them a bit tankier for more data
+            wit: 0,
+            maxHp: 70,
+            currentHp: 70, 
             equipment: $equipment,
             maxActionPoints: 3,
             currentActionPoints: 3,
             attackPointsUsed: 0,
             x: $x,
             y: $y,
-            blockResistRating: 30 // Give some basic resist to everyone to trigger penetration logic
+            blockResistRating: 0
         );
     }
 
-    #[Group('balance')]
     public function test_sword_vs_axe_balance()
     {
-        $totalBattles = 100;
+        $totalBattles = 1000;
 
         $swordWins = 0;
         $axeWins = 0;
