@@ -28,4 +28,40 @@ return [
         'prng_scale' => 0.25,
         'debug' => env('COMBAT_MAX_DAMAGE_DEBUG', false),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dodge Settings
+    |--------------------------------------------------------------------------
+    |
+    | K controls the rating-to-probability curve for dodge.
+    | Higher K makes it harder to achieve high dodge chances.
+    |
+    | Formula: chance = dodge_rating / (dodge_rating + K)
+    |
+    */
+    'dodge' => [
+        'k' => env('COMBAT_DODGE_K', 150),
+        'max_final_chance' => 0.80,
+        'prng_scale' => 0.25,
+        'debug' => env('COMBAT_DODGE_DEBUG', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Critical Hit Settings
+    |--------------------------------------------------------------------------
+    |
+    | K controls the rating-to-probability curve for critical hits.
+    | Higher K makes it harder to achieve high crit chances.
+    |
+    | Formula: chance = crit_rating / (crit_rating + K)
+    |
+    */
+    'critical_hit' => [
+        'k' => env('COMBAT_CRIT_K', 150),
+        'max_final_chance' => 0.80,
+        'prng_scale' => 0.25,
+        'debug' => env('COMBAT_CRIT_DEBUG', false),
+    ],
 ];

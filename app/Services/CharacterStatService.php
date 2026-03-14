@@ -17,6 +17,6 @@ class CharacterStatService
             throw new DomainException('HP configuration is missing or invalid.');
         }
 
-        return (int) $baseHp + ($con * (int) $hpPerCon);
+        return (int) ceil($baseHp + ($con * $hpPerCon));
     }
 }

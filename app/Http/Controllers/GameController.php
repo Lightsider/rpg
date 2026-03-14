@@ -37,6 +37,20 @@ class GameController extends Controller
         // Load or create character
         $character = $this->characterRepository->findByUserId($user->id);
 
+        if ($character && $character->getMaxHp() !== $user->max_hp) {
+            // Synchronize if they diverged (e.g. manual DB update or config change)
+            \App\Infrastructure\Eloquent\Models\CharacterModel::where('id', $character->getId())
+                ->update(['max_hp' => $user->max_hp]);
+            
+            // Also restore current HP if it's now higher than new max (optional, but safe)
+            if ($character->getCurrentHp() > $user->max_hp) {
+                 \App\Infrastructure\Eloquent\Models\CharacterModel::where('id', $character->getId())
+                     ->update(['hp' => $user->max_hp]);
+            }
+            
+            $character = $this->characterRepository->findByUserId($user->id);
+        }
+        
         if (!$character) {
             $defaultStats = [
                 'str' => 5,

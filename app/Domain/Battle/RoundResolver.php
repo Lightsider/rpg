@@ -211,6 +211,14 @@ class RoundResolver implements RoundResolverInterface
         if ($battle->isFinished()) {
             $this->blockPenetrationService->resetAllCounters();
             $this->maxDamageService->resetAllCounters();
+
+            // Restore HP to max for all participants after battle ends
+            foreach ($participants as $participant) {
+                $participant->restoreHp();
+            }
+
+            // Save the battle with restored HP to database
+            $this->battleRepository->save($battle);
         }
 
         return new RoundResolutionResult($logs);

@@ -244,14 +244,14 @@ class EloquentBattleRepository implements BattleRepositoryInterface
     private function resolveWeaponByLegacyName(?string $weaponType): Weapon
     {
         if ($weaponType === 'sword') {
-            return new Weapon(1, 'Sword', 8, 14, DamageType::SLASHING, 0.0, 20, 0.50, 90);
+            return new Weapon(1, 'Sword', 3, 7, DamageType::SLASHING, 0.0, 20, 0.50, 90);
         }
 
         if ($weaponType === 'axe') {
-            return new Weapon(2, 'Axe', 8, 14, DamageType::CHOPPING, 0.0, 60, 0.65);
+            return new Weapon(2, 'Axe', 3, 7, DamageType::CHOPPING, 0.0, 60, 0.65);
         }
 
-        return new Weapon(0, 'Fists', 5, 10, DamageType::BLUNT, 0.0, 0, 0.10);
+        return new Weapon(0, 'Fists', 1, 3, DamageType::BLUNT, 0.0, 0, 0.10);
     }
 
 

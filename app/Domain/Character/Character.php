@@ -17,8 +17,8 @@ class Character implements \JsonSerializable
 
     public const int MAX_ATTACKS_PER_TURN = 2;
 
-    private const float DODGE_CHANCE_PER_AGILITY = 0.02;
-    private const float CRIT_CHANCE_PER_WIT = 0.02;
+    private const float DODGE_CHANCE_PER_AGILITY = 0.045;
+    private const float CRIT_CHANCE_PER_WIT = 0.05;
     private const float BASE_CRIT_MULTIPLIER = 1.5;
     private const float CRIT_MULTIPLIER_PER_WIT = 0.05;
     private const float STRENGTH_BONUS_MULTIPLIER = 0.5;
@@ -42,6 +42,9 @@ class Character implements \JsonSerializable
         private int $y = 0,
         private bool $isCommitted = false,
         private readonly int $blockResistRating = 0,
+        // PRNG failure streaks
+        private int $dodgeFailStreak = 0,
+        private int $critFailStreak = 0,
     ) {
     }
 
@@ -133,6 +136,49 @@ class Character implements \JsonSerializable
         $this->isCommitted = false;
     }
 
+    // -------------------------------------------------------------------------
+    // PRNG Failure Streak Management
+    // -------------------------------------------------------------------------
+
+    public function getDodgeFailStreak(): int
+    {
+        return $this->dodgeFailStreak;
+    }
+
+    public function resetDodgeFailStreak(): void
+    {
+        $this->dodgeFailStreak = 0;
+    }
+
+    public function incrementDodgeFailStreak(): void
+    {
+        $this->dodgeFailStreak++;
+    }
+
+    public function getCritFailStreak(): int
+    {
+        return $this->critFailStreak;
+    }
+
+    public function resetCritFailStreak(): void
+    {
+        $this->critFailStreak = 0;
+    }
+
+    public function incrementCritFailStreak(): void
+    {
+        $this->critFailStreak++;
+    }
+
+    /**
+     * Reset all PRNG failure streaks. Call this when combat ends.
+     */
+    public function resetAllFailStreaks(): void
+    {
+        $this->dodgeFailStreak = 0;
+        $this->critFailStreak = 0;
+    }
+
     public function calculateDodgeChance(): float
     {
         return $this->agility * self::DODGE_CHANCE_PER_AGILITY;
@@ -220,6 +266,14 @@ class Character implements \JsonSerializable
     public function setCurrentHp(int $hp): void
     {
         $this->currentHp = $hp;
+    }
+
+    /**
+     * Restore HP to maximum value. Called after battle ends.
+     */
+    public function restoreHp(): void
+    {
+        $this->currentHp = $this->maxHp;
     }
 
     /**

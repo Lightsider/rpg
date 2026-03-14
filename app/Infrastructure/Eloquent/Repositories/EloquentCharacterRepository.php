@@ -16,11 +16,6 @@ use App\Infrastructure\Eloquent\Models\ItemModel;
 
 class EloquentCharacterRepository implements CharacterRepositoryInterface
 {
-    private const float DEFAULT_ACCURACY_BONUS = 0.0;
-    private const int DEFAULT_BLOCK_BREAK_RATING = 0;
-    private const float DEFAULT_PIERCE_MULTIPLIER = 0.1;
-    private const int DEFAULT_MAX_DAMAGE_RATING = 0;
-
     public function findById(int $id): ?Character
     {
         $model = CharacterModel::with('user.weaponItem')->find($id);
@@ -104,15 +99,15 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
 
     private function resolveWeaponByLegacyName(?string $weaponType): Weapon
     {
-        // Fallback
+        // Fallback - matching WeaponSeeder values
         if ($weaponType === 'sword') {
-            return new Weapon(1, 'Sword', 8, 14, DamageType::SLASHING, 0.0, 20, 0.50, 90);
+            return new Weapon(1, 'Sword', 3, 7, DamageType::SLASHING, 0.0, 20, 0.50, 90);
         }
 
         if ($weaponType === 'axe') {
-            return new Weapon(2, 'Axe', 8, 14, DamageType::CHOPPING, 0.0, 60, 0.65);
+            return new Weapon(2, 'Axe', 3, 7, DamageType::CHOPPING, 0.0, 60, 0.65);
         }
 
-        return new Weapon(0, 'Fists', 5, 10, DamageType::BLUNT, 0.0, 0, 0.10);
+        return new Weapon(0, 'Fists', 1, 3, DamageType::BLUNT, 0.0, 0, 0.10);
     }
 }

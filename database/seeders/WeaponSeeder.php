@@ -15,25 +15,27 @@ class WeaponSeeder extends Seeder
      */
     public function run(): void
     {
+        // Wooden Sword: Base damage 3-7
         WeaponModel::updateOrCreate(
             ['name' => 'Wooden Sword'],
             [
-                'min_damage' => 5,
-                'max_damage' => 8,
-                'damage_type' => DamageType::CRUSH,
-                'accuracy_bonus' => 0.1,
-                'block_break_chance' => 0.0,
+                'min_damage' => 3,
+                'max_damage' => 7,
+                'damage_type' => DamageType::SLASHING,
+                'accuracy_bonus' => 0.0,
+                'block_break_chance' => 0.20,
             ]
         );
 
+        // Wooden Axe: Base damage 3-7
         WeaponModel::updateOrCreate(
             ['name' => 'Wooden Axe'],
             [
-                'min_damage' => 5,
-                'max_damage' => 8,
-                'damage_type' => DamageType::CRUSH,
+                'min_damage' => 3,
+                'max_damage' => 7,
+                'damage_type' => DamageType::CHOPPING,
                 'accuracy_bonus' => 0.0,
-                'block_break_chance' => 0.15,
+                'block_break_chance' => 0.60,
             ]
         );
     }
