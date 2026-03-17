@@ -41,7 +41,7 @@ const showingNavigationDropdown = ref(false);
                                 </NavLink>
                                 <NavLink
                                     :href="route('game.index')"
-                                    :active="route().current('game.index') || route().current('fight.view')"
+                                    :active="route().current('game.index')"
                                 >
                                     Game
                                 </NavLink>

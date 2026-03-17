@@ -68,7 +68,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
         $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
 
         return new Character(
-            id: $model->id,
+            id: $model->user_id,
             userId: $model->user_id,
             name: $model->name,
             strength: (int) ($userModel->strength ?? 10),

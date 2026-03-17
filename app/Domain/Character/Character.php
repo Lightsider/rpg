@@ -293,7 +293,7 @@ class Character implements \JsonSerializable
             'name' => $this->getName(),
             'stats' => [
                 'strength' => $this->getStrength(),
-                'agility' => $this->getAgility(),
+                'dexterity' => $this->getAgility(),
                 'constitution' => $this->getConstitution(),
                 'wit' => $this->getWit(),
             ],

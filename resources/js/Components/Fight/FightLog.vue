@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { getFightLogs } from '@/api/gameApi';
 
 const props = defineProps({
@@ -14,6 +14,8 @@ const loading = ref(true);
 const error = ref('');
 
 const fetchLogs = async () => {
+    if (!props.fightId) return;
+    loading.value = true;
     try {
         const data = await getFightLogs(props.fightId);
         logs.value = data;
@@ -24,6 +26,10 @@ const fetchLogs = async () => {
         loading.value = false;
     }
 };
+
+watch(() => props.fightId, (newId) => {
+    if (newId) fetchLogs();
+});
 
 onMounted(() => {
     fetchLogs();

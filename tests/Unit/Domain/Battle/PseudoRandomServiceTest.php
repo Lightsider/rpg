@@ -7,7 +7,7 @@ namespace Tests\Unit\Domain\Battle;
 use App\Domain\Battle\PseudoRandom\PRNGResult;
 use App\Domain\Battle\PseudoRandom\PseudoRandomConfig;
 use App\Domain\Battle\PseudoRandom\PseudoRandomService;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class PseudoRandomServiceTest extends TestCase
 {
@@ -167,7 +167,17 @@ class PseudoRandomServiceTest extends TestCase
         // raw = 0.3 + 100 * (0.3 * 0.25) = 0.3 + 7.5 = 7.8
         // capped = min(0.5, 7.8) = 0.5
         // Roll 0.6 > 0.5 → fail
-        $service = $this->makeServiceWithFixedRoll(0.6);
+        $service = new class (0.6) extends PseudoRandomService {
+            public function __construct(private float $fixedRoll)
+            {
+                parent::__construct(new PseudoRandomConfig(150, 0.5, 0.25));
+            }
+
+            protected function getRandom(): float
+            {
+                return $this->fixedRoll;
+            }
+        };
 
         $result = $service->rollWithPRNG(0.3, 100);
 

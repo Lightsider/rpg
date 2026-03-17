@@ -16,9 +16,10 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('GameView');
     })->name('game.index');
 
-    Route::get('/fight/{id}', function ($id) {
-        return Inertia::render('FightView', ['fightId' => (int) $id]);
-    })->name('fight.view');
+    // Everything game-related is now on /game
+    Route::get('/fight/{id}', function () {
+        return redirect()->route('game.index');
+    });
 
     // JSON API Endpoints
     Route::prefix('api')->group(function () {

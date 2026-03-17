@@ -19,5 +19,9 @@
         "tailwindcss": "^3.2.1",
         "vite": "^7.0.7",
         "vue": "^3.4.0"
+    },
+    "dependencies": {
+        "laravel-echo": "^2.3.1",
+        "pusher-js": "^8.4.0"
     }
 }

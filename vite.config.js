@@ -8,12 +8,13 @@ export default defineConfig({
         port: 5173,
         strictPort: true,
         hmr: {
-            host: 'localhost'
+            host: 'localhost',
+            clientPort: 5173
         }
     },
     plugins: [
         laravel({
-            input: 'resources/js/app.js',
+            input: ['resources/js/app.js', 'resources/js/game.js'],
             refresh: true,
         }),
         vue({

@@ -16,6 +16,8 @@ use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\BattleState;
 use App\Domain\Battle\Map;
+use App\Events\Battle\BattleJoined;
+use App\Events\Battle\RoundStarted;
 use App\Infrastructure\Eloquent\Models\FightMapModel;
 use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 use App\Services\MapGenerator;
@@ -122,6 +124,24 @@ class FightController extends Controller
                 $this->mapGenerator->generateForFight($battle);
             }
 
+            // Notify all channel subscribers that a player joined.
+            // The event carries the full battle state (players, map, timer) so the
+            // client is fully bootstrapped without an extra HTTP call.
+            if ($battle) {
+                $timerRemaining = $this->calculateTimerRemaining($battle);
+                event(new BattleJoined($battle, $timerRemaining));
+
+                // When the second participant joins the battle becomes ACTIVE
+                // and a new round immediately starts — notify clients of that too.
+                if ($battle->getState() === BattleState::ACTIVE) {
+                    event(new RoundStarted(
+                        battleId: $battle->getId(),
+                        round: $battle->getRoundNumber(),
+                        timeout: $battle->getRoundDurationSeconds(),
+                    ));
+                }
+            }
+
             return response()->json($battle);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
@@ -179,7 +199,7 @@ class FightController extends Controller
             ])->toArray();
 
         return response()->json([
-            'fight_id' => $battle->getId(),
+            'id' => $battle->getId(),
             'status' => $battle->getState()->value,
             'round' => $battle->getRoundNumber(),
             'participants' => array_map(fn(Character $p) => [

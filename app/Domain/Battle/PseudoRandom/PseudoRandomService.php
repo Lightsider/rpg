@@ -63,7 +63,8 @@ class PseudoRandomService
     public function calculateFinalChance(float $baseChance, int $failureCount): float
     {
         $scaledIncrease = $baseChance * $failureCount * $this->config->prngScale;
-        return min($this->config->maxFinalChance, $baseChance + $scaledIncrease);
+        $maxAllowed = max($this->config->maxFinalChance, $baseChance);
+        return min($maxAllowed, $baseChance + $scaledIncrease);
     }
 
     /**

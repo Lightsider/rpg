@@ -14,6 +14,7 @@ services:
       - CHOKIDAR_USEPOLLING=true
     ports:
       - "8080:8080" # Reverb
+      - "8081:8081" # Game WebSocket
       - "5173:5173" # Vite
     depends_on:
       - db
