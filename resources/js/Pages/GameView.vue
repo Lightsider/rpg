@@ -6,7 +6,6 @@ import FightLog from '@/Components/Fight/FightLog.vue';
 import FightMap from '@/Components/Fight/FightMap.vue';
 import BlockSelector from '@/Components/Fight/BlockSelector.vue';
 import FightActionPanel from '@/Components/Fight/FightActionPanel.vue';
-import { gameSocket } from '@/game';
 import {
     getGameState,
     getAvailableFights,
@@ -115,14 +114,6 @@ const initWebSocket = (battleId) => {
         window.Echo.leave(`battle.${battleChannel}`);
     }
     battleChannel = battleId;
-
-    const gs = gameSocket || window.gameSocket;
-    if (gs) {
-        gs.connect();
-        const join = () => gs.send('joinBattle', { battleId, characterId: myCharacterId.value });
-        gs.on('connected', join);
-        if (gs.socket?.readyState === WebSocket.OPEN) join();
-    }
 
     const onUpdate = (payload) => {
         console.log('[Echo] Battle Update:', payload);

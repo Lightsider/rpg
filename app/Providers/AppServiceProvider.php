@@ -60,6 +60,17 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->singleton(\App\Application\Battle\BattleService::class, function ($app) {
+            return new \App\Application\Battle\BattleService(
+                $app->make(\App\Domain\Battle\Repositories\BattleRepositoryInterface::class),
+                $app->make(\App\Domain\Character\Repositories\CharacterRepositoryInterface::class),
+                $app->make(\App\Application\Battle\QueueAttackAction::class),
+                $app->make(\App\Application\Battle\QueueDefenseAction::class),
+                $app->make(\App\Application\Battle\QueueMoveAction::class),
+                $app->make(\App\Application\Battle\CommitRoundAction::class)
+            );
+        });
+
         $this->app->singleton(MaxDamageService::class, function () {
             return new MaxDamageService(
                 new MaxDamageConfig(
