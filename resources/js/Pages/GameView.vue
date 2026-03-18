@@ -6,6 +6,7 @@ import FightLog from '@/Components/Fight/FightLog.vue';
 import FightMap from '@/Components/Fight/FightMap.vue';
 import BlockSelector from '@/Components/Fight/BlockSelector.vue';
 import FightActionPanel from '@/Components/Fight/FightActionPanel.vue';
+import CurrencyDisplay from '@/Components/CurrencyDisplay.vue';
 import {
     getGameState,
     getAvailableFights,
@@ -53,7 +54,10 @@ const myPosition = computed(() => {
     if (!fightState.value?.positions) return null;
     return fightState.value.positions.find(p => p.character_id === myCharacterId.value) || null;
 });
-const amICommitted = computed(() => fightState.value?.actions_submitted.includes(myCharacterId.value));
+const amICommitted = computed(() => {
+    if (!fightState.value?.actions_submitted) return false;
+    return fightState.value.actions_submitted.includes(myCharacterId.value);
+});
 const isFightActive = computed(() => fightState.value?.status === 'active');
 const apAvailable = computed(() => 3);
 const moveCost = computed(() => (selectedTile.value ? 1 + selectedBlocks.value.length : 0));
@@ -128,7 +132,9 @@ const initWebSocket = (battleId) => {
             });
             fightState.value.positions = payload.players.map(p => ({ character_id: p.character_id, x: p.x, y: p.y }));
         }
-        if (logRef.value) logRef.value.refresh();
+        if (logRef.value && payload.events) {
+            logRef.value.pushRound(payload.round, payload.events);
+        }
     };
 
     const onRoundStarted = (payload) => {
@@ -153,6 +159,10 @@ const initWebSocket = (battleId) => {
 
     const onBattleJoined = (payload) => {
         console.log('[Echo] Battle Joined:', payload);
+        // Ensure all required fields exist to prevent UI crashes
+        if (!payload.actions_submitted) payload.actions_submitted = [];
+        if (!payload.id && payload.battleId) payload.id = payload.battleId;
+        
         fightState.value = payload;
         startLocalTimer();
     };
@@ -172,12 +182,40 @@ const initWebSocket = (battleId) => {
         .listen('.battle.committed', onCommitted);
 };
 
-onUnmounted(() => {
-    if (battleChannel) {
-        window.Echo.leave(`battle.${battleChannel}`);
+const initCharacterWebSocket = () => {
+    const charId = myCharacterId.value;
+    window.Echo.private(`character.${charId}`)
+        .listen('.character.currency', (payload) => {
+            console.log('[Echo] Currency Update:', payload);
+            if (gameState.value?.character && gameState.value.character.id === payload.characterId) {
+                gameState.value.character.currency_copper = payload.copper;
+            }
+        });
+};
+
+let locationChannel = null;
+
+const initLocationWebSocket = (locationId) => {
+    if (locationChannel === locationId) return;
+    if (locationChannel) {
+        window.Echo.leave(`location.${locationChannel}`);
     }
-    stopLocalTimer();
-});
+    locationChannel = locationId;
+
+    window.Echo.private(`location.${locationId}`)
+        .listen('.battle.created', (payload) => {
+            console.log('[Echo] Battle Created:', payload);
+            const exists = fights.value.find(f => f.id === payload.battle.id);
+            if (!exists) {
+                fights.value.push(payload.battle);
+            }
+        })
+        .listen('.battle.removed', (payload) => {
+            console.log('[Echo] Battle Removed:', payload);
+            fights.value = fights.value.filter(f => f.id !== payload.battleId);
+        });
+};
+
 
 const handleQueueSubmit = async (queuedActions) => {
     if (queuedActions.filter(a => a.type === 'attack').length > 2) return alert('Max 2 attacks.');
@@ -318,11 +356,21 @@ const handleSaveLoadout = async () => {
 onMounted(async () => {
     await fetchGameData();
     await fetchLoadoutData();
+    initCharacterWebSocket();
+    if (gameState.value?.location?.id) {
+        initLocationWebSocket(gameState.value.location.id);
+    }
 });
 
 onUnmounted(() => {
+    if (battleChannel) {
+        window.Echo.leave(`battle.${battleChannel}`);
+    }
+    window.Echo.leave(`character.${myCharacterId.value}`);
+    if (locationChannel) {
+        window.Echo.leave(`location.${locationChannel}`);
+    }
     stopLocalTimer();
-    if (onMounted.cleanup) onMounted.cleanup();
 });
 
 </script>
@@ -374,7 +422,10 @@ onUnmounted(() => {
                             <h3 class="text-lg font-bold mb-4 border-b pb-2">Your Character</h3>
                             <div class="space-y-4">
                                 <div>
-                                    <span class="text-gray-500 text-sm">Name</span>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-gray-500 text-sm">Name</span>
+                                        <CurrencyDisplay :copper="gameState.character.currency_copper || 0" />
+                                    </div>
                                     <div class="font-semibold text-xl">{{ gameState.character.name }}</div>
                                 </div>
                                 <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
@@ -512,8 +563,8 @@ onUnmounted(() => {
                                             Select an empty adjacent tile to move, or click an adjacent enemy to attack.
                                         </div>
                                     </div>
-                                    <FightLog ref="logRef" :fightId="fightState.id" />
                                 </template>
+                                <FightLog ref="logRef" :fightId="fightState.id" />
                             </div>
 
                             <!-- Lobby UI -->
@@ -547,7 +598,6 @@ onUnmounted(() => {
                                     </li>
                                 </ul>
                                 <div v-else class="text-center py-8 text-gray-500 bg-gray-50 rounded border border-dashed">No active fights. Create one!</div>
-                                <div class="mt-4 text-center"><button @click="fetchGameData" class="text-sm text-blue-600 hover:underline">Refresh List</button></div>
                             </div>
                         </div>
                     </div>

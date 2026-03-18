@@ -14,6 +14,6 @@ enum BattleLogType: string
     case BLOCK = 'block';
     case BLOCK_BREAK = 'block_break';
     case MAX_DAMAGE = 'max_damage';
-    case MISS = 'miss';
+    case DODGE = 'dodge';
     case DEATH = 'death';
 }

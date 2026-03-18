@@ -36,7 +36,26 @@ onMounted(() => {
 });
 
 defineExpose({
-    refresh: fetchLogs
+    refresh: fetchLogs,
+    pushRound: (round, events) => {
+        // Map camelCase from WebSocket to snake_case for visibility
+        const mappedEvents = events.map(e => ({
+            ...e,
+            actor_id: e.actorId || e.actor_id,
+            target_id: e.targetId || e.target_id,
+        }));
+        
+        // Check if round already exists to avoid duplicates
+        const existing = logs.value.find(r => r.round === round);
+        if (existing) {
+            existing.events = mappedEvents;
+        } else {
+            logs.value.push({ round, events: mappedEvents });
+            // Sort by round desc or asc? The template loops as is. 
+            // Usually logs are newest at top? No, Round 1, Round 2...
+            logs.value.sort((a, b) => a.round - b.round);
+        }
+    }
 });
 
 const getZoneDisplay = (zone) => {
@@ -48,7 +67,7 @@ const getActionIcon = (type) => {
     switch (type) {
         case 'hit': return '💥';
         case 'max_damage': return '⚡';
-        case 'miss': return '❌';
+        case 'dodge': return '💨';
         case 'block': return '🛡️';
         case 'block_break': return '💢';
         case 'move': return '👟';
@@ -79,7 +98,8 @@ const getActionIcon = (type) => {
                             'border-red-300 bg-red-50': event.type === 'hit' || event.type === 'max_damage',
                             'border-orange-300 bg-orange-50': event.type === 'block_break',
                             'border-green-300 bg-green-50': event.type === 'block',
-                            'border-gray-200': event.type === 'miss' || event.type === 'move',
+                            'border-blue-300 bg-blue-50': event.type === 'dodge',
+                            'border-gray-200': event.type === 'move',
                             'border-purple-300 bg-purple-50': event.type === 'death'
                         }">
                         <span class="text-lg leading-none font-semibold" :title="event.type">{{ getActionIcon(event.type) }}</span>
@@ -87,8 +107,8 @@ const getActionIcon = (type) => {
                             <span v-if="event.type === 'hit'">
                                 Player <span class="font-bold">{{ event.actor_id }}</span> hit Player <span class="font-bold">{{ event.target_id }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
                             </span>
-                            <span v-else-if="event.type === 'miss'">
-                                Player <span class="font-bold">{{ event.actor_id }}</span> missed their attack on Player <span class="font-bold">{{ event.target_id }}</span>.
+                            <span v-else-if="event.type === 'dodge'">
+                                Player <span class="font-bold">{{ event.actor_id }}</span> <span class="text-blue-600 font-bold uppercase">dodged</span> an attack from Player <span class="font-bold">{{ event.target_id }}</span>.
                             </span>
                             <span v-else-if="event.type === 'block'">
                                 Player <span class="font-bold">{{ event.actor_id }}</span> blocked an attack from Player <span class="font-bold">{{ event.target_id }}</span>. <span v-if="event.damage > 0">(Took {{ event.damage }} partial damage)</span>

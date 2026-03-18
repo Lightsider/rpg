@@ -118,9 +118,9 @@ class RoundResolver implements RoundResolverInterface
                 if ($dx > 1 || $dy > 1) {
                     $logs[] = new BattleLogEntry(
                         roundNumber: $battle->getRoundNumber(),
-                        type: BattleLogType::MISS,
-                        actorId: $attackerId,
-                        targetId: $defender->getId()
+                        type: BattleLogType::DODGE,
+                        actorId: $defender->getId(),
+                        targetId: $attackerId
                     );
                     continue;
                 }
@@ -134,9 +134,9 @@ class RoundResolver implements RoundResolverInterface
                 if ($result->isDodged || $result->isMiss) {
                     $logs[] = new BattleLogEntry(
                         roundNumber: $battle->getRoundNumber(),
-                        type: BattleLogType::MISS,
-                        actorId: $attackerId,
-                        targetId: $defender->getId()
+                        type: BattleLogType::DODGE,
+                        actorId: $defender->getId(),
+                        targetId: $attackerId
                     );
                 } elseif ($result->damage === 0 && $isBlocked) {
                     $logs[] = new BattleLogEntry(

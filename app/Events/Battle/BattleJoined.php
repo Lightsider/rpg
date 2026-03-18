@@ -31,34 +31,44 @@ class BattleJoined implements ShouldBroadcast
     ) {
         $participants = array_values($battle->getParticipants());
 
+        $participantsData = array_map(
+            fn(Character $c) => [
+                'character_id' => $c->getId(),
+                'name'         => $c->getName(),
+                'hp'           => $c->getCurrentHp(),
+                'max_hp'       => $c->getMaxHp(),
+                'x'            => $c->getX(),
+                'y'            => $c->getY(),
+            ],
+            $participants
+        );
+
         $this->payload = [
-            'id'             => $battle->getId(),
-            'round'          => $battle->getRoundNumber(),
-            'status'         => $battle->getState()->value,
-            'timer_remaining' => $timerRemaining,
-            'players'        => array_map(
-                fn(Character $c) => [
-                    'character_id' => $c->getId(),
-                    'name'         => $c->getName(),
-                    'hp'           => $c->getCurrentHp(),
-                    'max_hp'       => $c->getMaxHp(),
-                    'x'            => $c->getX(),
-                    'y'            => $c->getY(),
-                ],
-                $participants
-            ),
+            'id'                => $battle->getId(),
+            'battleId'          => $battle->getId(),
+            'round'             => $battle->getRoundNumber(),
+            'status'            => $battle->getState()->value,
+            'timer_remaining'   => $timerRemaining,
+            'players'           => $participantsData,
+            'participants'      => array_map(fn($p) => [
+                'character_id' => $p['character_id'],
+                'name'         => $p['name'],
+                'hp'           => $p['hp'],
+                'max_hp'       => $p['max_hp']
+            ], $participantsData),
             'map' => [
                 'width'  => $battle->getMap()->getWidth(),
                 'height' => $battle->getMap()->getHeight(),
             ],
             'positions' => array_map(
-                fn(Character $c) => [
-                    'character_id' => $c->getId(),
-                    'x'            => $c->getX(),
-                    'y'            => $c->getY(),
+                fn($p) => [
+                    'character_id' => $p['character_id'],
+                    'x'            => $p['x'],
+                    'y'            => $p['y'],
                 ],
-                $participants
+                $participantsData
             ),
+            'actions_submitted' => $battle->getCommittedCharacterIds(),
         ];
     }
 

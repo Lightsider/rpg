@@ -51,6 +51,7 @@ class BattleUpdated implements ShouldBroadcast
 
         $this->payload = [
             'id'       => $battle->getId(),
+            'battleId' => $battle->getId(),
             'round'    => $battle->getRoundNumber(),
             'status'   => $battle->getState()->value,
             'events'   => array_values($events),

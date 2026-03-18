@@ -34,6 +34,7 @@ class Character implements \JsonSerializable
         private readonly int $maxHp,
         private int $currentHp,
         public readonly \App\Domain\Equipment\Equipment $equipment,
+        private int $currencyCopper = 0,
         private readonly int $locationId = 1,
         private readonly int $maxActionPoints = self::DEFAULT_MAX_AP,
         private int $currentActionPoints = self::DEFAULT_MAX_AP,
@@ -268,6 +269,31 @@ class Character implements \JsonSerializable
         $this->currentHp = $hp;
     }
 
+    public function getCurrencyCopper(): int
+    {
+        return $this->currencyCopper;
+    }
+
+    public function addCurrency(int $amount): void
+    {
+        if ($amount < 0) {
+            throw new \App\Domain\DomainException('Cannot add negative currency.');
+        }
+        $this->currencyCopper += $amount;
+    }
+
+    public function spendCurrency(int $amount): bool
+    {
+        if ($amount < 0) {
+            throw new \App\Domain\DomainException('Cannot spend negative currency.');
+        }
+        if ($this->currencyCopper < $amount) {
+            return false;
+        }
+        $this->currencyCopper -= $amount;
+        return true;
+    }
+
     /**
      * Restore HP to maximum value. Called after battle ends.
      */
@@ -305,6 +331,7 @@ class Character implements \JsonSerializable
                 'y' => $this->getY(),
             ],
             'weapon' => $this->getWeapon()->getName(),
+            'currency_copper' => $this->getCurrencyCopper(),
         ];
     }
 }

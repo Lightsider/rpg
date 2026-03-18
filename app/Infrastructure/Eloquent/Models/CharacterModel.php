@@ -14,7 +14,8 @@ class CharacterModel extends Model
         'name',
         'hp',
         'max_hp',
-        'location_id'
+        'location_id',
+        'currency_copper'
     ];
 
     public function user(): BelongsTo

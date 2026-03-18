@@ -46,7 +46,8 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             'name' => $character->getName(),
             'hp' => $character->getCurrentHp(),
             'max_hp' => $character->getMaxHp(),
-            'location_id' => $character->getLocationId()
+            'location_id' => $character->getLocationId(),
+            'currency_copper' => $character->getCurrencyCopper()
         ]);
 
         return $this->mapModelToDomain($model);
@@ -55,6 +56,11 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
     public function updateHp(int $id, int $currentHp): void
     {
         CharacterModel::where('id', $id)->update(['hp' => $currentHp]);
+    }
+
+    public function updateCurrency(int $id, int $copper): void
+    {
+        CharacterModel::where('id', $id)->update(['currency_copper' => $copper]);
     }
 
     private function mapModelToDomain(CharacterModel $model): Character
@@ -78,6 +84,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             maxHp: (int) $model->max_hp,
             currentHp: (int) $model->hp,
             equipment: $equipment,
+            currencyCopper: (int) $model->currency_copper,
             locationId: $model->location_id,
         );
     }

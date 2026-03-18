@@ -18,6 +18,8 @@ use App\Domain\Battle\BattleState;
 use App\Domain\Battle\Map;
 use App\Events\Battle\BattleJoined;
 use App\Events\Battle\RoundStarted;
+use App\Events\Location\BattleCreated;
+use App\Events\Location\BattleRemoved;
 use App\Infrastructure\Eloquent\Models\FightMapModel;
 use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 use App\Services\MapGenerator;
@@ -83,6 +85,7 @@ class FightController extends Controller
         $battle = $this->battleRepository->findById($fightId);
         if ($battle) {
             $this->mapGenerator->generateForFight($battle);
+            event(new BattleCreated($battle->jsonSerialize()));
         }
 
         return response()->json(['fight_id' => $fightId], 201);
@@ -134,6 +137,7 @@ class FightController extends Controller
                 // When the second participant joins the battle becomes ACTIVE
                 // and a new round immediately starts — notify clients of that too.
                 if ($battle->getState() === BattleState::ACTIVE) {
+                    event(new BattleRemoved($battle->getLocationId(), $battle->getId()));
                     event(new RoundStarted(
                         battleId: $battle->getId(),
                         round: $battle->getRoundNumber(),
@@ -159,6 +163,7 @@ class FightController extends Controller
 
         try {
             $this->leaveWaitingBattleAction->execute($id, $character->getId());
+            event(new BattleRemoved($character->getLocationId(), $id));
             return response()->json(['success' => true]);
         } catch (DomainException $e) {
             return response()->json(['error' => $e->getMessage()], 400);

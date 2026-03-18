@@ -32,3 +32,23 @@ Broadcast::channel('battle.{battleId}', function ($user, int $battleId) {
 
     return $battle->getParticipantById($character->getId()) !== null;
 });
+
+/**
+ * Private per-character channel.
+ * Only the owner of the character may subscribe.
+ */
+Broadcast::channel('character.{characterId}', function ($user, int $characterId) {
+    /** @var CharacterRepositoryInterface $characterRepository */
+    $characterRepository = app(CharacterRepositoryInterface::class);
+
+    $character = $characterRepository->findByUserId($characterId);
+    if ($character === null) {
+        return false;
+    }
+
+    return (int) $user->id === (int) $character->getUserId();
+});
+
+Broadcast::channel('location.{locationId}', function ($user, int $locationId) {
+    return (bool) $user;
+});
