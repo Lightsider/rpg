@@ -249,6 +249,12 @@ class Character implements \JsonSerializable
         return $weapon;
     }
 
+    public function canEquip(Weapon $weapon): bool
+    {
+        return $this->strength >= $weapon->getRequiredStrength() &&
+               $this->wit >= $weapon->getRequiredWit();
+    }
+
     public function getEquipment(): Equipment
     {
         return $this->equipment;

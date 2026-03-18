@@ -18,5 +18,9 @@ class ItemModel extends Model
         'block_break_rating',
         'pierce_multiplier',
         'max_damage_rating',
+        'archetype',
+        'required_strength',
+        'required_wit',
+        'flat_crit_bonus',
     ];
 }

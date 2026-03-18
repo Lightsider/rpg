@@ -70,31 +70,33 @@ class CombatResolver
             return new AttackResult(0, false, true, false, $damageType);
         }
 
-        // 2. Roll damage
+        // 2. Roll damage from weapon
         $maxDamageProc = $this->maxDamageService->checkMaxDamage($attacker);
-        $damage = (float) ($maxDamageProc->triggered
+        $baseDamage = (float) ($maxDamageProc->triggered
             ? $weapon->getMaxDamage()
             : $weapon->rollBaseDamage());
 
-        // 3. Add strength bonus
-        $damage += $attacker->calculateStrengthBonus();
+        // 3. Add strength bonus (stat amplification)
+        $strengthBonus = $attacker->calculateStrengthBonus();
+        $totalDamage = $baseDamage + $strengthBonus;
 
         // 4. Check critical with PRNG
         $isCritical = false;
         $critResult = $this->checkCritical($attacker);
         if ($critResult->success) {
-            $damage *= $attacker->calculateCritMultiplier();
+            // New gear-first crit: total_damage + weapon's flat crit bonus
+            $totalDamage += $weapon->getFlatCritBonus();
             $isCritical = true;
         }
 
-        $baseDamage = (int) round($damage);
+        $finalDamage = (int) round($totalDamage);
 
         // 5. If blocked – delegate entirely to BlockPenetrationService
         if ($isBlocked) {
             $penetrationResult = $this->blockPenetrationService->checkBlockBreak(
                 $attacker,
                 $defender,
-                $baseDamage,
+                $finalDamage,
             );
 
             return new AttackResult(
@@ -108,7 +110,7 @@ class CombatResolver
             );
         }
 
-        return new AttackResult($baseDamage, $isCritical, false, false, $damageType, false, $maxDamageProc->triggered);
+        return new AttackResult($finalDamage, $isCritical, false, false, $damageType, false, $maxDamageProc->triggered);
     }
 
     /**

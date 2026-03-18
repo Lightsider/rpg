@@ -22,6 +22,10 @@ class Weapon extends Item
         private readonly int $blockBreakRating,
         private readonly float $pierceMultiplier,
         private readonly int $maxDamageRating = 0,
+        private readonly WeaponArchetype $archetype = WeaponArchetype::UNIVERSAL,
+        private readonly int $requiredStrength = 0,
+        private readonly int $requiredWit = 0,
+        private readonly int $flatCritBonus = 0,
     ) {
         parent::__construct($id, $name, ItemType::WEAPON);
     }
@@ -76,5 +80,25 @@ class Weapon extends Item
     public function getMaxDamageRating(): int
     {
         return $this->maxDamageRating;
+    }
+
+    public function getArchetype(): WeaponArchetype
+    {
+        return $this->archetype;
+    }
+
+    public function getRequiredStrength(): int
+    {
+        return $this->requiredStrength;
+    }
+
+    public function getRequiredWit(): int
+    {
+        return $this->requiredWit;
+    }
+
+    public function getFlatCritBonus(): int
+    {
+        return $this->flatCritBonus;
     }
 }

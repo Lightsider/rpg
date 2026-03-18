@@ -10,6 +10,7 @@ use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Weapon\DamageType;
 use App\Domain\Weapon\Weapon;
+use App\Domain\Weapon\WeaponArchetype;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Infrastructure\Eloquent\Models\User as EloquentUser;
 use App\Infrastructure\Eloquent\Models\ItemModel;
@@ -100,21 +101,25 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             accuracyBonus: $item->accuracy_bonus,
             blockBreakRating: $item->block_break_rating,
             pierceMultiplier: $item->pierce_multiplier,
-            maxDamageRating: $item->max_damage_rating
+            maxDamageRating: $item->max_damage_rating,
+            archetype: WeaponArchetype::from($item->archetype ?? 'universal'),
+            requiredStrength: $item->required_strength ?? 0,
+            requiredWit: $item->required_wit ?? 0,
+            flatCritBonus: $item->flat_crit_bonus ?? 0
         );
     }
 
     private function resolveWeaponByLegacyName(?string $weaponType): Weapon
     {
-        // Fallback - matching WeaponSeeder values
+        // Fallback - matching new balanced values
         if ($weaponType === 'sword') {
-            return new Weapon(1, 'Sword', 3, 7, DamageType::SLASHING, 0.0, 20, 0.50, 90);
+            return new Weapon(1, 'Sword', 9, 11, DamageType::SLASHING, 0.0, 20, 0.50, 90, WeaponArchetype::UNIVERSAL, 7, 3, 3);
         }
 
         if ($weaponType === 'axe') {
-            return new Weapon(2, 'Axe', 3, 7, DamageType::CHOPPING, 0.0, 60, 0.65);
+            return new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 60, 0.65, 0, WeaponArchetype::UNIVERSAL, 7, 3, 3);
         }
 
-        return new Weapon(0, 'Fists', 1, 3, DamageType::BLUNT, 0.0, 0, 0.10);
+        return new Weapon(0, 'Fists', 1, 3, DamageType::BLUNT, 0.0, 0, 0.10, 0, WeaponArchetype::UNIVERSAL, 0, 0, 0);
     }
 }
