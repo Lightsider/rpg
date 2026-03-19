@@ -15,6 +15,7 @@ use App\Events\Battle\BattleEnded;
 use App\Events\Battle\BattleUpdated;
 use App\Events\Battle\RoundStarted;
 use App\Events\Battle\BattleCommitted;
+use App\Infrastructure\Eloquent\Models\BattleModel;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -41,6 +42,12 @@ class CommitRoundAction
         $pendingEvents = [];
 
         DB::transaction(function () use ($battleId, $characterId, &$pendingEvents) {
+            // Guard against concurrent resolution by locking the battle row.
+            $battleModel = BattleModel::where('id', $battleId)->lockForUpdate()->first();
+            if (!$battleModel) {
+                throw new DomainException('Battle not found.');
+            }
+
             // 1. Load battle
             $battle = $this->battleRepository->findById($battleId);
             if (!$battle) {

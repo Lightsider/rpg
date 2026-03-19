@@ -48,6 +48,7 @@ const selectedEnemy = ref(null);
 const selectedBlocks = ref([]);
 const actionMode = ref('none');
 let countdownInterval = null;
+let refreshInterval = null;
 
 const myCharacterId = computed(() => page.props.auth.user.id);
 const myPosition = computed(() => {
@@ -102,6 +103,7 @@ const fetchGameData = async () => {
 const fetchFightState = async (id) => {
     try {
         const data = await getFightState(id);
+        if (data && !data.id && data.battle_id) data.id = data.battle_id;
         fightState.value = data;
         startLocalTimer();
         initWebSocket(id);
@@ -121,56 +123,66 @@ const initWebSocket = (battleId) => {
 
     const onUpdate = (payload) => {
         console.log('[Echo] Battle Update:', payload);
+        const data = payload?.payload ?? payload;
         if (fightState.value) {
-            fightState.value.round = payload.round;
-            payload.players.forEach(p => {
+            fightState.value.round = data.round;
+            data.players.forEach(p => {
                 const existing = fightState.value.participants.find(part => part.character_id === p.character_id);
                 if (existing) existing.hp = p.hp;
                 if (p.character_id === myCharacterId.value && gameState.value?.character) {
                     gameState.value.character.hp = p.hp;
                 }
             });
-            fightState.value.positions = payload.players.map(p => ({ character_id: p.character_id, x: p.x, y: p.y }));
+            fightState.value.positions = data.players.map(p => ({ character_id: p.character_id, x: p.x, y: p.y }));
         }
-        if (logRef.value && payload.events) {
-            logRef.value.pushRound(payload.round, payload.events);
+        if (logRef.value && data.events) {
+            logRef.value.pushRound(data.round, data.events);
         }
     };
 
     const onRoundStarted = (payload) => {
         console.log('[Echo] Round Started:', payload);
+        const data = payload?.payload ?? payload;
         if (fightState.value) {
             Object.assign(fightState.value, {
-                round: payload.round,
-                timer_remaining: payload.timeout,
+                round: data.round,
+                timer_remaining: data.timeout,
                 status: 'active',
                 actions_submitted: []
             });
         }
         clearSelection();
         if (actionPanelRef.value) actionPanelRef.value.clearQueue();
+        if (logRef.value) logRef.value.refresh();
     };
 
     const onBattleEnded = (payload) => {
         console.log('[Echo] Battle Ended:', payload);
+        const data = payload?.payload ?? payload;
         if (fightState.value) fightState.value.status = 'finished';
         stopLocalTimer();
     };
 
     const onBattleJoined = (payload) => {
         console.log('[Echo] Battle Joined:', payload);
+        const data = payload?.payload ?? payload;
         // Ensure all required fields exist to prevent UI crashes
-        if (!payload.actions_submitted) payload.actions_submitted = [];
-        if (!payload.id && payload.battleId) payload.id = payload.battleId;
+        if (!data.actions_submitted) data.actions_submitted = [];
+        if (!data.id && data.battle_id) data.id = data.battle_id;
         
-        fightState.value = payload;
+        fightState.value = data;
+        if (fightState.value && !fightState.value.id && fightState.value.battle_id) {
+            fightState.value.id = fightState.value.battle_id;
+        }
         startLocalTimer();
+        if (logRef.value) logRef.value.refresh();
     };
 
     const onCommitted = (payload) => {
         console.log('[Echo] Battle Committed:', payload);
+        const data = payload?.payload ?? payload;
         if (fightState.value) {
-            fightState.value.actions_submitted = payload.committed_character_ids;
+            fightState.value.actions_submitted = data.committed_character_ids;
         }
     };
 
@@ -187,8 +199,9 @@ const initCharacterWebSocket = () => {
     window.Echo.private(`character.${charId}`)
         .listen('.character.currency', (payload) => {
             console.log('[Echo] Currency Update:', payload);
-            if (gameState.value?.character && gameState.value.character.id === payload.characterId) {
-                gameState.value.character.currency_copper = payload.copper;
+            const data = payload?.payload ?? payload;
+            if (gameState.value?.character && gameState.value.character.id === data.character_id) {
+                gameState.value.character.currency_copper = data.copper;
             }
         });
 };
@@ -205,14 +218,16 @@ const initLocationWebSocket = (locationId) => {
     window.Echo.private(`location.${locationId}`)
         .listen('.battle.created', (payload) => {
             console.log('[Echo] Battle Created:', payload);
-            const exists = fights.value.find(f => f.id === payload.battle.id);
+            const data = payload?.payload ?? payload;
+            const exists = fights.value.find(f => f.id === data.battle.id);
             if (!exists) {
-                fights.value.push(payload.battle);
+                fights.value.push(data.battle);
             }
         })
         .listen('.battle.removed', (payload) => {
             console.log('[Echo] Battle Removed:', payload);
-            fights.value = fights.value.filter(f => f.id !== payload.battleId);
+            const data = payload?.payload ?? payload;
+            fights.value = fights.value.filter(f => f.id !== data.battle_id);
         });
 };
 
@@ -231,12 +246,15 @@ const handleQueueSubmit = async (queuedActions) => {
 
     submitting.value = true;
     try {
+        if (!fightState.value?.id) {
+            throw new Error('Fight is not ready yet. Please try again in a moment.');
+        }
         await submitActions(fightState.value.id, payload);
         await fetchFightState(fightState.value.id);
         if (actionPanelRef.value) actionPanelRef.value.clearQueue();
         clearSelection();
     } catch (e) {
-        alert(e.response?.data?.error || 'Failed to submit.');
+        alert(e.response?.data?.error || e.message || 'Failed to submit.');
     } finally {
         submitting.value = false;
     }
@@ -302,13 +320,24 @@ const startLocalTimer = () => {
     countdownInterval = setInterval(() => {
         if (fightState.value?.timer_remaining > 0 && fightState.value?.status === 'active') {
             fightState.value.timer_remaining--;
+            if (fightState.value.timer_remaining === 0 && fightState.value?.id) {
+                fetchFightState(fightState.value.id);
+            }
         }
     }, 1000);
+
+    refreshInterval = setInterval(() => {
+        if (fightState.value?.status === 'active' && fightState.value?.id && !submitting.value) {
+            fetchFightState(fightState.value.id);
+        }
+    }, 5000);
 };
 
 const stopLocalTimer = () => {
     if (countdownInterval) clearInterval(countdownInterval);
     countdownInterval = null;
+    if (refreshInterval) clearInterval(refreshInterval);
+    refreshInterval = null;
 };
 
 const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
@@ -529,7 +558,7 @@ onUnmounted(() => {
                             <div v-if="fightState" class="space-y-6">
                                 <div v-if="fightState.status === 'waiting'" class="bg-yellow-50 border border-yellow-200 p-6 rounded-lg text-center">
                                     <h3 class="font-bold text-lg">Waiting for opponent</h3>
-                                    <p class="text-gray-600">The battle will automatically begin when a second player joins.</p>
+                                    <p class="text-gray-600">Fight #{{ fightState.id }} will automatically begin when a second player joins.</p>
                                     <button @click="handleCancelFight" class="mt-4 bg-gray-800 hover:bg-gray-900 text-white font-semibold py-2 px-4 rounded">Cancel Fight</button>
                                 </div>
                                 <div v-else-if="fightState.status === 'finished'" class="bg-gray-100 border p-6 rounded-lg text-center">
@@ -564,7 +593,7 @@ onUnmounted(() => {
                                         </div>
                                     </div>
                                 </template>
-                                <FightLog ref="logRef" :fightId="fightState.id" />
+                                <FightLog ref="logRef" :fightId="fightState.id" :fightStatus="fightState.status" :fightNumber="fightState.id" />
                             </div>
 
                             <!-- Lobby UI -->

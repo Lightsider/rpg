@@ -32,4 +32,19 @@ class BattleCreated implements ShouldBroadcast
     {
         return 'battle.created';
     }
+
+    public function broadcastWith(): array
+    {
+        $payload = [
+            'battle' => $this->battle,
+        ];
+
+        return array_merge(
+            [
+                'type' => $this->broadcastAs(),
+                'payload' => $payload,
+            ],
+            $payload
+        );
+    }
 }

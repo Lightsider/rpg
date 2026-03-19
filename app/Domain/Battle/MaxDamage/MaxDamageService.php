@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Battle\MaxDamage;
 
 use App\Domain\Battle\BlockPenetration\RatingConverter;
+use App\Domain\Battle\Rng\DefaultRandomGenerator;
+use App\Domain\Battle\Rng\RandomGeneratorInterface;
 use App\Domain\Character\Character;
 use Illuminate\Support\Facades\Log;
 
@@ -12,20 +14,24 @@ use Illuminate\Support\Facades\Log;
  * Stateful domain service that resolves "Max Damage" proc attempts.
  *
  * State kept:
- *   - attacker_id → failed attempt counter
+ *   - attacker_id > failed attempt counter
  *
  * Logic is similar to BlockPenetrationService but per-attacker (not per-pair).
  */
 class MaxDamageService
 {
     /**
-     * @var array<int, int> attacker_id → failed attempt counter
+     * @var array<int, int> attacker_id > failed attempt counter
      */
     private array $failedAttempts = [];
 
+    private RandomGeneratorInterface $rng;
+
     public function __construct(
         private readonly MaxDamageConfig $config,
+        ?RandomGeneratorInterface $rng = null,
     ) {
+        $this->rng = $rng ?? new DefaultRandomGenerator();
     }
 
     /**
@@ -87,6 +93,11 @@ class MaxDamageService
         $this->failedAttempts = [];
     }
 
+    public function setRandomGenerator(RandomGeneratorInterface $rng): void
+    {
+        $this->rng = $rng;
+    }
+
     private function incrementCounter(int $attackerId): void
     {
         $this->failedAttempts[$attackerId] = ($this->failedAttempts[$attackerId] ?? 0) + 1;
@@ -97,6 +108,6 @@ class MaxDamageService
      */
     protected function getRandom(): float
     {
-        return mt_rand() / mt_getrandmax();
+        return $this->rng->nextFloat();
     }
 }

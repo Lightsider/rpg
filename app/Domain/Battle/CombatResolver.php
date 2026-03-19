@@ -7,6 +7,7 @@ namespace App\Domain\Battle;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\PseudoRandom\PseudoRandomService;
+use App\Domain\Battle\Rng\RandomGeneratorInterface;
 use App\Domain\Character\Character;
 use Illuminate\Support\Facades\Log;
 
@@ -180,5 +181,11 @@ class CombatResolver
     protected function getRandom(): float
     {
         return mt_rand() / mt_getrandmax();
+    }
+
+    public function setRandomGenerator(RandomGeneratorInterface $rng): void
+    {
+        $this->dodgePRNG?->setRandomGenerator($rng);
+        $this->critPRNG?->setRandomGenerator($rng);
     }
 }

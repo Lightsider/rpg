@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Battle\PseudoRandom;
 
+use App\Domain\Battle\Rng\DefaultRandomGenerator;
+use App\Domain\Battle\Rng\RandomGeneratorInterface;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -18,9 +20,13 @@ use Illuminate\Support\Facades\Log;
  */
 class PseudoRandomService
 {
+    private RandomGeneratorInterface $rng;
+
     public function __construct(
         private readonly PseudoRandomConfig $config,
+        ?RandomGeneratorInterface $rng = null
     ) {
+        $this->rng = $rng ?? new DefaultRandomGenerator();
     }
 
     /**
@@ -72,6 +78,11 @@ class PseudoRandomService
      */
     protected function getRandom(): float
     {
-        return mt_rand() / mt_getrandmax();
+        return $this->rng->nextFloat();
+    }
+
+    public function setRandomGenerator(RandomGeneratorInterface $rng): void
+    {
+        $this->rng = $rng;
     }
 }

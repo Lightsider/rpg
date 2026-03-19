@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Events\Battle;
 
 use App\Domain\Battle\Battle;
+use App\Application\Battle\BattleEventPayloadFactory;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -38,10 +39,14 @@ class BattleCommitted implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
-        return [
-            'id' => $this->battle->getId(),
-            'character_id' => $this->characterId,
-            'committed_character_ids' => $this->battle->getCommittedCharacterIds(),
-        ];
+        $payload = BattleEventPayloadFactory::committed($this->battle, $this->characterId);
+
+        return array_merge(
+            [
+                'type' => $this->broadcastAs(),
+                'payload' => $payload,
+            ],
+            $payload
+        );
     }
 }

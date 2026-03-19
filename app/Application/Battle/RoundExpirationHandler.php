@@ -13,6 +13,7 @@ use App\Domain\Battle\RoundResolverInterface;
 use App\Events\Battle\BattleEnded;
 use App\Events\Battle\BattleUpdated;
 use App\Events\Battle\RoundStarted;
+use App\Infrastructure\Eloquent\Models\BattleModel;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -39,6 +40,9 @@ class RoundExpirationHandler
 
             foreach ($activeBattles as $battle) {
                 if ($battle->getState() === BattleState::ACTIVE && $battle->isRoundExpired()) {
+                    // Lock the row to avoid double resolution with commit flow.
+                    BattleModel::where('id', $battle->getId())->lockForUpdate()->first();
+
                     $result = $this->roundResolver->resolve($battle);
 
                     $this->battleLogRepository->saveBatch($battle->getId(), $result->logs);

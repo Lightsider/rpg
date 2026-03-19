@@ -12,6 +12,7 @@ use App\Domain\Location\Repositories\LocationRepositoryInterface;
 use App\Services\CharacterStatService;
 use App\Services\CharacterStatValidator;
 use App\Services\WeaponAssigner;
+use App\Infrastructure\Eloquent\Models\CharacterModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,24 +33,8 @@ class GameController extends Controller
     {
         $user = Auth::user();
 
-        $this->weaponAssigner->ensureUserHasWeapon($user);
-
         // Load or create character
         $character = $this->characterRepository->findByUserId($user->id);
-
-        if ($character && $character->getMaxHp() !== $user->max_hp) {
-            // Synchronize if they diverged (e.g. manual DB update or config change)
-            \App\Infrastructure\Eloquent\Models\CharacterModel::where('id', $character->getId())
-                ->update(['max_hp' => $user->max_hp]);
-            
-            // Also restore current HP if it's now higher than new max (optional, but safe)
-            if ($character->getCurrentHp() > $user->max_hp) {
-                 \App\Infrastructure\Eloquent\Models\CharacterModel::where('id', $character->getId())
-                     ->update(['hp' => $user->max_hp]);
-            }
-            
-            $character = $this->characterRepository->findByUserId($user->id);
-        }
         
         if (!$character) {
             $defaultStats = [
@@ -67,11 +52,6 @@ class GameController extends Controller
 
             $computedHp = $this->statService->calculateHp($defaultStats['con']);
 
-            $user->update([
-                'hp' => $computedHp,
-                'max_hp' => $computedHp,
-            ]);
-
             // Create default character for new user
             $newCharacter = new Character(
                 id: 0, // Auto-generated
@@ -87,6 +67,12 @@ class GameController extends Controller
                 locationId: 1 // Training Grounds
             );
             $character = $this->characterRepository->create($newCharacter);
+        }
+
+        $characterModel = CharacterModel::where('user_id', $user->id)->first();
+        if ($characterModel) {
+            $this->weaponAssigner->ensureCharacterHasWeapon($characterModel);
+            $character = $this->characterRepository->findByUserId($user->id) ?? $character;
         }
 
         // Load current location

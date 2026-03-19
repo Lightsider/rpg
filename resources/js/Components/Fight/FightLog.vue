@@ -6,6 +6,16 @@ const props = defineProps({
     fightId: {
         type: Number,
         required: true
+    },
+    fightStatus: {
+        type: String,
+        required: false,
+        default: null
+    },
+    fightNumber: {
+        type: Number,
+        required: false,
+        default: null
     }
 });
 
@@ -79,9 +89,15 @@ const getActionIcon = (type) => {
 
 <template>
     <div class="bg-gray-50 rounded-lg p-4 border h-96 overflow-y-auto">
-        <h3 class="font-bold text-lg mb-4 sticky top-0 bg-gray-50 py-2 border-b">Combat Log</h3>
+        <h3 class="font-bold text-lg mb-4 sticky top-0 bg-gray-50 py-2 border-b">
+            Combat Log
+            <span v-if="fightNumber" class="text-sm font-normal text-gray-500 ml-2">Fight #{{ fightNumber }}</span>
+        </h3>
         
-        <div v-if="loading" class="text-sm text-gray-500">Loading logs...</div>
+        <div v-if="loading && fightStatus !== 'waiting'" class="text-sm text-gray-500">Loading logs...</div>
+        <div v-else-if="fightStatus === 'waiting'" class="text-sm text-gray-500 italic text-center py-8">
+            Battle not started yet. Waiting for an opponent.
+        </div>
         <div v-else-if="error" class="text-sm text-red-500">{{ error }}</div>
         <div v-else-if="logs.length === 0" class="text-sm text-gray-500 italic text-center py-8">
             No combat events yet. The battle has just begun!

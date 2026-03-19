@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Battle\BlockPenetration;
 
+use App\Domain\Battle\Rng\DefaultRandomGenerator;
+use App\Domain\Battle\Rng\RandomGeneratorInterface;
 use App\Domain\Character\Character;
 use App\Domain\Weapon\Weapon;
 use Illuminate\Support\Facades\Log;
@@ -12,8 +14,8 @@ use Illuminate\Support\Facades\Log;
  * Stateful domain service that resolves block penetration attempts.
  *
  * State kept:
- *   - (attacker_id, defender_id) → failed attempt counter
- *   - (attacker_id) → last weapon id used (to detect weapon changes)
+ *   - (attacker_id, defender_id) > failed attempt counter
+ *   - (attacker_id) > last weapon id used (to detect weapon changes)
  *
  * All randomness is isolated to getRandom() so it can be overridden in tests.
  */
@@ -25,13 +27,17 @@ class BlockPenetrationService
     private array $failedAttempts = [];
 
     /**
-     * @var array<int, int> attacker_id → last weapon id
+     * @var array<int, int> attacker_id > last weapon id
      */
     private array $lastWeaponId = [];
 
+    private RandomGeneratorInterface $rng;
+
     public function __construct(
         private readonly BlockPenetrationConfig $config,
+        ?RandomGeneratorInterface $rng = null,
     ) {
+        $this->rng = $rng ?? new DefaultRandomGenerator();
     }
 
     // -------------------------------------------------------------------------
@@ -97,9 +103,7 @@ class BlockPenetrationService
             $this->incrementCounter($attacker->getId(), $defender->getId());
         }
 
-        $debug = $this->config->debug;
-
-        if ($debug) {
+        if ($this->config->debug) {
             Log::debug('BlockPenetration', [
                 'attacker_id' => $attacker->getId(),
                 'defender_id' => $defender->getId(),
@@ -117,12 +121,12 @@ class BlockPenetrationService
         return new BlockPenetrationResult(
             penetrated: $penetrated,
             damage: $damage,
-            attackRating: $debug ? (float) $attackRating : null,
-            defenseRating: $debug ? (float) $defenseRating : null,
-            effectiveRating: $debug ? (float) $effectiveRating : null,
-            baseChance: $debug ? $baseChance : null,
-            finalChance: $debug ? $finalChance : null,
-            randomRoll: $debug ? $roll : null,
+            attackRating: $this->config->debug ? (float) $attackRating : null,
+            defenseRating: $this->config->debug ? (float) $defenseRating : null,
+            effectiveRating: $this->config->debug ? (float) $effectiveRating : null,
+            baseChance: $this->config->debug ? $baseChance : null,
+            finalChance: $this->config->debug ? $finalChance : null,
+            randomRoll: $this->config->debug ? $roll : null,
         );
     }
 
@@ -150,6 +154,11 @@ class BlockPenetrationService
     {
         $this->failedAttempts = [];
         $this->lastWeaponId = [];
+    }
+
+    public function setRandomGenerator(RandomGeneratorInterface $rng): void
+    {
+        $this->rng = $rng;
     }
 
     // -------------------------------------------------------------------------
@@ -181,7 +190,7 @@ class BlockPenetrationService
         $last = $this->lastWeaponId[$attacker->getId()] ?? null;
 
         if ($last !== null && $last !== $weaponId) {
-            // Weapon changed — invalidate all pairs for this attacker
+            // Weapon changed � invalidate all pairs for this attacker
             $prefix = "{$attacker->getId()}:";
             foreach (array_keys($this->failedAttempts) as $key) {
                 if (str_starts_with($key, $prefix)) {
@@ -198,6 +207,6 @@ class BlockPenetrationService
      */
     protected function getRandom(): float
     {
-        return mt_rand() / mt_getrandmax();
+        return $this->rng->nextFloat();
     }
 }

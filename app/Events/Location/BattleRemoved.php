@@ -36,4 +36,20 @@ class BattleRemoved implements ShouldBroadcast
     {
         return 'battle.removed';
     }
+
+    public function broadcastWith(): array
+    {
+        $payload = [
+            'battle_id' => $this->battleId,
+            'location_id' => $this->locationId,
+        ];
+
+        return array_merge(
+            [
+                'type' => $this->broadcastAs(),
+                'payload' => $payload,
+            ],
+            $payload
+        );
+    }
 }

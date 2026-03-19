@@ -176,7 +176,7 @@ class BattleTest extends TestCase
         $battle->queueAction($action);
     }
 
-    public function test_cannot_move_to_occupied_tile(): void
+    public function test_can_queue_move_to_occupied_tile_for_resolution(): void
     {
         $char1 = $this->createMockCharacter(1, 100, 0, 0);
         $char2 = $this->createMockCharacter(2, 100, 1, 0);
@@ -184,9 +184,8 @@ class BattleTest extends TestCase
 
         $action = new TurnAction(1, ActionType::MOVE, null, 0, 0, 1, 0);
 
-        $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('Target cell is occupied.');
         $battle->queueAction($action);
+        $this->assertCount(1, $battle->getQueuedActions());
     }
 
     public function test_cannot_attack_non_adjacent_opponent(): void

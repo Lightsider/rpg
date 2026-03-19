@@ -44,10 +44,18 @@ class RoundStarted implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
-        return [
-            'battleId' => $this->battleId,
+        $payload = [
+            'battle_id' => $this->battleId,
             'round'    => $this->round,
             'timeout'  => $this->timeout,
         ];
+
+        return array_merge(
+            [
+                'type' => $this->broadcastAs(),
+                'payload' => $payload,
+            ],
+            $payload
+        );
     }
 }

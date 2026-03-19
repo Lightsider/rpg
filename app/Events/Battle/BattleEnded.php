@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Events\Battle;
 
 use App\Domain\Battle\Battle;
-use App\Domain\Character\Character;
+use App\Application\Battle\BattleEventPayloadFactory;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -27,13 +27,7 @@ class BattleEnded implements ShouldBroadcast
     public function __construct(
         public readonly Battle $battle
     ) {
-        $winner = $this->findWinner($battle);
-
-        $this->payload = [
-            'battleId' => $battle->getId(),
-            'winnerId' => $winner?->getId(),
-            'reason'   => $winner === null ? 'draw' : 'knockout',
-        ];
+        $this->payload = BattleEventPayloadFactory::ended($battle);
     }
 
     /**
@@ -53,17 +47,13 @@ class BattleEnded implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
-        return $this->payload;
+        return array_merge(
+            [
+                'type' => $this->broadcastAs(),
+                'payload' => $this->payload,
+            ],
+            $this->payload
+        );
     }
 
-    private function findWinner(Battle $battle): ?Character
-    {
-        foreach ($battle->getParticipants() as $participant) {
-            if ($participant->getCurrentHp() > 0) {
-                return $participant;
-            }
-        }
-
-        return null; // draw — both dead simultaneously
-    }
 }

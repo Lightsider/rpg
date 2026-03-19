@@ -17,12 +17,6 @@ class Character implements \JsonSerializable
 
     public const int MAX_ATTACKS_PER_TURN = 2;
 
-    private const float DODGE_CHANCE_PER_AGILITY = 0.045;
-    private const float CRIT_CHANCE_PER_WIT = 0.05;
-    private const float BASE_CRIT_MULTIPLIER = 1.5;
-    private const float CRIT_MULTIPLIER_PER_WIT = 0.05;
-    private const float STRENGTH_BONUS_MULTIPLIER = 0.5;
-
     public function __construct(
         private readonly int $id,
         private readonly int $userId,
@@ -182,22 +176,22 @@ class Character implements \JsonSerializable
 
     public function calculateDodgeChance(): float
     {
-        return $this->agility * self::DODGE_CHANCE_PER_AGILITY;
+        return CombatFormulas::dodgeChance($this->agility);
     }
 
     public function calculateCritChance(): float
     {
-        return $this->wit * self::CRIT_CHANCE_PER_WIT;
+        return CombatFormulas::critChance($this->wit);
     }
 
     public function calculateCritMultiplier(): float
     {
-        return self::BASE_CRIT_MULTIPLIER + ($this->wit * self::CRIT_MULTIPLIER_PER_WIT);
+        return CombatFormulas::critMultiplier($this->wit);
     }
 
     public function calculateStrengthBonus(): float
     {
-        return $this->strength * self::STRENGTH_BONUS_MULTIPLIER;
+        return CombatFormulas::strengthBonus($this->strength);
     }
 
     public function getId(): int

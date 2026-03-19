@@ -33,17 +33,22 @@ class CharacterLoadoutController extends Controller
             return response()->json(['error' => 'Character not found.'], 404);
         }
 
+        $characterModel = CharacterModel::where('user_id', $user->id)->first();
+        if (!$characterModel) {
+            return response()->json(['error' => 'Character not found.'], 404);
+        }
+
         $activeBattle = $this->battleRepository->findActiveBattleForCharacter($character->getId());
         $canEdit = $activeBattle === null;
 
         return response()->json([
             'stats' => [
-                'strength' => (int) ($user->strength ?? 10),
-                'dexterity' => (int) ($user->dexterity ?? 10),
-                'constitution' => (int) ($user->constitution ?? 10),
-                'wit' => (int) ($user->wit ?? 10),
+                'strength' => (int) $characterModel->strength,
+                'dexterity' => (int) $characterModel->dexterity,
+                'constitution' => (int) $characterModel->constitution,
+                'wit' => (int) $characterModel->wit,
             ],
-            'weapon_id' => $user->weapon_id,
+            'weapon_id' => $characterModel->weapon_id,
             'can_edit' => $canEdit,
             'blocked_reason' => $canEdit ? null : 'Cannot edit loadout while you are in a fight.',
         ]);
@@ -116,21 +121,21 @@ class CharacterLoadoutController extends Controller
             $updates['weapon'] = $this->resolveLegacyWeaponName($weaponId);
         }
 
-        $user->update($updates);
-        CharacterModel::where('id', $character->getId())
-            ->update(['hp' => $computedHp, 'max_hp' => $computedHp]);
+        CharacterModel::where('user_id', $user->id)
+            ->update($updates);
 
         $updatedCharacter = $this->characterRepository->findByUserId($user->id);
+        $characterModel = CharacterModel::where('user_id', $user->id)->first();
 
         return response()->json([
             'character' => $updatedCharacter,
             'stats' => [
-                'strength' => (int) ($user->strength ?? 10),
-                'dexterity' => (int) ($user->dexterity ?? 10),
-                'constitution' => (int) ($user->constitution ?? 10),
-                'wit' => (int) ($user->wit ?? 10),
+                'strength' => (int) ($characterModel?->strength ?? 10),
+                'dexterity' => (int) ($characterModel?->dexterity ?? 10),
+                'constitution' => (int) ($characterModel?->constitution ?? 10),
+                'wit' => (int) ($characterModel?->wit ?? 10),
             ],
-            'weapon_id' => $user->weapon_id,
+            'weapon_id' => $characterModel?->weapon_id,
         ]);
     }
 

@@ -12,19 +12,24 @@ use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\TargetZone;
 use App\Domain\Battle\TurnAction;
 use App\Domain\Character\Character;
-use App\Infrastructure\Eloquent\Models\BattleActionModel;
-use App\Infrastructure\Eloquent\Models\BattleModel;
-use App\Infrastructure\Eloquent\Models\ItemModel;
-use App\Infrastructure\Eloquent\Models\User as EloquentUser;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
-use App\Domain\Weapon\DamageType;
-use App\Domain\Weapon\Weapon;
-use App\Domain\Weapon\WeaponArchetype;
+use App\Infrastructure\Eloquent\Models\BattleActionModel;
+use App\Infrastructure\Eloquent\Models\BattleModel;
+use App\Infrastructure\Eloquent\Models\CharacterModel;
+use App\Infrastructure\Eloquent\Models\FighterPositionModel;
+use App\Infrastructure\Eloquent\Models\ItemModel;
+use App\Infrastructure\Eloquent\Models\User as EloquentUser;
+use App\Infrastructure\Eloquent\WeaponHydrator;
 use Illuminate\Support\Facades\DB;
 
 class EloquentBattleRepository implements BattleRepositoryInterface
 {
+    public function __construct(
+        private readonly WeaponHydrator $weaponHydrator
+    ) {
+    }
+
     public function findById(int $id): ?Battle
     {
         $model = BattleModel::with(['participants', 'actions'])->find($id);
@@ -79,10 +84,8 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         // Update character positions and HP (only if ACTIVE or FINISHED)
         if ($battle->getState() !== BattleState::WAITING) {
             foreach ($battle->getParticipants() as $participant) {
-                EloquentUser::where('id', $participant->getId())->update([
+                CharacterModel::where('user_id', $participant->getId())->update([
                     'hp' => $participant->getCurrentHp(),
-                    'x' => $participant->getX(),
-                    'y' => $participant->getY(),
                 ]);
             }
         }
@@ -151,8 +154,14 @@ class EloquentBattleRepository implements BattleRepositoryInterface
 
     private function mapToDomain(BattleModel $model): Battle
     {
-        $participants = $model->participants->map(function (EloquentUser $user) {
-            return $this->mapUserToCharacter($user);
+        $positions = FighterPositionModel::where('fight_id', $model->id)
+            ->get()
+            ->mapWithKeys(fn(FighterPositionModel $pos) => [
+                $pos->user_id => ['x' => $pos->x, 'y' => $pos->y],
+            ])->toArray();
+
+        $participants = $model->participants->map(function (EloquentUser $user) use ($positions) {
+            return $this->mapUserToCharacter($user, $positions);
         })->toArray();
 
         // Key by ID
@@ -191,19 +200,23 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         );
     }
 
-    private function mapUserToCharacter(EloquentUser $model): Character
+    /**
+     * @param array<int, array{x:int, y:int}> $positions
+     */
+    private function mapUserToCharacter(EloquentUser $model, array $positions): Character
     {
         // Copy-pasted/shared logic from EloquentCharacterRepository for now
+        $characterModel = CharacterModel::where('user_id', $model->id)->first();
         $weapon = null;
-        if ($model->weapon_id) {
-            $item = ItemModel::find($model->weapon_id);
+        if ($characterModel && $characterModel->weapon_id) {
+            $item = ItemModel::find($characterModel->weapon_id);
             if ($item && $item->type === 'weapon') {
-                $weapon = $this->resolveWeaponFromItem($item);
+                $weapon = $this->weaponHydrator->fromItem($item);
             }
         }
 
         if (!$weapon) {
-            $weapon = $this->resolveWeaponByLegacyName($model->weapon);
+            $weapon = $this->weaponHydrator->fromLegacyName($characterModel?->weapon);
         }
 
         $equipment = new Equipment();
@@ -212,61 +225,18 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         return new Character(
             id: $model->id,
             userId: $model->id, // Assuming user ID is the same as character ID for legacy compatibility
-            name: $model->name,
-            strength: (int) $model->strength,
-            agility: (int) $model->dexterity,
-            constitution: (int) $model->constitution ?? 10,
-            wit: (int) $model->wit ?? 10,
-            maxHp: (int) $model->max_hp,
-            currentHp: (int) $model->hp,
+            name: $characterModel?->name ?? $model->name,
+            strength: (int) ($characterModel?->strength ?? 10),
+            agility: (int) ($characterModel?->dexterity ?? 10),
+            constitution: (int) ($characterModel?->constitution ?? 10),
+            wit: (int) ($characterModel?->wit ?? 10),
+            maxHp: (int) ($characterModel?->max_hp ?? $model->max_hp),
+            currentHp: (int) ($characterModel?->hp ?? $model->hp),
             equipment: $equipment,
-            locationId: 1, // Defaulting to Training Grounds for now
-            x: (int) $model->x,
-            y: (int) $model->y,
+            locationId: (int) ($characterModel?->location_id ?? 1),
+            x: (int) ($positions[$model->id]['x'] ?? 0),
+            y: (int) ($positions[$model->id]['y'] ?? 0),
             blockResistRating: 0, // populated from shield once that system exists
         );
     }
-
-    private function resolveWeaponFromItem(ItemModel $item): Weapon
-    {
-        return new Weapon(
-            id: $item->id,
-            name: $item->name,
-            minDamage: $item->min_damage,
-            maxDamage: $item->max_damage,
-            damageType: DamageType::from(strtolower($item->damage_type ?? 'blunt')),
-            accuracyBonus: $item->accuracy_bonus,
-            blockBreakRating: $item->block_break_rating,
-            pierceMultiplier: $item->pierce_multiplier,
-            maxDamageRating: $item->max_damage_rating,
-            archetype: WeaponArchetype::from($item->archetype ?? 'universal'),
-            requiredStrength: $item->required_strength ?? 0,
-            requiredWit: $item->required_wit ?? 0,
-            flatCritBonus: $item->flat_crit_bonus ?? 0
-        );
-    }
-
-    private function resolveWeaponByLegacyName(?string $weaponType): Weapon
-    {
-        if ($weaponType === 'sword') {
-            return new Weapon(1, 'Sword', 9, 11, DamageType::SLASHING, 0.0, 20, 0.50, 90, WeaponArchetype::UNIVERSAL, 7, 3, 3);
-        }
-
-        if ($weaponType === 'axe') {
-            return new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 60, 0.65, 0, WeaponArchetype::UNIVERSAL, 7, 3, 3);
-        }
-
-        return new Weapon(0, 'Fists', 1, 3, DamageType::BLUNT, 0.0, 0, 0.10, 0, WeaponArchetype::UNIVERSAL, 0, 0, 0);
-    }
-
-
-
-
-
-
-
-
-
-
-
 }

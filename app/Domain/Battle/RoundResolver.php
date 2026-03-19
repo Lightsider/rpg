@@ -8,6 +8,7 @@ use App\Domain\Character\Character;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
+use App\Domain\Battle\Rng\DeterministicRandomGenerator;
 use App\Domain\DomainException;
 use App\Services\MovementResolver;
 use Exception;
@@ -28,6 +29,13 @@ class RoundResolver implements RoundResolverInterface
 
     public function resolve(Battle $battle): RoundResolutionResult
     {
+        // Seeded RNG per battle/round for deterministic resolution.
+        $seed = (int) sprintf('%u', crc32($battle->getId() . ':' . $battle->getRoundNumber()));
+        $rng = new DeterministicRandomGenerator($seed);
+        $this->combatResolver->setRandomGenerator($rng);
+        $this->blockPenetrationService->setRandomGenerator($rng);
+        $this->maxDamageService->setRandomGenerator($rng);
+
         // 1. Guard against double resolution
         if ($battle->getState() === BattleState::RESOLVING) {
             // Abort (or throw depending on preference, but 'abort' usually means exit early)

@@ -26,16 +26,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'hp',
-        'max_hp',
-        'strength',
-        'dexterity',
-        'constitution',
-        'wit',
-        'weapon',
-        'weapon_id',
-        'x',
-        'y',
     ];
 
     /**
@@ -61,8 +51,4 @@ class User extends Authenticatable
         ];
     }
 
-    public function weaponItem()
-    {
-        return $this->belongsTo(ItemModel::class, 'weapon_id');
-    }
 }

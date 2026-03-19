@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Events\Battle;
 
 use App\Domain\Battle\Battle;
-use App\Domain\Battle\BattleLogEntry;
-use App\Domain\Character\Character;
+use App\Application\Battle\BattleEventPayloadFactory;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -38,34 +37,7 @@ class BattleUpdated implements ShouldBroadcast
         public readonly Battle $battle,
         public readonly array $logs
     ) {
-        $events = array_map(
-            fn(BattleLogEntry $entry) => array_filter([
-                'type'     => $entry->type->value,
-                'actorId'  => $entry->actorId,
-                'targetId' => $entry->targetId,
-                'zone'     => $entry->zone?->value,
-                'damage'   => $entry->damage,
-            ], fn($v) => $v !== null),
-            $logs
-        );
-
-        $this->payload = [
-            'id'       => $battle->getId(),
-            'battleId' => $battle->getId(),
-            'round'    => $battle->getRoundNumber(),
-            'status'   => $battle->getState()->value,
-            'events'   => array_values($events),
-            'players'  => array_map(
-                fn(Character $c) => [
-                    'character_id' => $c->getId(),
-                    'hp'           => $c->getCurrentHp(),
-                    'max_hp'       => $c->getMaxHp(),
-                    'x'            => $c->getX(),
-                    'y'            => $c->getY(),
-                ],
-                array_values($battle->getParticipants())
-            ),
-        ];
+        $this->payload = BattleEventPayloadFactory::updated($battle, $logs);
     }
 
     /**
@@ -85,6 +57,12 @@ class BattleUpdated implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
-        return $this->payload;
+        return array_merge(
+            [
+                'type' => $this->broadcastAs(),
+                'payload' => $this->payload,
+            ],
+            $this->payload
+        );
     }
 }
