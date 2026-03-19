@@ -13,9 +13,10 @@ import {
     createFight,
     joinFight,
     cancelFight,
-    getWeapons,
     getCharacterLoadout,
     updateCharacterLoadout,
+    equipBackpackItem,
+    unequipBackpackItem,
     getFightState,
     submitActions,
 } from '@/api/gameApi';
@@ -23,17 +24,21 @@ import {
 const page = usePage();
 const gameState = ref(null);
 const fights = ref([]);
-const weapons = ref([]);
 const loadout = ref({
     stats: { strength: 10, dexterity: 10, constitution: 10, wit: 10 },
-    weapon_id: null,
+    equipment: { main_hand: null },
+    backpack: [],
     can_edit: true,
     blocked_reason: null,
 });
-const loadoutForm = ref({ strength: 10, dexterity: 10, constitution: 10, wit: 10, weapon_id: null });
+const loadoutForm = ref({ strength: 10, dexterity: 10, constitution: 10, wit: 10 });
 const loadoutErrors = ref({});
 const loadoutMessage = ref('');
 const savingLoadout = ref(false);
+
+const equipmentError = ref('');
+const equipmentMessage = ref('');
+const savingEquipment = ref(false);
 
 const loading = ref(true);
 const error = ref('');
@@ -344,15 +349,18 @@ const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(
 
 const fetchLoadoutData = async () => {
     try {
-        const [weaponList, loadoutData] = await Promise.all([getWeapons(), getCharacterLoadout()]);
-        weapons.value = weaponList;
-        loadout.value = loadoutData;
+        const loadoutData = await getCharacterLoadout();
+        loadout.value = {
+            ...loadout.value,
+            ...loadoutData,
+            equipment: loadoutData.equipment ?? { main_hand: null },
+            backpack: loadoutData.backpack ?? [],
+        };
         Object.assign(loadoutForm.value, {
             strength: loadoutData.stats.strength,
             dexterity: loadoutData.stats.dexterity,
             constitution: loadoutData.stats.constitution,
             wit: loadoutData.stats.wit,
-            weapon_id: loadoutData.weapon_id,
         });
     } catch (e) {
         loadoutErrors.value = { general: e.response?.data?.error || 'Failed to load loadout data.' };
@@ -371,7 +379,6 @@ const handleSaveLoadout = async () => {
             dexterity: response.stats.dexterity,
             constitution: response.stats.constitution,
             wit: response.stats.wit,
-            weapon_id: response.weapon_id,
         });
         loadoutMessage.value = 'Loadout updated.';
         await fetchGameData();
@@ -379,6 +386,47 @@ const handleSaveLoadout = async () => {
         loadoutErrors.value = e.response?.status === 422 ? e.response.data.errors : { general: e.response?.data?.error || 'Failed to update loadout.' };
     } finally {
         savingLoadout.value = false;
+    }
+};
+
+const canEquipItem = (item) => {
+    if (!item || !gameState.value?.character?.stats) return false;
+    return gameState.value.character.stats.strength >= (item.required_strength ?? 0) &&
+        gameState.value.character.stats.wit >= (item.required_wit ?? 0);
+};
+
+const handleEquipItem = async (item, slot = 'main_hand') => {
+    if (!item) return;
+    equipmentError.value = '';
+    equipmentMessage.value = '';
+    savingEquipment.value = true;
+    try {
+        const response = await equipBackpackItem({ item_id: item.id, slot });
+        if (response.character) gameState.value.character = response.character;
+        if (response.equipment) loadout.value.equipment = response.equipment;
+        if (response.backpack) loadout.value.backpack = response.backpack;
+        equipmentMessage.value = 'Equipped.';
+    } catch (e) {
+        equipmentError.value = e.response?.data?.error || 'Failed to equip item.';
+    } finally {
+        savingEquipment.value = false;
+    }
+};
+
+const handleUnequipItem = async (slot = 'main_hand') => {
+    equipmentError.value = '';
+    equipmentMessage.value = '';
+    savingEquipment.value = true;
+    try {
+        const response = await unequipBackpackItem({ slot });
+        if (response.character) gameState.value.character = response.character;
+        if (response.equipment) loadout.value.equipment = response.equipment;
+        if (response.backpack) loadout.value.backpack = response.backpack;
+        equipmentMessage.value = 'Unequipped.';
+    } catch (e) {
+        equipmentError.value = e.response?.data?.error || 'Failed to unequip item.';
+    } finally {
+        savingEquipment.value = false;
     }
 };
 
@@ -481,12 +529,12 @@ onUnmounted(() => {
                                 </div>
                                 <div>
                                     <span class="text-gray-500 text-sm">Weapon</span>
-                                    <div class="capitalize text-gray-700 font-medium">{{ typeof gameState.character.weapon === 'string' ? gameState.character.weapon : gameState.character.weapon?.name }}</div>
+                                    <div class="capitalize text-gray-700 font-medium">{{ gameState.character.weapon ? (typeof gameState.character.weapon === 'string' ? gameState.character.weapon : gameState.character.weapon?.name) : 'Unarmed' }}</div>
                                 </div>
                             </div>
 
                             <!-- Loadout editing only in Lobby -->
-                            <div v-if="!fightState" class="mt-6 border-t pt-4">
+                                                        <div v-if="!fightState" class="mt-6 border-t pt-4">
                                 <h4 class="text-sm font-semibold uppercase text-gray-500 mb-2">Edit Loadout</h4>
                                 <div v-if="!loadout.can_edit" class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3 mb-3">
                                     {{ loadout.blocked_reason || 'Loadout editing is unavailable right now.' }}
@@ -518,16 +566,61 @@ onUnmounted(() => {
                                         <input v-model.number="loadoutForm.wit" type="number" class="w-full rounded border-gray-300 text-sm" :disabled="!loadout.can_edit || savingLoadout" />
                                         <div v-if="loadoutErrors.wit" class="text-xs text-red-600 mt-1">{{ loadoutErrors.wit[0] }}</div>
                                     </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Weapon</label>
-                                        <select v-model="loadoutForm.weapon_id" class="w-full rounded border-gray-300 text-sm" :disabled="!loadout.can_edit || savingLoadout">
-                                            <option :value="null">Unarmed</option>
-                                            <option v-for="weapon in weapons" :key="weapon.id" :value="weapon.id">{{ weapon.name }}</option>
-                                        </select>
-                                    </div>
                                     <button @click="handleSaveLoadout" class="w-full bg-gray-900 hover:bg-gray-800 text-white py-2 rounded text-sm font-semibold disabled:opacity-60" :disabled="!loadout.can_edit || savingLoadout">
                                         {{ savingLoadout ? 'Saving...' : 'Save Loadout' }}
                                     </button>
+                                </div>
+
+                                <div class="mt-5 border-t pt-4">
+                                    <h4 class="text-xs font-semibold uppercase text-gray-500 mb-2">Equipment</h4>
+                                    <div class="bg-gray-50 p-3 rounded flex items-center justify-between">
+                                        <div>
+                                            <div class="text-[10px] uppercase text-gray-400">Main Hand</div>
+                                            <div class="font-medium text-gray-800">
+                                                {{ loadout.equipment.main_hand ? loadout.equipment.main_hand.name : 'Empty' }}
+                                            </div>
+                                            <div v-if="loadout.equipment.main_hand" class="text-[10px] text-gray-500 mt-1">
+                                                DMG {{ loadout.equipment.main_hand.min_damage }}-{{ loadout.equipment.main_hand.max_damage }}
+                                                <span v-if="loadout.equipment.main_hand.damage_type">· {{ loadout.equipment.main_hand.damage_type }}</span>
+                                            </div>
+                                        </div>
+                                        <button v-if="loadout.equipment.main_hand" @click="handleUnequipItem('main_hand')" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded disabled:opacity-60" :disabled="!loadout.can_edit || savingEquipment">
+                                            {{ savingEquipment ? 'Working...' : 'Unequip' }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <h4 class="text-xs font-semibold uppercase text-gray-500 mb-2">Backpack</h4>
+                                    <div v-if="equipmentError" class="text-sm text-red-600 mb-2">
+                                        {{ equipmentError }}
+                                    </div>
+                                    <div v-if="equipmentMessage" class="text-sm text-green-600 mb-2">
+                                        {{ equipmentMessage }}
+                                    </div>
+                                    <div v-if="loadout.backpack.length === 0" class="text-xs text-gray-500 bg-gray-50 border border-dashed rounded p-3">
+                                        Backpack is empty.
+                                    </div>
+                                    <ul v-else class="space-y-2">
+                                        <li v-for="item in loadout.backpack" :key="item.id" class="flex items-center justify-between p-3 border rounded bg-white">
+                                            <div>
+                                                <div class="font-medium text-sm">
+                                                    {{ item.name }}
+                                                    <span v-if="item.quantity > 1" class="text-xs text-gray-500">x{{ item.quantity }}</span>
+                                                </div>
+                                                <div class="text-[10px] text-gray-500">
+                                                    DMG {{ item.min_damage }}-{{ item.max_damage }}
+                                                    <span v-if="item.damage_type">· {{ item.damage_type }}</span>
+                                                </div>
+                                                <div class="text-[10px] text-gray-400">
+                                                    Req STR {{ item.required_strength }} / WIT {{ item.required_wit }}
+                                                </div>
+                                            </div>
+                                            <button @click="handleEquipItem(item, 'main_hand')" class="text-xs bg-gray-900 text-white px-3 py-1.5 rounded disabled:opacity-60" :disabled="!loadout.can_edit || savingEquipment || !canEquipItem(item)">
+                                                {{ savingEquipment ? 'Working...' : 'Equip' }}
+                                            </button>
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
                             
@@ -636,3 +729,5 @@ onUnmounted(() => {
         </div>
     </AuthenticatedLayout>
 </template>
+
+

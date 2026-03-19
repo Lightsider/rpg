@@ -4,7 +4,9 @@ namespace App\Infrastructure\Eloquent\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Infrastructure\Eloquent\Models\ItemModel;
+use App\Infrastructure\Eloquent\Models\CharacterItemModel;
 
 class CharacterModel extends Model
 {
@@ -19,12 +21,17 @@ class CharacterModel extends Model
         'wit',
         'weapon_id',
         'weapon',
+        'backpack_seeded',
         'hp',
         'max_hp',
         'location_id',
         'x',
         'y',
         'currency_copper'
+    ];
+
+    protected $casts = [
+        'backpack_seeded' => 'bool',
     ];
 
     public function user(): BelongsTo
@@ -40,5 +47,10 @@ class CharacterModel extends Model
     public function weaponItem(): BelongsTo
     {
         return $this->belongsTo(ItemModel::class, 'weapon_id');
+    }
+
+    public function backpackItems(): HasMany
+    {
+        return $this->hasMany(CharacterItemModel::class, 'character_id');
     }
 }

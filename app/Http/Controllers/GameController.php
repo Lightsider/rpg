@@ -9,10 +9,10 @@ use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Location\Repositories\LocationRepositoryInterface;
+use App\Infrastructure\Eloquent\Models\CharacterModel;
+use App\Services\BackpackService;
 use App\Services\CharacterStatService;
 use App\Services\CharacterStatValidator;
-use App\Services\WeaponAssigner;
-use App\Infrastructure\Eloquent\Models\CharacterModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +23,7 @@ class GameController extends Controller
         private readonly CharacterRepositoryInterface $characterRepository,
         private readonly LocationRepositoryInterface $locationRepository,
         private readonly BattleRepositoryInterface $battleRepository,
-        private readonly WeaponAssigner $weaponAssigner,
+        private readonly BackpackService $backpackService,
         private readonly CharacterStatValidator $statValidator,
         private readonly CharacterStatService $statService
     ) {
@@ -35,7 +35,7 @@ class GameController extends Controller
 
         // Load or create character
         $character = $this->characterRepository->findByUserId($user->id);
-        
+
         if (!$character) {
             $defaultStats = [
                 'str' => 5,
@@ -71,7 +71,7 @@ class GameController extends Controller
 
         $characterModel = CharacterModel::where('user_id', $user->id)->first();
         if ($characterModel) {
-            $this->weaponAssigner->ensureCharacterHasWeapon($characterModel);
+            $this->backpackService->ensureSeeded($characterModel);
             $character = $this->characterRepository->findByUserId($user->id) ?? $character;
         }
 

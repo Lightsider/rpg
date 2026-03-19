@@ -46,11 +46,6 @@ export const getFightLogs = async (fightId) => {
     return response.data;
 };
 
-export const getWeapons = async () => {
-    const response = await api.get('/weapons');
-    return response.data;
-};
-
 export const getCharacterLoadout = async () => {
     const response = await api.get('/character/loadout');
     return response.data;
@@ -58,5 +53,15 @@ export const getCharacterLoadout = async () => {
 
 export const updateCharacterLoadout = async (payload) => {
     const response = await api.put('/character/loadout', payload);
+    return response.data;
+};
+
+export const equipBackpackItem = async (payload) => {
+    const response = await api.post('/character/backpack/equip', payload);
+    return response.data;
+};
+
+export const unequipBackpackItem = async (payload) => {
+    const response = await api.post('/character/backpack/unequip', payload);
     return response.data;
 };

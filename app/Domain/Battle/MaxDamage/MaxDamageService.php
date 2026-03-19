@@ -39,7 +39,7 @@ class MaxDamageService
      */
     public function checkMaxDamage(Character $attacker): MaxDamageResult
     {
-        $rating = $attacker->getWeapon()->getMaxDamageRating();
+        $rating = $attacker->getWeaponForCombat()->getMaxDamageRating();
 
         // If the weapon has no max damage rating, it can never trigger.
         if ($rating <= 0) {
@@ -111,3 +111,4 @@ class MaxDamageService
         return $this->rng->nextFloat();
     }
 }
+

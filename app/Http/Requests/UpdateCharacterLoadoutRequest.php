@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateCharacterLoadoutRequest extends FormRequest
 {
@@ -21,13 +20,6 @@ class UpdateCharacterLoadoutRequest extends FormRequest
             'dexterity' => 'required|integer|min:0|max:100',
             'constitution' => 'required|integer|min:0|max:100',
             'wit' => 'required|integer|min:0|max:100',
-            'weapon_id' => [
-                'sometimes',
-                'nullable',
-                'integer',
-                Rule::exists('items', 'id')->where('type', 'weapon'),
-            ],
         ];
     }
 }
-

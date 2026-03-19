@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BattleController;
+use App\Http\Controllers\BackpackController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\FightController;
@@ -26,7 +27,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/game', [GameController::class, 'index'])->name('api.game.index');
         Route::get('/character/loadout', [CharacterLoadoutController::class, 'loadout'])->name('api.character.loadout');
         Route::put('/character/loadout', [CharacterLoadoutController::class, 'update'])->name('api.character.update_loadout');
-        Route::get('/weapons', [CharacterLoadoutController::class, 'weapons'])->name('api.weapons.index');
+        Route::post('/character/backpack/equip', [BackpackController::class, 'equip'])->name('api.character.backpack.equip');
+        Route::post('/character/backpack/unequip', [BackpackController::class, 'unequip'])->name('api.character.backpack.unequip');
         Route::get('/locations', [LocationController::class, 'index'])->name('api.locations.index');
         Route::get('/locations/{id}', [LocationController::class, 'show'])->name('api.locations.show');
 
@@ -62,6 +64,3 @@ Route::middleware('auth')->group(function () {
 Route::get('/ping', fn() => 'pong');
 
 require __DIR__ . '/auth.php';
-
-
-

@@ -7,6 +7,7 @@ namespace App\Domain\Character;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Weapon\Weapon;
+use App\Domain\Weapon\DamageType;
 
 /**
  * Pure PHP Domain Model for a Character.
@@ -16,6 +17,8 @@ class Character implements \JsonSerializable
     public const int DEFAULT_MAX_AP = 3;
 
     public const int MAX_ATTACKS_PER_TURN = 2;
+
+    private static ?Weapon $unarmedWeapon = null;
 
     public function __construct(
         private readonly int $id,
@@ -236,11 +239,40 @@ class Character implements \JsonSerializable
 
     public function getWeapon(): Weapon
     {
-        $weapon = $this->equipment->getItem(EquipmentSlot::MAIN_HAND);
-        if (!$weapon instanceof Weapon) {
+        $weapon = $this->getEquippedWeapon();
+        if (!$weapon) {
             throw new \App\Domain\DomainException('Character has no valid weapon equipped in main hand.');
         }
         return $weapon;
+    }
+
+    public function getWeaponForCombat(): Weapon
+    {
+        return $this->getEquippedWeapon() ?? self::getUnarmedWeapon();
+    }
+
+    private function getEquippedWeapon(): ?Weapon
+    {
+        $weapon = $this->equipment->getItem(EquipmentSlot::MAIN_HAND);
+        return $weapon instanceof Weapon ? $weapon : null;
+    }
+
+    private static function getUnarmedWeapon(): Weapon
+    {
+        if (self::$unarmedWeapon === null) {
+            self::$unarmedWeapon = new Weapon(
+                id: 0,
+                name: 'Unarmed',
+                minDamage: 0,
+                maxDamage: 0,
+                damageType: DamageType::BLUNT,
+                accuracyBonus: 0.0,
+                blockBreakRating: 0,
+                pierceMultiplier: 0.0
+            );
+        }
+
+        return self::$unarmedWeapon;
     }
 
     public function canEquip(Weapon $weapon): bool
@@ -330,7 +362,7 @@ class Character implements \JsonSerializable
                 'x' => $this->getX(),
                 'y' => $this->getY(),
             ],
-            'weapon' => $this->getWeapon()->getName(),
+            'weapon' => ($this->getEquippedWeapon()?->getName()),
             'currency_copper' => $this->getCurrencyCopper(),
         ];
     }

@@ -62,7 +62,7 @@ class CombatResolver
      */
     public function resolveAttack(Character $attacker, Character $defender, bool $isBlocked): AttackResult
     {
-        $weapon = $attacker->getWeapon();
+        $weapon = $attacker->getWeaponForCombat();
         $damageType = $weapon->getDamageType();
 
         // 1. Check dodge with PRNG
@@ -189,3 +189,4 @@ class CombatResolver
         $this->critPRNG?->setRandomGenerator($rng);
     }
 }
+

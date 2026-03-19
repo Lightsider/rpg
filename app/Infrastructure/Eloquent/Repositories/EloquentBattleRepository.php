@@ -215,12 +215,14 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             }
         }
 
-        if (!$weapon) {
-            $weapon = $this->weaponHydrator->fromLegacyName($characterModel?->weapon);
+        if (!$weapon && $characterModel?->weapon) {
+            $weapon = $this->weaponHydrator->fromLegacyName($characterModel->weapon);
         }
 
         $equipment = new Equipment();
-        $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
+        if ($weapon) {
+            $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
+        }
 
         return new Character(
             id: $model->id,
@@ -240,3 +242,4 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         );
     }
 }
+

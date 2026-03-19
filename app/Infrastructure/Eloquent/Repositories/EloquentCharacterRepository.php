@@ -8,8 +8,8 @@ use App\Domain\Character\Character;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
-use App\Infrastructure\Eloquent\WeaponHydrator;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
+use App\Infrastructure\Eloquent\WeaponHydrator;
 
 class EloquentCharacterRepository implements CharacterRepositoryInterface
 {
@@ -77,12 +77,17 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
 
     private function mapModelToDomain(CharacterModel $model): Character
     {
-        $weapon = $model->weaponItem
-            ? $this->weaponHydrator->fromItem($model->weaponItem)
-            : $this->weaponHydrator->fromLegacyName($model->weapon);
+        $weapon = null;
+        if ($model->weaponItem) {
+            $weapon = $this->weaponHydrator->fromItem($model->weaponItem);
+        } elseif ($model->weapon) {
+            $weapon = $this->weaponHydrator->fromLegacyName($model->weapon);
+        }
 
         $equipment = new Equipment();
-        $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
+        if ($weapon) {
+            $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
+        }
 
         return new Character(
             id: $model->user_id,

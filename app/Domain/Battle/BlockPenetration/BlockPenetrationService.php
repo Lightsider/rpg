@@ -49,7 +49,7 @@ class BlockPenetrationService
      */
     public function calculateEffectiveRating(Character $attacker, Character $defender): int
     {
-        return max(0, $attacker->getWeapon()->getBlockBreakRating() - $defender->getBlockResistRating());
+        return max(0, $attacker->getWeaponForCombat()->getBlockBreakRating() - $defender->getBlockResistRating());
     }
 
     /**
@@ -79,7 +79,7 @@ class BlockPenetrationService
     ): BlockPenetrationResult {
         $this->handleWeaponChange($attacker);
 
-        $attackRating = $attacker->getWeapon()->getBlockBreakRating();
+        $attackRating = $attacker->getWeaponForCombat()->getBlockBreakRating();
         $defenseRating = $defender->getBlockResistRating();
         $effectiveRating = max(0, $attackRating - $defenseRating);
 
@@ -94,7 +94,7 @@ class BlockPenetrationService
         $penetrated = $roll < $finalChance;
 
         $damage = $penetrated
-            ? $this->applyPierceDamage($baseDamage, $attacker->getWeapon())
+            ? $this->applyPierceDamage($baseDamage, $attacker->getWeaponForCombat())
             : 0;
 
         if ($penetrated) {
@@ -186,7 +186,7 @@ class BlockPenetrationService
      */
     private function handleWeaponChange(Character $attacker): void
     {
-        $weaponId = $attacker->getWeapon()->getId();
+        $weaponId = $attacker->getWeaponForCombat()->getId();
         $last = $this->lastWeaponId[$attacker->getId()] ?? null;
 
         if ($last !== null && $last !== $weaponId) {
@@ -210,3 +210,4 @@ class BlockPenetrationService
         return $this->rng->nextFloat();
     }
 }
+
