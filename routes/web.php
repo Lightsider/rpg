@@ -31,6 +31,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/character/backpack/unequip', [BackpackController::class, 'unequip'])->name('api.character.backpack.unequip');
         Route::get('/locations', [LocationController::class, 'index'])->name('api.locations.index');
         Route::get('/locations/{id}', [LocationController::class, 'show'])->name('api.locations.show');
+        Route::post('/locations/{id}/enter', [LocationController::class, 'enter'])->name('api.locations.enter');
 
         Route::get('/fights', [FightController::class, 'index'])->name('api.fights.index');
         Route::post('/fights', [FightController::class, 'create'])->name('api.fights.create');

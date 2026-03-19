@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Domain\Battle\BattleState;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Character;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
@@ -79,7 +78,6 @@ class GameController extends Controller
         $location = $this->locationRepository->findById($character->getLocationId());
 
         $currentFight = $this->battleRepository->findActiveBattleForCharacter($character->getId());
-        $isWaiting = $currentFight && $currentFight->getState() === BattleState::WAITING;
 
         // Load available fights in the location
         $availableFights = $this->battleRepository->findActiveByLocation($character->getLocationId());
@@ -89,8 +87,8 @@ class GameController extends Controller
             'location' => $location,
             'availableFights' => $availableFights,
             'currentFight' => $currentFight,
-            'canCreateFight' => !$isWaiting,
-            'canLeaveLocation' => !$isWaiting,
+            'canCreateFight' => $currentFight === null,
+            'canLeaveLocation' => $currentFight === null,
         ]);
     }
 }

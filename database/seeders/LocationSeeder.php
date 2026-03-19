@@ -16,5 +16,13 @@ class LocationSeeder extends Seeder
                 'description' => 'A place where warriors practice combat.'
             ]
         );
+
+        LocationModel::updateOrCreate(
+            ['id' => 2],
+            [
+                'name' => 'Shop',
+                'description' => 'A cozy stall filled with gear, trinkets, and trade.'
+            ]
+        );
     }
 }

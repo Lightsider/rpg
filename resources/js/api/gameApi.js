@@ -46,6 +46,16 @@ export const getFightLogs = async (fightId) => {
     return response.data;
 };
 
+export const getLocations = async () => {
+    const response = await api.get('/locations');
+    return response.data;
+};
+
+export const changeLocation = async (locationId) => {
+    const response = await api.post(`/locations/${locationId}/enter`);
+    return response.data;
+};
+
 export const getCharacterLoadout = async () => {
     const response = await api.get('/character/loadout');
     return response.data;

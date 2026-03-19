@@ -1,4 +1,4 @@
-<script setup>
+ï»¿<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, onMounted, computed, onUnmounted } from 'vue';
@@ -17,6 +17,8 @@ import {
     updateCharacterLoadout,
     equipBackpackItem,
     unequipBackpackItem,
+    getLocations,
+    changeLocation,
     getFightState,
     submitActions,
 } from '@/api/gameApi';
@@ -24,6 +26,7 @@ import {
 const page = usePage();
 const gameState = ref(null);
 const fights = ref([]);
+const locations = ref([]);
 const loadout = ref({
     stats: { strength: 10, dexterity: 10, constitution: 10, wit: 10 },
     equipment: { main_hand: null },
@@ -35,6 +38,8 @@ const loadoutForm = ref({ strength: 10, dexterity: 10, constitution: 10, wit: 10
 const loadoutErrors = ref({});
 const loadoutMessage = ref('');
 const savingLoadout = ref(false);
+const changingLocation = ref(false);
+const locationError = ref('');
 
 const equipmentError = ref('');
 const equipmentMessage = ref('');
@@ -91,6 +96,7 @@ const fetchGameData = async () => {
     try {
         gameState.value = await getGameState();
         fights.value = await getAvailableFights();
+        locations.value = await getLocations();
         
         // If there's an active or waiting fight, fetch its state
         if (gameState.value.currentFight) {
@@ -293,6 +299,29 @@ const handleCancelFight = async () => {
         await fetchLoadoutData();
     } catch (e) {
         alert(e.response?.data?.error || 'Failed to cancel fight');
+    }
+};
+
+const handleChangeLocation = async (locationId) => {
+    if (changingLocation.value) return;
+    if (!gameState.value?.canLeaveLocation) {
+        locationError.value = 'You cannot change locations while in a fight.';
+        return;
+    }
+    if (gameState.value?.location?.id === locationId) return;
+
+    changingLocation.value = true;
+    locationError.value = '';
+    try {
+        await changeLocation(locationId);
+        await fetchGameData();
+        if (gameState.value?.location?.id) {
+            initLocationWebSocket(gameState.value.location.id);
+        }
+    } catch (e) {
+        locationError.value = e.response?.data?.error || 'Failed to change location.';
+    } finally {
+        changingLocation.value = false;
     }
 };
 
@@ -581,7 +610,7 @@ onUnmounted(() => {
                                             </div>
                                             <div v-if="loadout.equipment.main_hand" class="text-[10px] text-gray-500 mt-1">
                                                 DMG {{ loadout.equipment.main_hand.min_damage }}-{{ loadout.equipment.main_hand.max_damage }}
-                                                <span v-if="loadout.equipment.main_hand.damage_type">· {{ loadout.equipment.main_hand.damage_type }}</span>
+                                                <span v-if="loadout.equipment.main_hand.damage_type">ï¿½ {{ loadout.equipment.main_hand.damage_type }}</span>
                                             </div>
                                         </div>
                                         <button v-if="loadout.equipment.main_hand" @click="handleUnequipItem('main_hand')" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded disabled:opacity-60" :disabled="!loadout.can_edit || savingEquipment">
@@ -610,7 +639,7 @@ onUnmounted(() => {
                                                 </div>
                                                 <div class="text-[10px] text-gray-500">
                                                     DMG {{ item.min_damage }}-{{ item.max_damage }}
-                                                    <span v-if="item.damage_type">· {{ item.damage_type }}</span>
+                                                    <span v-if="item.damage_type">ï¿½ {{ item.damage_type }}</span>
                                                 </div>
                                                 <div class="text-[10px] text-gray-400">
                                                     Req STR {{ item.required_strength }} / WIT {{ item.required_wit }}
@@ -694,6 +723,39 @@ onUnmounted(() => {
                                 <h3 class="text-lg font-bold mb-2">Location: {{ gameState.location.name }}</h3>
                                 <p class="text-gray-600 mb-6 italic">{{ gameState.location.description }}</p>
 
+                                <div class="mb-6 border-b pb-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-semibold text-lg text-gray-800">Travel</h4>
+                                        <span class="text-xs uppercase tracking-wide text-gray-400">Locations</span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mb-3">Choose where to go next.</p>
+                                    <div v-if="!gameState.canLeaveLocation" class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3 mb-3">
+                                        You cannot change locations while you are in a fight.
+                                    </div>
+                                    <div v-if="locationError" class="text-sm text-red-600 mb-2">
+                                        {{ locationError }}
+                                    </div>
+                                    <ul v-if="locations.length" class="space-y-2">
+                                        <li v-for="location in locations" :key="location.id" class="flex items-center justify-between p-3 border rounded bg-gray-50">
+                                            <div>
+                                                <div class="font-medium text-gray-800">{{ location.name }}</div>
+                                                <div class="text-xs text-gray-500">{{ location.description }}</div>
+                                            </div>
+                                            <button
+                                                @click="handleChangeLocation(location.id)"
+                                                :disabled="changingLocation || !gameState.canLeaveLocation || location.id === gameState.location.id"
+                                                class="text-xs font-semibold px-3 py-1.5 rounded border"
+                                                :class="location.id === gameState.location.id ? 'bg-gray-200 text-gray-600 border-gray-200' : 'bg-gray-900 text-white border-gray-900 hover:bg-gray-800'"
+                                            >
+                                                {{ location.id === gameState.location.id ? 'Current' : (changingLocation ? 'Traveling...' : 'Travel') }}
+                                            </button>
+                                        </li>
+                                    </ul>
+                                    <div v-else class="text-sm text-gray-500 bg-gray-50 border border-dashed rounded p-3">
+                                        No locations available.
+                                    </div>
+                                </div>
+
                                 <div v-if="gameState.currentFight && gameState.currentFight.state === 'waiting'" class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded flex justify-between items-center">
                                     <div>
                                         <div class="font-semibold text-yellow-800">You are waiting in Fight #{{ gameState.currentFight.id }}</div>
@@ -729,5 +791,7 @@ onUnmounted(() => {
         </div>
     </AuthenticatedLayout>
 </template>
+
+
 
 
