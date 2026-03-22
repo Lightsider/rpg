@@ -21,18 +21,25 @@ use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 use App\Infrastructure\Eloquent\Models\ItemModel;
 use App\Infrastructure\Eloquent\Models\User as EloquentUser;
 use App\Infrastructure\Eloquent\WeaponHydrator;
+use App\Infrastructure\Eloquent\SealHydrator;
 use Illuminate\Support\Facades\DB;
 
 class EloquentBattleRepository implements BattleRepositoryInterface
 {
     public function __construct(
-        private readonly WeaponHydrator $weaponHydrator
+        private readonly WeaponHydrator $weaponHydrator,
+        private readonly SealHydrator $sealHydrator
     ) {
     }
 
     public function findById(int $id): ?Battle
     {
-        $model = BattleModel::with(['participants', 'actions'])->find($id);
+        $model = BattleModel::with([
+            'participants.character' => function($query) {
+                $query->with(['weaponItem', 'seal1', 'seal2', 'seal3', 'seal4']);
+            },
+            'actions'
+        ])->find($id);
         if (!$model) {
             return null;
         }
@@ -86,6 +93,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             foreach ($battle->getParticipants() as $participant) {
                 CharacterModel::where('user_id', $participant->getId())->update([
                     'hp' => $participant->getCurrentHp(),
+                    'damage_accumulator' => $participant->getDamageAccumulator(),
                 ]);
             }
         }
@@ -224,6 +232,15 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
         }
 
+        foreach ([1, 2, 3, 4] as $i) {
+            $relation = "seal{$i}";
+            if ($characterModel && $characterModel->$relation) {
+                $seal = $this->sealHydrator->fromItem($characterModel->$relation);
+                $slot = Constant("App\Domain\Equipment\EquipmentSlot::SEAL_{$i}");
+                $equipment->setItem($slot, $seal);
+            }
+        }
+
         return new Character(
             id: $model->id,
             userId: $model->id, // Assuming user ID is the same as character ID for legacy compatibility
@@ -235,6 +252,8 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             maxHp: (int) ($characterModel?->max_hp ?? $model->max_hp),
             currentHp: (int) ($characterModel?->hp ?? $model->hp),
             equipment: $equipment,
+            damageAccumulator: (float) ($characterModel?->damage_accumulator ?? 0.0),
+            currencyCopper: (int) ($characterModel?->currency_copper ?? 0),
             locationId: (int) ($characterModel?->location_id ?? 1),
             x: (int) ($positions[$model->id]['x'] ?? 0),
             y: (int) ($positions[$model->id]['y'] ?? 0),

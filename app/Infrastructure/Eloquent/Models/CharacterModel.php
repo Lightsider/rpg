@@ -27,7 +27,12 @@ class CharacterModel extends Model
         'location_id',
         'x',
         'y',
-        'currency_copper'
+        'currency_copper',
+        'damage_accumulator',
+        'seal_1_id',
+        'seal_2_id',
+        'seal_3_id',
+        'seal_4_id',
     ];
 
     protected $casts = [
@@ -48,6 +53,11 @@ class CharacterModel extends Model
     {
         return $this->belongsTo(ItemModel::class, 'weapon_id');
     }
+
+    public function seal1(): BelongsTo { return $this->belongsTo(ItemModel::class, 'seal_1_id'); }
+    public function seal2(): BelongsTo { return $this->belongsTo(ItemModel::class, 'seal_2_id'); }
+    public function seal3(): BelongsTo { return $this->belongsTo(ItemModel::class, 'seal_3_id'); }
+    public function seal4(): BelongsTo { return $this->belongsTo(ItemModel::class, 'seal_4_id'); }
 
     public function backpackItems(): HasMany
     {

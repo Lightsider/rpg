@@ -15,17 +15,17 @@ class Weapon extends Item
     public function __construct(
         int $id,
         string $name,
-        private readonly int $minDamage,
-        private readonly int $maxDamage,
+        private readonly float $minDamage,
+        private readonly float $maxDamage,
         private readonly DamageType $damageType,
-        private readonly float $accuracyBonus,
-        private readonly int $blockBreakRating,
-        private readonly float $pierceMultiplier,
+        private readonly float $accuracyBonus = 0.0,
+        private readonly int $blockBreakRating = 0,
+        private readonly float $pierceMultiplier = 0.0,
         private readonly int $maxDamageRating = 0,
         private readonly WeaponArchetype $archetype = WeaponArchetype::UNIVERSAL,
         private readonly int $requiredStrength = 0,
         private readonly int $requiredWit = 0,
-        private readonly int $flatCritBonus = 0,
+        private readonly float $flatCritBonus = 0,
     ) {
         parent::__construct($id, $name, ItemType::WEAPON);
     }
@@ -33,17 +33,17 @@ class Weapon extends Item
     /**
      * Returns a random value between minDamage and maxDamage.
      */
-    public function rollBaseDamage(): int
+    public function rollBaseDamage(): float
     {
-        return mt_rand($this->minDamage, $this->maxDamage);
+        return (float) mt_rand((int) round($this->minDamage * 100), (int) round($this->maxDamage * 100)) / 100;
     }
 
-    public function getMinDamage(): int
+    public function getMinDamage(): float
     {
         return $this->minDamage;
     }
 
-    public function getMaxDamage(): int
+    public function getMaxDamage(): float
     {
         return $this->maxDamage;
     }
@@ -97,8 +97,8 @@ class Weapon extends Item
         return $this->requiredWit;
     }
 
-    public function getFlatCritBonus(): int
+    public function getFlatCritBonus(): float
     {
-        return $this->flatCritBonus;
+        return (float) $this->flatCritBonus;
     }
 }

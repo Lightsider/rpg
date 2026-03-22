@@ -14,8 +14,8 @@ enum EquipmentSlot: string
     case CHEST = 'chest';
     case LEGS = 'legs';
 
-    case CHARM_1 = 'charm_1';
-    case CHARM_2 = 'charm_2';
-    case CHARM_3 = 'charm_3';
-    case CHARM_4 = 'charm_4';
+    case SEAL_1 = 'seal_1';
+    case SEAL_2 = 'seal_2';
+    case SEAL_3 = 'seal_3';
+    case SEAL_4 = 'seal_4';
 }

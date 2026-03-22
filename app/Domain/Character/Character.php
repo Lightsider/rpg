@@ -6,6 +6,7 @@ namespace App\Domain\Character;
 
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
+use App\Domain\Seal\Seal;
 use App\Domain\Weapon\Weapon;
 use App\Domain\Weapon\DamageType;
 
@@ -31,6 +32,7 @@ class Character implements \JsonSerializable
         private readonly int $maxHp,
         private int $currentHp,
         public readonly \App\Domain\Equipment\Equipment $equipment,
+        private float $damageAccumulator = 0.0,
         private int $currencyCopper = 0,
         private readonly int $locationId = 1,
         private readonly int $maxActionPoints = self::DEFAULT_MAX_AP,
@@ -194,7 +196,8 @@ class Character implements \JsonSerializable
 
     public function calculateStrengthBonus(): float
     {
-        return CombatFormulas::strengthBonus($this->strength);
+        // 1 STR = 0.5 DMG
+        return (float) round($this->getStrength() * 0.5, 4);
     }
 
     public function getId(): int
@@ -275,10 +278,61 @@ class Character implements \JsonSerializable
         return self::$unarmedWeapon;
     }
 
+    public function getDamageAccumulator(): float
+    {
+        return (float) $this->damageAccumulator;
+    }
+
+    public function setDamageAccumulator(float $value): void
+    {
+        $this->damageAccumulator = (float) round($value, 4);
+    }
+
     public function canEquip(Weapon $weapon): bool
     {
         return $this->strength >= $weapon->getRequiredStrength() &&
                $this->wit >= $weapon->getRequiredWit();
+    }
+
+    /**
+     * @return array<Seal>
+     */
+    public function getEquippedSeals(): array
+    {
+        $seals = [];
+        $slots = [
+            EquipmentSlot::SEAL_1,
+            EquipmentSlot::SEAL_2,
+            EquipmentSlot::SEAL_3,
+            EquipmentSlot::SEAL_4,
+        ];
+
+        foreach ($slots as $slot) {
+            $item = $this->equipment->getItem($slot);
+            if ($item instanceof Seal) {
+                $seals[] = $item;
+            }
+        }
+
+        return $seals;
+    }
+
+    public function getSealsBaseDamage(): float
+    {
+        $total = 0.0;
+        foreach ($this->getEquippedSeals() as $seal) {
+            $total += $seal->rollBaseDamage();
+        }
+        return (float) round($total, 4);
+    }
+
+    public function getSealsFlatCritBonus(): float
+    {
+        $total = 0.0;
+        foreach ($this->getEquippedSeals() as $seal) {
+            $total += $seal->getFlatCritBonus();
+        }
+        return (float) round($total, 4);
     }
 
     public function getEquipment(): Equipment

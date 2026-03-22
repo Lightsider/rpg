@@ -13,5 +13,5 @@ enum ItemType: string
     case GLOVES = 'gloves';
     case CHEST_ARMOR = 'chest_armor';
     case LEG_ARMOR = 'leg_armor';
-    case CHARM = 'charm';
+    case SEAL = 'seal';
 }

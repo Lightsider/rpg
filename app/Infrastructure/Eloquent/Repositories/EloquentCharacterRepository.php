@@ -10,17 +10,19 @@ use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Infrastructure\Eloquent\WeaponHydrator;
+use App\Infrastructure\Eloquent\SealHydrator;
 
 class EloquentCharacterRepository implements CharacterRepositoryInterface
 {
     public function __construct(
-        private readonly WeaponHydrator $weaponHydrator
+        private readonly WeaponHydrator $weaponHydrator,
+        private readonly SealHydrator $sealHydrator
     ) {
     }
 
     public function findById(int $id): ?Character
     {
-        $model = CharacterModel::with('weaponItem')
+        $model = CharacterModel::with(['weaponItem', 'seal1', 'seal2', 'seal3', 'seal4'])
             ->where('user_id', $id)
             ->first();
         if (!$model) {
@@ -32,7 +34,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
 
     public function findByUserId(int $userId): ?Character
     {
-        $model = CharacterModel::with('weaponItem')
+        $model = CharacterModel::with(['weaponItem', 'seal1', 'seal2', 'seal3', 'seal4'])
             ->where('user_id', $userId)
             ->first();
 
@@ -89,6 +91,15 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
         }
 
+        foreach ([1, 2, 3, 4] as $i) {
+            $relation = "seal{$i}";
+            if ($model->$relation) {
+                $seal = $this->sealHydrator->fromItem($model->$relation);
+                $slot = Constant("App\Domain\Equipment\EquipmentSlot::SEAL_{$i}");
+                $equipment->setItem($slot, $seal);
+            }
+        }
+
         return new Character(
             id: $model->user_id,
             userId: $model->user_id,
@@ -100,6 +111,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             maxHp: (int) $model->max_hp,
             currentHp: (int) $model->hp,
             equipment: $equipment,
+            damageAccumulator: (float) ($model->damage_accumulator ?? 0.0),
             currencyCopper: (int) $model->currency_copper,
             locationId: $model->location_id,
             x: (int) $model->x,
