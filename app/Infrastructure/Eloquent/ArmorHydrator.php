@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Eloquent;
+
+use App\Domain\Armor\Armor;
+use App\Domain\Armor\ArmorSubtype;
+use App\Infrastructure\Eloquent\Models\ItemModel;
+
+class ArmorHydrator
+{
+    public function fromItem(ItemModel $item): Armor
+    {
+        return new Armor(
+            id: $item->id,
+            name: $item->name,
+            adArmor: (float)$item->ad_armor,
+            dodgeBonus: (float)$item->dodge_bonus,
+            subtype: ArmorSubtype::from($item->armor_subtype ?? 'body'),
+            requiredStrength: $item->required_strength ?? 0,
+            requiredWit: $item->required_wit ?? 0
+        );
+    }
+}

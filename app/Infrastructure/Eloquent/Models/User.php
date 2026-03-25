@@ -26,11 +26,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'hp',
-        'max_hp',
-        'strength',
-        'dexterity',
-        'weapon',
     ];
 
     /**
@@ -55,4 +50,5 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
 }

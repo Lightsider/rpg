@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Item;
+
+/**
+ * Base domain model for all equipable items.
+ */
+abstract class Item
+{
+    public function __construct(
+        private readonly int $id,
+        private readonly string $name,
+        private readonly ItemType $itemType,
+    ) {
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getItemType(): ItemType
+    {
+        return $this->itemType;
+    }
+}

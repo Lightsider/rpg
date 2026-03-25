@@ -8,12 +8,7 @@ class UserEntity
         public readonly ?int $id,
         public readonly string $name,
         public readonly string $email,
-        public readonly string $password,
-        public readonly ?int $hp = 100,
-        public readonly ?int $maxHp = 100,
-        public readonly ?int $strength = 10,
-        public readonly ?int $dexterity = 10,
-        public readonly ?string $weapon = null
+        public readonly string $password
     ) {
     }
 
@@ -23,12 +18,7 @@ class UserEntity
             id: $data['id'] ?? null,
             name: $data['name'],
             email: $data['email'],
-            password: $data['password'],
-            hp: $data['hp'] ?? 100,
-            maxHp: $data['max_hp'] ?? 100,
-            strength: $data['strength'] ?? 10,
-            dexterity: $data['dexterity'] ?? 10,
-            weapon: $data['weapon'] ?? null,
+            password: $data['password']
         );
     }
 
@@ -39,11 +29,6 @@ class UserEntity
             'name' => $this->name,
             'email' => $this->email,
             'password' => $this->password,
-            'hp' => $this->hp,
-            'max_hp' => $this->maxHp,
-            'strength' => $this->strength,
-            'dexterity' => $this->dexterity,
-            'weapon' => $this->weapon,
         ];
     }
 }

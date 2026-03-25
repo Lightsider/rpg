@@ -1,4 +1,4 @@
-.PHONY: build up down restart shell tinker migrate test dev
+.PHONY: build up down restart shell tinker migrate test front-dev front-build game-websocket
 
 build:
 	docker compose build
@@ -25,5 +25,11 @@ migrate:
 test:
 	docker compose exec app php artisan test
 
-dev:
+front-dev:
 	docker compose exec app npm run dev
+
+front-build:
+	docker compose exec app npm run build
+
+game-websocket:
+	docker compose exec app php artisan game:websocket start
