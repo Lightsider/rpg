@@ -10,6 +10,8 @@ use App\Domain\Seal\Seal;
 use App\Domain\Weapon\Weapon;
 use App\Domain\Weapon\DamageType;
 
+use App\Domain\Battle\Rng\RandomGeneratorInterface;
+
 /**
  * Pure PHP Domain Model for a Character.
  */
@@ -42,6 +44,10 @@ class Character implements \JsonSerializable
         private int $y = 0,
         private bool $isCommitted = false,
         private readonly int $blockResistRating = 0,
+        private float $adArmorHead = 0.0,
+        private float $adArmorChest = 0.0,
+        private float $adArmorLegs = 0.0,
+        private float $adArmorHands = 0.0,
         // PRNG failure streaks
         private int $dodgeFailStreak = 0,
         private int $critFailStreak = 0,
@@ -181,7 +187,28 @@ class Character implements \JsonSerializable
 
     public function calculateDodgeChance(): float
     {
-        return CombatFormulas::dodgeChance($this->agility);
+        $baseDodge = CombatFormulas::dodgeChance($this->agility);
+        return $baseDodge + $this->getArmorDodgeBonus();
+    }
+
+    public function getArmorDodgeBonus(): float
+    {
+        $bonus = 0.0;
+        $armorSlots = [
+            EquipmentSlot::HELMET,
+            EquipmentSlot::CHEST,
+            EquipmentSlot::LEGS,
+            EquipmentSlot::GLOVES,
+        ];
+
+        foreach ($armorSlots as $slot) {
+            $item = $this->equipment->getItem($slot);
+            if ($item instanceof \App\Domain\Armor\Armor) {
+                $bonus += $item->getDodgeBonus();
+            }
+        }
+
+        return (float) round($bonus / 100, 4);
     }
 
     public function calculateCritChance(): float
@@ -288,6 +315,56 @@ class Character implements \JsonSerializable
         $this->damageAccumulator = (float) round($value, 4);
     }
 
+    public function getAdArmorForZone(string $zone): float
+    {
+        return match ($zone) {
+            'head' => $this->adArmorHead,
+            'torso', 'chest' => $this->adArmorChest,
+            'legs' => $this->adArmorLegs,
+            'hands', 'left_arm', 'right_arm' => $this->adArmorHands,
+            default => 0.0,
+        };
+    }
+
+    public function setAdArmorForZone(string $zone, float $value): void
+    {
+        $value = (float) round(max(0, $value), 4);
+        switch ($zone) {
+            case 'head':
+                $this->adArmorHead = $value;
+                break;
+            case 'torso':
+            case 'chest':
+                $this->adArmorChest = $value;
+                break;
+            case 'legs':
+                $this->adArmorLegs = $value;
+                break;
+            case 'hands':
+            case 'left_arm':
+            case 'right_arm':
+                $this->adArmorHands = $value;
+                break;
+        }
+    }
+
+    public function initializeAdArmor(): void
+    {
+        $this->adArmorHead = $this->getMaxAdArmorForSlot(EquipmentSlot::HELMET);
+        $this->adArmorChest = $this->getMaxAdArmorForSlot(EquipmentSlot::CHEST);
+        $this->adArmorLegs = $this->getMaxAdArmorForSlot(EquipmentSlot::LEGS);
+        $this->adArmorHands = $this->getMaxAdArmorForSlot(EquipmentSlot::GLOVES);
+    }
+
+    private function getMaxAdArmorForSlot(EquipmentSlot $slot): float
+    {
+        $item = $this->equipment->getItem($slot);
+        if ($item instanceof \App\Domain\Armor\Armor) {
+            return $item->getAdArmor();
+        }
+        return 0.0;
+    }
+
     public function canEquip(Weapon $weapon): bool
     {
         return $this->strength >= $weapon->getRequiredStrength() &&
@@ -317,11 +394,11 @@ class Character implements \JsonSerializable
         return $seals;
     }
 
-    public function getSealsBaseDamage(): float
+    public function getSealsBaseDamage(?RandomGeneratorInterface $rng = null): float
     {
         $total = 0.0;
         foreach ($this->getEquippedSeals() as $seal) {
-            $total += $seal->rollBaseDamage();
+            $total += $seal->rollBaseDamage($rng);
         }
         return (float) round($total, 4);
     }

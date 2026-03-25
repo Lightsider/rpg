@@ -11,18 +11,23 @@ use App\Domain\Equipment\EquipmentSlot;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Infrastructure\Eloquent\WeaponHydrator;
 use App\Infrastructure\Eloquent\SealHydrator;
+use App\Infrastructure\Eloquent\ArmorHydrator;
 
 class EloquentCharacterRepository implements CharacterRepositoryInterface
 {
     public function __construct(
         private readonly WeaponHydrator $weaponHydrator,
-        private readonly SealHydrator $sealHydrator
+        private readonly SealHydrator $sealHydrator,
+        private readonly ArmorHydrator $armorHydrator
     ) {
     }
 
     public function findById(int $id): ?Character
     {
-        $model = CharacterModel::with(['weaponItem', 'seal1', 'seal2', 'seal3', 'seal4'])
+        $model = CharacterModel::with([
+            'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
+            'helmet', 'chest', 'legs', 'gloves'
+        ])
             ->where('user_id', $id)
             ->first();
         if (!$model) {
@@ -34,7 +39,10 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
 
     public function findByUserId(int $userId): ?Character
     {
-        $model = CharacterModel::with(['weaponItem', 'seal1', 'seal2', 'seal3', 'seal4'])
+        $model = CharacterModel::with([
+            'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
+            'helmet', 'chest', 'legs', 'gloves'
+        ])
             ->where('user_id', $userId)
             ->first();
 
@@ -100,6 +108,20 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             }
         }
 
+        $armorRelations = [
+            'helmet' => EquipmentSlot::HELMET,
+            'chest' => EquipmentSlot::CHEST,
+            'legs' => EquipmentSlot::LEGS,
+            'gloves' => EquipmentSlot::GLOVES,
+        ];
+
+        foreach ($armorRelations as $relation => $slot) {
+            if ($model->$relation) {
+                $armor = $this->armorHydrator->fromItem($model->$relation);
+                $equipment->setItem($slot, $armor);
+            }
+        }
+
         return new Character(
             id: $model->user_id,
             userId: $model->user_id,
@@ -116,6 +138,10 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             locationId: $model->location_id,
             x: (int) $model->x,
             y: (int) $model->y,
+            adArmorHead: (float)($model->ad_armor_head ?? 0.0),
+            adArmorChest: (float)($model->ad_armor_chest ?? 0.0),
+            adArmorLegs: (float)($model->ad_armor_legs ?? 0.0),
+            adArmorHands: (float)($model->ad_armor_hands ?? 0.0),
         );
     }
 }

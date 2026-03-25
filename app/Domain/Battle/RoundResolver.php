@@ -136,7 +136,7 @@ class RoundResolver implements RoundResolverInterface
                 $isBlocked = isset($defenses[$defender->getId()])
                     && in_array($action->getTargetZone()->value, $defenses[$defender->getId()], true);
 
-                $result = $this->combatResolver->resolveAttack($attacker, $defender, $isBlocked);
+                $result = $this->combatResolver->resolveAttack($attacker, $defender, $isBlocked, $action->getTargetZone());
                 $attackResults[] = ['defender' => $defender, 'result' => $result, 'attacker' => $attacker, 'zone' => $action->getTargetZone()->value];
 
                 if ($result->isDodged || $result->isMiss) {

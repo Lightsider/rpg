@@ -22,13 +22,15 @@ use App\Infrastructure\Eloquent\Models\ItemModel;
 use App\Infrastructure\Eloquent\Models\User as EloquentUser;
 use App\Infrastructure\Eloquent\WeaponHydrator;
 use App\Infrastructure\Eloquent\SealHydrator;
+use App\Infrastructure\Eloquent\ArmorHydrator;
 use Illuminate\Support\Facades\DB;
 
 class EloquentBattleRepository implements BattleRepositoryInterface
 {
     public function __construct(
         private readonly WeaponHydrator $weaponHydrator,
-        private readonly SealHydrator $sealHydrator
+        private readonly SealHydrator $sealHydrator,
+        private readonly ArmorHydrator $armorHydrator
     ) {
     }
 
@@ -36,7 +38,10 @@ class EloquentBattleRepository implements BattleRepositoryInterface
     {
         $model = BattleModel::with([
             'participants.character' => function($query) {
-                $query->with(['weaponItem', 'seal1', 'seal2', 'seal3', 'seal4']);
+                $query->with([
+                    'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
+                    'helmet', 'chest', 'legs', 'gloves'
+                ]);
             },
             'actions'
         ])->find($id);
@@ -94,6 +99,10 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                 CharacterModel::where('user_id', $participant->getId())->update([
                     'hp' => $participant->getCurrentHp(),
                     'damage_accumulator' => $participant->getDamageAccumulator(),
+                    'ad_armor_head' => $participant->getAdArmorForZone('head'),
+                    'ad_armor_chest' => $participant->getAdArmorForZone('chest'),
+                    'ad_armor_legs' => $participant->getAdArmorForZone('legs'),
+                    'ad_armor_hands' => $participant->getAdArmorForZone('hands'),
                 ]);
             }
         }
@@ -241,9 +250,23 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             }
         }
 
+        $armorRelations = [
+            'helmet' => EquipmentSlot::HELMET,
+            'chest' => EquipmentSlot::CHEST,
+            'legs' => EquipmentSlot::LEGS,
+            'gloves' => EquipmentSlot::GLOVES,
+        ];
+
+        foreach ($armorRelations as $relation => $slot) {
+            if ($characterModel && $characterModel->$relation) {
+                $armor = $this->armorHydrator->fromItem($characterModel->$relation);
+                $equipment->setItem($slot, $armor);
+            }
+        }
+
         return new Character(
-            id: $model->id,
-            userId: $model->id, // Assuming user ID is the same as character ID for legacy compatibility
+            id: (int) $model->id,
+            userId: (int) $model->id,
             name: $characterModel?->name ?? $model->name,
             strength: (int) ($characterModel?->strength ?? 10),
             agility: (int) ($characterModel?->dexterity ?? 10),
@@ -257,7 +280,11 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             locationId: (int) ($characterModel?->location_id ?? 1),
             x: (int) ($positions[$model->id]['x'] ?? 0),
             y: (int) ($positions[$model->id]['y'] ?? 0),
-            blockResistRating: 0, // populated from shield once that system exists
+            blockResistRating: 0,
+            adArmorHead: (float) ($characterModel?->ad_armor_head ?? 0.0),
+            adArmorChest: (float) ($characterModel?->ad_armor_chest ?? 0.0),
+            adArmorLegs: (float) ($characterModel?->ad_armor_legs ?? 0.0),
+            adArmorHands: (float) ($characterModel?->ad_armor_hands ?? 0.0),
         );
     }
 }

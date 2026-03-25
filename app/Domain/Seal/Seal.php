@@ -8,6 +8,8 @@ use App\Domain\Item\Item;
 use App\Domain\Item\ItemType;
 use App\Domain\Weapon\WeaponArchetype;
 
+use App\Domain\Battle\Rng\RandomGeneratorInterface;
+
 class Seal extends Item
 {
     public function __construct(
@@ -23,10 +25,14 @@ class Seal extends Item
         parent::__construct($id, $name, ItemType::SEAL);
     }
 
-    public function rollBaseDamage(): float
+    public function rollBaseDamage(?RandomGeneratorInterface $rng = null): float
     {
         if ($this->minDamage >= $this->maxDamage) {
             return $this->minDamage;
+        }
+
+        if ($rng) {
+            return $this->minDamage + $rng->nextFloat() * ($this->maxDamage - $this->minDamage);
         }
 
         // Maintaining precision for the roll

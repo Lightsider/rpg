@@ -22,5 +22,16 @@ class ItemModel extends Model
         'required_strength',
         'required_wit',
         'flat_crit_bonus',
+        'ad_armor',
+        'dodge_bonus',
+        'armor_subtype',
+    ];
+
+    protected $casts = [
+        'min_damage' => 'float',
+        'max_damage' => 'float',
+        'flat_crit_bonus' => 'float',
+        'ad_armor' => 'float',
+        'dodge_bonus' => 'float',
     ];
 }

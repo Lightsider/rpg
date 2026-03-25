@@ -7,6 +7,8 @@ namespace App\Domain\Weapon;
 use App\Domain\Item\Item;
 use App\Domain\Item\ItemType;
 
+use App\Domain\Battle\Rng\RandomGeneratorInterface;
+
 /**
  * Pure PHP Domain Model for a Weapon.
  */
@@ -33,8 +35,11 @@ class Weapon extends Item
     /**
      * Returns a random value between minDamage and maxDamage.
      */
-    public function rollBaseDamage(): float
+    public function rollBaseDamage(?RandomGeneratorInterface $rng = null): float
     {
+        if ($rng) {
+            return $this->minDamage + $rng->nextFloat() * ($this->maxDamage - $this->minDamage);
+        }
         return (float) mt_rand((int) round($this->minDamage * 100), (int) round($this->maxDamage * 100)) / 100;
     }
 
