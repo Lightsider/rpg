@@ -28,7 +28,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
             'helmet', 'chest', 'legs', 'gloves'
         ])
-            ->where('user_id', $id)
+            ->where('id', $id)
             ->first();
         if (!$model) {
             return null;
@@ -77,12 +77,12 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
 
     public function updateHp(int $id, int $currentHp): void
     {
-        CharacterModel::where('user_id', $id)->update(['hp' => $currentHp]);
+        CharacterModel::where('id', $id)->update(['hp' => $currentHp]);
     }
 
     public function updateCurrency(int $id, int $copper): void
     {
-        CharacterModel::where('user_id', $id)->update(['currency_copper' => $copper]);
+        CharacterModel::where('id', $id)->update(['currency_copper' => $copper]);
     }
 
     private function mapModelToDomain(CharacterModel $model): Character
@@ -122,8 +122,14 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             }
         }
 
+        $chestArmor = (float) ($model->ad_armor_chest ?? 0.0);
+        $handsArmor = (float) ($model->ad_armor_hands ?? 0.0);
+        $armFallback = ($chestArmor * 0.5) + ($handsArmor * 0.5);
+        $leftArm = $model->ad_armor_left_arm !== null ? (float) $model->ad_armor_left_arm : $armFallback;
+        $rightArm = $model->ad_armor_right_arm !== null ? (float) $model->ad_armor_right_arm : $armFallback;
+
         return new Character(
-            id: $model->user_id,
+            id: $model->id,
             userId: $model->user_id,
             name: $model->name,
             strength: (int) $model->strength,
@@ -139,9 +145,10 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             x: (int) $model->x,
             y: (int) $model->y,
             adArmorHead: (float)($model->ad_armor_head ?? 0.0),
-            adArmorChest: (float)($model->ad_armor_chest ?? 0.0),
+            adArmorChest: $chestArmor,
             adArmorLegs: (float)($model->ad_armor_legs ?? 0.0),
-            adArmorHands: (float)($model->ad_armor_hands ?? 0.0),
+            adArmorLeftArm: $leftArm,
+            adArmorRightArm: $rightArm,
         );
     }
 }

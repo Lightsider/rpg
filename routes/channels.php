@@ -41,7 +41,7 @@ Broadcast::channel('character.{characterId}', function ($user, int $characterId)
     /** @var CharacterRepositoryInterface $characterRepository */
     $characterRepository = app(CharacterRepositoryInterface::class);
 
-    $character = $characterRepository->findByUserId($characterId);
+    $character = $characterRepository->findById($characterId);
     if ($character === null) {
         return false;
     }

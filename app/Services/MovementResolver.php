@@ -137,7 +137,7 @@ class MovementResolver
                 $tempX = -1;
                 $tempY = -1 - $characterId;
                 FighterPositionModel::where('fight_id', $battle->getId())
-                    ->where('user_id', $characterId)
+                    ->where('character_id', $characterId)
                     ->update(['x' => $tempX, 'y' => $tempY]);
             }
 
@@ -148,7 +148,7 @@ class MovementResolver
                 }
 
                 FighterPositionModel::where('fight_id', $battle->getId())
-                    ->where('user_id', $characterId)
+                    ->where('character_id', $characterId)
                     ->update(['x' => $target['x'], 'y' => $target['y']]);
             }
         });

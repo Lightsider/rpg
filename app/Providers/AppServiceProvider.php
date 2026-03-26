@@ -48,6 +48,26 @@ class AppServiceProvider extends ServiceProvider
             \App\Infrastructure\Eloquent\Repositories\EloquentLocationRepository::class
         );
 
+        $this->app->bind(
+            \App\Domain\Store\Repositories\StoreRepositoryInterface::class,
+            \App\Infrastructure\Persistence\EloquentStoreRepository::class
+        );
+
+        $this->app->bind(
+            \App\Domain\Store\Repositories\StoreItemRepositoryInterface::class,
+            \App\Infrastructure\Persistence\EloquentStoreItemRepository::class
+        );
+
+        $this->app->bind(
+            \App\Domain\Item\Repositories\ItemRepositoryInterface::class,
+            \App\Infrastructure\Persistence\EloquentItemRepository::class
+        );
+
+        $this->app->bind(
+            \App\Domain\Item\Repositories\CharacterItemRepositoryInterface::class,
+            \App\Infrastructure\Persistence\EloquentCharacterItemRepository::class
+        );
+
         // BlockPenetrationService is a singleton because it carries per-battle
         // state (failure counters) that must survive across the same request.
         $this->app->singleton(BlockPenetrationService::class, function () {

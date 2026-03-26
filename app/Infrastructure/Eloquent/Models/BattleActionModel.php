@@ -6,6 +6,7 @@ namespace App\Infrastructure\Eloquent\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Infrastructure\Eloquent\Models\CharacterModel;
 
 class BattleActionModel extends Model
 {
@@ -13,7 +14,7 @@ class BattleActionModel extends Model
 
     protected $fillable = [
         'battle_id',
-        'user_id',
+        'character_id',
         'type',
         'target_zone',
         'from_x',
@@ -26,7 +27,7 @@ class BattleActionModel extends Model
 
     protected $casts = [
         'battle_id' => 'integer',
-        'user_id' => 'integer',
+        'character_id' => 'integer',
         'from_x' => 'integer',
         'from_y' => 'integer',
         'to_x' => 'integer',
@@ -40,9 +41,9 @@ class BattleActionModel extends Model
         return $this->belongsTo(BattleModel::class, 'battle_id');
     }
 
-    public function user(): BelongsTo
+    public function character(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(CharacterModel::class, 'character_id');
     }
 }
 

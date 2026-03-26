@@ -75,3 +75,13 @@ export const unequipBackpackItem = async (payload) => {
     const response = await api.post('/character/backpack/unequip', payload);
     return response.data;
 };
+
+export const openStore = async (storeId) => {
+    const response = await api.post(`/store/${storeId}/open`);
+    return response.data;
+};
+
+export const buyStoreItem = async (storeItemId) => {
+    const response = await api.post('/store/buy', { store_item_id: storeItemId });
+    return response.data;
+};

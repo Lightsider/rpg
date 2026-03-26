@@ -17,6 +17,8 @@ class Armor extends Item
         private readonly ArmorSubtype $subtype,
         private readonly int $requiredStrength = 0,
         private readonly int $requiredWit = 0,
+        private readonly int $requiredDexterity = 0,
+        private readonly int $requiredConstitution = 0,
     ) {
         parent::__construct($id, $name, ItemType::ARMOR);
     }
@@ -44,5 +46,15 @@ class Armor extends Item
     public function getRequiredWit(): int
     {
         return $this->requiredWit;
+    }
+
+    public function getRequiredDexterity(): int
+    {
+        return $this->requiredDexterity;
+    }
+
+    public function getRequiredConstitution(): int
+    {
+        return $this->requiredConstitution;
     }
 }

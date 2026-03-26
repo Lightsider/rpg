@@ -112,6 +112,8 @@ return [
                 ],
                 'queue' => [
                     'job' => VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Jobs\RabbitMQJob::class,
+                    'declare' => env('RABBITMQ_QUEUE_DECLARE', true),
+                    'bind' => env('RABBITMQ_QUEUE_BIND', true),
                 ],
             ],
             'worker' => env('RABBITMQ_WORKER', 'default'),

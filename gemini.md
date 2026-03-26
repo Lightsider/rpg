@@ -1,4 +1,4 @@
-Мы делаем backend на Laravel + PHP.
+Мы делаем backend на Laravel + PHP в docker окружении
 
 Это прототип браузерной PvP
 

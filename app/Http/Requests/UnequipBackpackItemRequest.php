@@ -21,7 +21,10 @@ class UnequipBackpackItemRequest extends FormRequest
             'slot' => [
                 'required',
                 'string',
-                Rule::in([EquipmentSlot::MAIN_HAND->value]),
+                Rule::in(array_map(
+                    static fn (EquipmentSlot $slot) => $slot->value,
+                    EquipmentSlot::cases()
+                )),
             ],
         ];
     }

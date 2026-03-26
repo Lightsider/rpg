@@ -48,7 +48,7 @@ class MapGenerator
                 $characterId = $participants[$i]->getId();
 
                 FighterPositionModel::firstOrCreate(
-                    ['fight_id' => $fight->getId(), 'user_id' => $characterId],
+                    ['fight_id' => $fight->getId(), 'character_id' => $characterId],
                     ['x' => $positions[$i]['x'], 'y' => $positions[$i]['y']]
                 );
             }

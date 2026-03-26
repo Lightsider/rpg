@@ -21,6 +21,8 @@ class ItemModel extends Model
         'archetype',
         'required_strength',
         'required_wit',
+        'required_dexterity',
+        'required_constitution',
         'flat_crit_bonus',
         'ad_armor',
         'dodge_bonus',
@@ -35,3 +37,4 @@ class ItemModel extends Model
         'dodge_bonus' => 'float',
     ];
 }
+

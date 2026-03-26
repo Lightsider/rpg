@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Infrastructure\Eloquent\Models\CharacterModel;
 
 class BattleModel extends Model
 {
@@ -35,7 +36,7 @@ class BattleModel extends Model
 
     public function participants(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'battle_participants', 'battle_id', 'user_id');
+        return $this->belongsToMany(CharacterModel::class, 'battle_participants', 'battle_id', 'character_id');
     }
 
     public function actions(): HasMany

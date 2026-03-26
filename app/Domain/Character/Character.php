@@ -47,7 +47,8 @@ class Character implements \JsonSerializable
         private float $adArmorHead = 0.0,
         private float $adArmorChest = 0.0,
         private float $adArmorLegs = 0.0,
-        private float $adArmorHands = 0.0,
+        private float $adArmorLeftArm = 0.0,
+        private float $adArmorRightArm = 0.0,
         // PRNG failure streaks
         private int $dodgeFailStreak = 0,
         private int $critFailStreak = 0,
@@ -321,7 +322,9 @@ class Character implements \JsonSerializable
             'head' => $this->adArmorHead,
             'torso', 'chest' => $this->adArmorChest,
             'legs' => $this->adArmorLegs,
-            'hands', 'left_arm', 'right_arm' => $this->adArmorHands,
+            'left_arm' => $this->adArmorLeftArm,
+            'right_arm' => $this->adArmorRightArm,
+            'hands' => max($this->adArmorLeftArm, $this->adArmorRightArm),
             default => 0.0,
         };
     }
@@ -341,9 +344,14 @@ class Character implements \JsonSerializable
                 $this->adArmorLegs = $value;
                 break;
             case 'hands':
+                $this->adArmorLeftArm = $value;
+                $this->adArmorRightArm = $value;
+                break;
             case 'left_arm':
+                $this->adArmorLeftArm = $value;
+                break;
             case 'right_arm':
-                $this->adArmorHands = $value;
+                $this->adArmorRightArm = $value;
                 break;
         }
     }
@@ -353,7 +361,11 @@ class Character implements \JsonSerializable
         $this->adArmorHead = $this->getMaxAdArmorForSlot(EquipmentSlot::HELMET);
         $this->adArmorChest = $this->getMaxAdArmorForSlot(EquipmentSlot::CHEST);
         $this->adArmorLegs = $this->getMaxAdArmorForSlot(EquipmentSlot::LEGS);
-        $this->adArmorHands = $this->getMaxAdArmorForSlot(EquipmentSlot::GLOVES);
+        $chestArmor = $this->adArmorChest;
+        $glovesArmor = $this->getMaxAdArmorForSlot(EquipmentSlot::GLOVES);
+        $armArmor = ($chestArmor * 0.5) + ($glovesArmor * 0.5);
+        $this->adArmorLeftArm = $armArmor;
+        $this->adArmorRightArm = $armArmor;
     }
 
     private function getMaxAdArmorForSlot(EquipmentSlot $slot): float
@@ -495,6 +507,13 @@ class Character implements \JsonSerializable
             ],
             'weapon' => ($this->getEquippedWeapon()?->getName()),
             'currency_copper' => $this->getCurrencyCopper(),
+            'additional_armor' => [
+                'head' => $this->getAdArmorForZone('head'),
+                'chest' => $this->getAdArmorForZone('chest'),
+                'legs' => $this->getAdArmorForZone('legs'),
+                'left_arm' => $this->getAdArmorForZone('left_arm'),
+                'right_arm' => $this->getAdArmorForZone('right_arm'),
+            ],
         ];
     }
 }

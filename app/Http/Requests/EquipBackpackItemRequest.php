@@ -21,12 +21,15 @@ class EquipBackpackItemRequest extends FormRequest
             'item_id' => [
                 'required',
                 'integer',
-                Rule::exists('items', 'id')->where('type', 'weapon'),
+                Rule::exists('items', 'id'),
             ],
             'slot' => [
                 'required',
                 'string',
-                Rule::in([EquipmentSlot::MAIN_HAND->value]),
+                Rule::in(array_map(
+                    static fn (EquipmentSlot $slot) => $slot->value,
+                    EquipmentSlot::cases()
+                )),
             ],
         ];
     }

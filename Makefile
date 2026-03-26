@@ -32,4 +32,4 @@ front-build:
 	docker compose exec app npm run build
 
 game-websocket:
-	docker compose exec app php artisan game:websocket start
+	docker compose exec app php artisan reverb:start

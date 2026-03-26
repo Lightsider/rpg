@@ -33,6 +33,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/locations/{id}', [LocationController::class, 'show'])->name('api.locations.show');
         Route::post('/locations/{id}/enter', [LocationController::class, 'enter'])->name('api.locations.enter');
 
+        Route::post('/store/{id}/open', [\App\Http\Controllers\StoreController::class, 'open'])->name('api.store.open');
+        Route::post('/store/buy', [\App\Http\Controllers\StoreController::class, 'buy'])->name('api.store.buy');
+
         Route::get('/fights', [FightController::class, 'index'])->name('api.fights.index');
         Route::post('/fights', [FightController::class, 'create'])->name('api.fights.create');
         Route::get('/fights/{id}', [FightController::class, 'show'])->name('api.fights.show');

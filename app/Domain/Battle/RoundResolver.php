@@ -223,6 +223,7 @@ class RoundResolver implements RoundResolverInterface
             // Restore HP to max for all participants after battle ends
             foreach ($participants as $participant) {
                 $participant->restoreHp();
+                $participant->initializeAdArmor();
             }
 
             // Save the battle with restored HP to database

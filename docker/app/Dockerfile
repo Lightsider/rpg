@@ -38,6 +38,11 @@ RUN pecl install redis amqp \
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Update www-data user to match host UID/GID (usually 1000 in WSL2/Linux)
+RUN apk add --no-cache shadow \
+    && usermod -u 1000 www-data \
+    && groupmod -g 1000 www-data
+
 # Setup working directory
 WORKDIR /var/www/html
 

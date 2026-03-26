@@ -41,6 +41,8 @@ class CharacterModel extends Model
         'ad_armor_chest',
         'ad_armor_legs',
         'ad_armor_hands',
+        'ad_armor_left_arm',
+        'ad_armor_right_arm',
     ];
 
     protected $casts = [

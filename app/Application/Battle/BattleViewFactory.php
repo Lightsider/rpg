@@ -20,7 +20,7 @@ class BattleViewFactory
         $positions = FighterPositionModel::where('fight_id', $battle->getId())
             ->get()
             ->map(fn(FighterPositionModel $pos) => [
-                'character_id' => $pos->user_id,
+                'character_id' => $pos->character_id,
                 'x' => $pos->x,
                 'y' => $pos->y,
             ])->toArray();
@@ -33,7 +33,14 @@ class BattleViewFactory
                 'character_id' => $p->getId(),
                 'name' => $p->getName(),
                 'hp' => $p->getCurrentHp(),
-                'max_hp' => $p->getMaxHp()
+                'max_hp' => $p->getMaxHp(),
+                'additional_armor' => [
+                    'head' => $p->getAdArmorForZone('head'),
+                    'chest' => $p->getAdArmorForZone('chest'),
+                    'legs' => $p->getAdArmorForZone('legs'),
+                    'left_arm' => $p->getAdArmorForZone('left_arm'),
+                    'right_arm' => $p->getAdArmorForZone('right_arm'),
+                ],
             ], array_values($battle->getParticipants())),
             'map' => [
                 'width' => $mapWidth,

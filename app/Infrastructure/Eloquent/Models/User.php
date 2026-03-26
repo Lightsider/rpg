@@ -6,6 +6,7 @@ namespace App\Infrastructure\Eloquent\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -51,4 +52,8 @@ class User extends Authenticatable
         ];
     }
 
+    public function character(): HasOne
+    {
+        return $this->hasOne(CharacterModel::class, 'user_id');
+    }
 }

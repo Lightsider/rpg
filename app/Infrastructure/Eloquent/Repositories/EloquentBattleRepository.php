@@ -19,7 +19,6 @@ use App\Infrastructure\Eloquent\Models\BattleModel;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 use App\Infrastructure\Eloquent\Models\ItemModel;
-use App\Infrastructure\Eloquent\Models\User as EloquentUser;
 use App\Infrastructure\Eloquent\WeaponHydrator;
 use App\Infrastructure\Eloquent\SealHydrator;
 use App\Infrastructure\Eloquent\ArmorHydrator;
@@ -37,13 +36,13 @@ class EloquentBattleRepository implements BattleRepositoryInterface
     public function findById(int $id): ?Battle
     {
         $model = BattleModel::with([
-            'participants.character' => function($query) {
+            'participants' => function ($query) {
                 $query->with([
                     'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
                     'helmet', 'chest', 'legs', 'gloves'
                 ]);
             },
-            'actions'
+            'actions',
         ])->find($id);
         if (!$model) {
             return null;
@@ -81,7 +80,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         foreach ($battle->getQueuedActions() as $action) {
             BattleActionModel::create([
                 'battle_id' => $model->id,
-                'user_id' => $action->getCharacterId(),
+                'character_id' => $action->getCharacterId(),
                 'type' => $action->getType()->value,
                 'target_zone' => $action->getTargetZone()?->value,
                 'from_x' => $action->getFromX(),
@@ -96,13 +95,14 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         // Update character positions and HP (only if ACTIVE or FINISHED)
         if ($battle->getState() !== BattleState::WAITING) {
             foreach ($battle->getParticipants() as $participant) {
-                CharacterModel::where('user_id', $participant->getId())->update([
+                CharacterModel::where('id', $participant->getId())->update([
                     'hp' => $participant->getCurrentHp(),
                     'damage_accumulator' => $participant->getDamageAccumulator(),
                     'ad_armor_head' => $participant->getAdArmorForZone('head'),
                     'ad_armor_chest' => $participant->getAdArmorForZone('chest'),
                     'ad_armor_legs' => $participant->getAdArmorForZone('legs'),
-                    'ad_armor_hands' => $participant->getAdArmorForZone('hands'),
+                    'ad_armor_left_arm' => $participant->getAdArmorForZone('left_arm'),
+                    'ad_armor_right_arm' => $participant->getAdArmorForZone('right_arm'),
                 ]);
             }
         }
@@ -148,7 +148,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
     {
         return DB::table('battle_participants')
             ->join('battles', 'battle_participants.battle_id', '=', 'battles.id')
-            ->where('battle_participants.user_id', $characterId)
+            ->where('battle_participants.character_id', $characterId)
             ->where('battles.state', '!=', BattleState::FINISHED->value)
             ->exists();
     }
@@ -157,7 +157,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
     {
         $battleId = DB::table('battle_participants')
             ->join('battles', 'battle_participants.battle_id', '=', 'battles.id')
-            ->where('battle_participants.user_id', $characterId)
+            ->where('battle_participants.character_id', $characterId)
             ->where('battles.state', '!=', BattleState::FINISHED->value)
             ->orderBy('battles.id')
             ->value('battles.id');
@@ -174,11 +174,11 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $positions = FighterPositionModel::where('fight_id', $model->id)
             ->get()
             ->mapWithKeys(fn(FighterPositionModel $pos) => [
-                $pos->user_id => ['x' => $pos->x, 'y' => $pos->y],
+                $pos->character_id => ['x' => $pos->x, 'y' => $pos->y],
             ])->toArray();
 
-        $participants = $model->participants->map(function (EloquentUser $user) use ($positions) {
-            return $this->mapUserToCharacter($user, $positions);
+        $participants = $model->participants->map(function (CharacterModel $character) use ($positions) {
+            return $this->mapCharacterToDomain($character, $positions);
         })->toArray();
 
         // Key by ID
@@ -192,7 +192,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             ->get()
             ->map(function (BattleActionModel $actionModel) {
                 return new TurnAction(
-                    $actionModel->user_id,
+                    $actionModel->character_id,
                     ActionType::from($actionModel->type),
                     $actionModel->target_zone ? TargetZone::from($actionModel->target_zone) : null,
                     $actionModel->from_x,
@@ -220,12 +220,10 @@ class EloquentBattleRepository implements BattleRepositoryInterface
     /**
      * @param array<int, array{x:int, y:int}> $positions
      */
-    private function mapUserToCharacter(EloquentUser $model, array $positions): Character
+    private function mapCharacterToDomain(CharacterModel $characterModel, array $positions): Character
     {
-        // Copy-pasted/shared logic from EloquentCharacterRepository for now
-        $characterModel = CharacterModel::where('user_id', $model->id)->first();
         $weapon = null;
-        if ($characterModel && $characterModel->weapon_id) {
+        if ($characterModel->weapon_id) {
             $item = ItemModel::find($characterModel->weapon_id);
             if ($item && $item->type === 'weapon') {
                 $weapon = $this->weaponHydrator->fromItem($item);
@@ -264,28 +262,34 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             }
         }
 
+        $chestArmor = (float) ($characterModel->ad_armor_chest ?? 0.0);
+        $handsArmor = (float) ($characterModel->ad_armor_hands ?? 0.0);
+        $armFallback = ($chestArmor * 0.5) + ($handsArmor * 0.5);
+        $leftArm = $characterModel->ad_armor_left_arm !== null ? (float) $characterModel->ad_armor_left_arm : $armFallback;
+        $rightArm = $characterModel->ad_armor_right_arm !== null ? (float) $characterModel->ad_armor_right_arm : $armFallback;
+
         return new Character(
-            id: (int) $model->id,
-            userId: (int) $model->id,
-            name: $characterModel?->name ?? $model->name,
-            strength: (int) ($characterModel?->strength ?? 10),
-            agility: (int) ($characterModel?->dexterity ?? 10),
-            constitution: (int) ($characterModel?->constitution ?? 10),
-            wit: (int) ($characterModel?->wit ?? 10),
-            maxHp: (int) ($characterModel?->max_hp ?? $model->max_hp),
-            currentHp: (int) ($characterModel?->hp ?? $model->hp),
+            id: (int) $characterModel->id,
+            userId: (int) $characterModel->user_id,
+            name: $characterModel->name,
+            strength: (int) ($characterModel->strength),
+            agility: (int) ($characterModel->dexterity),
+            constitution: (int) ($characterModel->constitution),
+            wit: (int) ($characterModel->wit),
+            maxHp: (int) ($characterModel->max_hp),
+            currentHp: (int) ($characterModel->hp),
             equipment: $equipment,
-            damageAccumulator: (float) ($characterModel?->damage_accumulator ?? 0.0),
-            currencyCopper: (int) ($characterModel?->currency_copper ?? 0),
-            locationId: (int) ($characterModel?->location_id ?? 1),
-            x: (int) ($positions[$model->id]['x'] ?? 0),
-            y: (int) ($positions[$model->id]['y'] ?? 0),
+            damageAccumulator: (float) ($characterModel->damage_accumulator ?? 0.0),
+            currencyCopper: (int) ($characterModel->currency_copper ?? 0),
+            locationId: (int) ($characterModel->location_id),
+            x: (int) ($positions[$characterModel->id]['x'] ?? 0),
+            y: (int) ($positions[$characterModel->id]['y'] ?? 0),
             blockResistRating: 0,
-            adArmorHead: (float) ($characterModel?->ad_armor_head ?? 0.0),
-            adArmorChest: (float) ($characterModel?->ad_armor_chest ?? 0.0),
-            adArmorLegs: (float) ($characterModel?->ad_armor_legs ?? 0.0),
-            adArmorHands: (float) ($characterModel?->ad_armor_hands ?? 0.0),
+            adArmorHead: (float) ($characterModel->ad_armor_head ?? 0.0),
+            adArmorChest: $chestArmor,
+            adArmorLegs: (float) ($characterModel->ad_armor_legs ?? 0.0),
+            adArmorLeftArm: $leftArm,
+            adArmorRightArm: $rightArm,
         );
     }
 }
-

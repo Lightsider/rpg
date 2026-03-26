@@ -19,7 +19,9 @@ class ArmorHydrator
             dodgeBonus: (float)$item->dodge_bonus,
             subtype: ArmorSubtype::from($item->armor_subtype ?? 'body'),
             requiredStrength: $item->required_strength ?? 0,
-            requiredWit: $item->required_wit ?? 0
+            requiredWit: $item->required_wit ?? 0,
+            requiredDexterity: $item->required_dexterity ?? 0,
+            requiredConstitution: $item->required_constitution ?? 0
         );
     }
 }

@@ -1,7 +1,7 @@
-﻿<script setup>
+<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
 import FightLog from '@/Components/Fight/FightLog.vue';
 import FightMap from '@/Components/Fight/FightMap.vue';
 import BlockSelector from '@/Components/Fight/BlockSelector.vue';
@@ -21,6 +21,8 @@ import {
     changeLocation,
     getFightState,
     submitActions,
+    openStore,
+    buyStoreItem,
 } from '@/api/gameApi';
 
 const page = usePage();
@@ -29,7 +31,7 @@ const fights = ref([]);
 const locations = ref([]);
 const loadout = ref({
     stats: { strength: 10, dexterity: 10, constitution: 10, wit: 10 },
-    equipment: { main_hand: null },
+    equipment: { main_hand: null, seal_1: null, seal_2: null, seal_3: null, seal_4: null, helmet: null, chest: null, legs: null, gloves: null },
     backpack: [],
     can_edit: true,
     blocked_reason: null,
@@ -40,6 +42,10 @@ const loadoutMessage = ref('');
 const savingLoadout = ref(false);
 const changingLocation = ref(false);
 const locationError = ref('');
+
+const storeState = ref(null);
+const loadingStore = ref(false);
+const buyingItem = ref(false);
 
 const equipmentError = ref('');
 const equipmentMessage = ref('');
@@ -60,7 +66,7 @@ const actionMode = ref('none');
 let countdownInterval = null;
 let refreshInterval = null;
 
-const myCharacterId = computed(() => page.props.auth.user.id);
+const myCharacterId = computed(() => gameState.value?.character?.id);
 const myPosition = computed(() => {
     if (!fightState.value?.positions) return null;
     return fightState.value.positions.find(p => p.character_id === myCharacterId.value) || null;
@@ -104,6 +110,12 @@ const fetchGameData = async () => {
         } else {
             fightState.value = null;
         }
+
+        if (gameState.value?.location?.name === 'Shop') {
+            handleOpenStore();
+        } else {
+            storeState.value = null;
+        }
     } catch (e) {
         error.value = e.response?.data?.error || 'Failed to load game data.';
     } finally {
@@ -124,6 +136,13 @@ const fetchFightState = async (id) => {
 };
 
 let battleChannel = null;
+
+const clearBattleChannel = () => {
+    if (battleChannel) {
+        window.Echo.leave(`battle.${battleChannel}`);
+        battleChannel = null;
+    }
+};
 
 const initWebSocket = (battleId) => {
     // Cleanup existing channel if any
@@ -167,11 +186,13 @@ const initWebSocket = (battleId) => {
         if (logRef.value) logRef.value.refresh();
     };
 
-    const onBattleEnded = (payload) => {
+    const onBattleEnded = async (payload) => {
         console.log('[Echo] Battle Ended:', payload);
         const data = payload?.payload ?? payload;
         if (fightState.value) fightState.value.status = 'finished';
         stopLocalTimer();
+        clearBattleChannel();
+        await fetchGameData();
     };
 
     const onBattleJoined = (payload) => {
@@ -214,6 +235,16 @@ const initCharacterWebSocket = () => {
             if (gameState.value?.character && gameState.value.character.id === data.character_id) {
                 gameState.value.character.currency_copper = data.copper;
             }
+        })
+        .listen('.store.state', (payload) => {
+            console.log('[Echo] Store State:', payload);
+            const data = payload?.payload ?? payload;
+            storeState.value = data.items;
+            loadingStore.value = false;
+        })
+        .listen('.inventory.update', (payload) => {
+            console.log('[Echo] Inventory Update:', payload);
+            fetchLoadoutData();
         });
 };
 
@@ -295,11 +326,19 @@ const handleCancelFight = async () => {
     try {
         await cancelFight(id);
         fightState.value = null;
+        clearBattleChannel();
         await fetchGameData();
         await fetchLoadoutData();
     } catch (e) {
         alert(e.response?.data?.error || 'Failed to cancel fight');
     }
+};
+
+const handleReturnToLobby = async () => {
+    fightState.value = null;
+    stopLocalTimer();
+    clearBattleChannel();
+    await fetchGameData();
 };
 
 const handleChangeLocation = async (locationId) => {
@@ -318,10 +357,44 @@ const handleChangeLocation = async (locationId) => {
         if (gameState.value?.location?.id) {
             initLocationWebSocket(gameState.value.location.id);
         }
+        if (gameState.value?.location?.name === 'Shop') {
+            handleOpenStore();
+        } else {
+            storeState.value = null;
+        }
     } catch (e) {
         locationError.value = e.response?.data?.error || 'Failed to change location.';
     } finally {
         changingLocation.value = false;
+    }
+};
+
+const handleOpenStore = async () => {
+    if (gameState.value?.location?.name === 'Shop') {
+        loadingStore.value = true;
+        try {
+            const response = await openStore(1);
+            if (response?.items) {
+                storeState.value = response.items;
+            }
+        } catch (e) {
+            console.error("Failed to open store", e);
+        } finally {
+            loadingStore.value = false;
+        }
+    } else {
+        storeState.value = null;
+    }
+};
+
+const handleBuyItem = async (storeItemId) => {
+    buyingItem.value = true;
+    try {
+        await buyStoreItem(storeItemId);
+    } catch (e) {
+        alert(e.response?.data?.error || 'Failed to buy store item');
+    } finally {
+        buyingItem.value = false;
     }
 };
 
@@ -382,7 +455,7 @@ const fetchLoadoutData = async () => {
         loadout.value = {
             ...loadout.value,
             ...loadoutData,
-            equipment: loadoutData.equipment ?? { main_hand: null },
+            equipment: loadoutData.equipment ?? { main_hand: null, seal_1: null, seal_2: null, seal_3: null, seal_4: null, helmet: null, chest: null, legs: null, gloves: null },
             backpack: loadoutData.backpack ?? [],
         };
         Object.assign(loadoutForm.value, {
@@ -421,16 +494,45 @@ const handleSaveLoadout = async () => {
 const canEquipItem = (item) => {
     if (!item || !gameState.value?.character?.stats) return false;
     return gameState.value.character.stats.strength >= (item.required_strength ?? 0) &&
-        gameState.value.character.stats.wit >= (item.required_wit ?? 0);
+        gameState.value.character.stats.wit >= (item.required_wit ?? 0) &&
+        gameState.value.character.stats.dexterity >= (item.required_dexterity ?? 0) &&
+        gameState.value.character.stats.constitution >= (item.required_constitution ?? 0);
 };
 
-const handleEquipItem = async (item, slot = 'main_hand') => {
+const sealSlots = ['seal_1', 'seal_2', 'seal_3', 'seal_4'];
+const armorSlotLabels = {
+    helmet: 'Helmet',
+    chest: 'Chest',
+    legs: 'Legs',
+    gloves: 'Gloves',
+};
+
+const resolveEquipSlot = (item) => {
+    if (item?.type === 'seal') {
+        const openSlot = sealSlots.find(slot => !loadout.value?.equipment?.[slot]);
+        return openSlot || sealSlots[0];
+    }
+    if (item?.type === 'armor') {
+        const subtype = item.armor_subtype;
+        const slotBySubtype = {
+            helmet: 'helmet',
+            body: 'chest',
+            boots: 'legs',
+            gloves: 'gloves',
+        };
+        return slotBySubtype[subtype] || 'chest';
+    }
+    return 'main_hand';
+};
+
+const handleEquipItem = async (item, slot = null) => {
     if (!item) return;
     equipmentError.value = '';
     equipmentMessage.value = '';
     savingEquipment.value = true;
     try {
-        const response = await equipBackpackItem({ item_id: item.id, slot });
+        const targetSlot = slot || resolveEquipSlot(item);
+        const response = await equipBackpackItem({ item_id: item.id, slot: targetSlot });
         if (response.character) gameState.value.character = response.character;
         if (response.equipment) loadout.value.equipment = response.equipment;
         if (response.backpack) loadout.value.backpack = response.backpack;
@@ -462,7 +564,11 @@ const handleUnequipItem = async (slot = 'main_hand') => {
 onMounted(async () => {
     await fetchGameData();
     await fetchLoadoutData();
-    initCharacterWebSocket();
+    watch(() => gameState.value?.character?.id, (newId) => {
+        if (newId) {
+            initCharacterWebSocket();
+        }
+    }, { immediate: true });
     if (gameState.value?.location?.id) {
         initLocationWebSocket(gameState.value.location.id);
     }
@@ -617,6 +723,32 @@ onUnmounted(() => {
                                             {{ savingEquipment ? 'Working...' : 'Unequip' }}
                                         </button>
                                     </div>
+                                    <div class="mt-3 grid grid-cols-2 gap-2">
+                                        <div v-for="slot in sealSlots" :key="slot" class="bg-gray-50 p-3 rounded flex items-center justify-between">
+                                            <div>
+                                                <div class="text-[10px] uppercase text-gray-400">{{ slot.replace('seal_', 'Seal ') }}</div>
+                                                <div class="font-medium text-gray-800">
+                                                    {{ loadout.equipment[slot] ? loadout.equipment[slot].name : 'Empty' }}
+                                                </div>
+                                            </div>
+                                            <button v-if="loadout.equipment[slot]" @click="handleUnequipItem(slot)" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded disabled:opacity-60" :disabled="!loadout.can_edit || savingEquipment">
+                                                {{ savingEquipment ? 'Working...' : 'Unequip' }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 grid grid-cols-2 gap-2">
+                                        <div v-for="(label, slot) in armorSlotLabels" :key="slot" class="bg-gray-50 p-3 rounded flex items-center justify-between">
+                                            <div>
+                                                <div class="text-[10px] uppercase text-gray-400">{{ label }}</div>
+                                                <div class="font-medium text-gray-800">
+                                                    {{ loadout.equipment[slot] ? loadout.equipment[slot].name : 'Empty' }}
+                                                </div>
+                                            </div>
+                                            <button v-if="loadout.equipment[slot]" @click="handleUnequipItem(slot)" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded disabled:opacity-60" :disabled="!loadout.can_edit || savingEquipment">
+                                                {{ savingEquipment ? 'Working...' : 'Unequip' }}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="mt-4">
@@ -641,11 +773,19 @@ onUnmounted(() => {
                                                     DMG {{ item.min_damage }}-{{ item.max_damage }}
                                                     <span v-if="item.damage_type">� {{ item.damage_type }}</span>
                                                 </div>
+                                                <div v-if="item.ad_armor" class="text-[10px] text-gray-500">
+                                                    Armor {{ item.ad_armor }}
+                                                </div>
                                                 <div class="text-[10px] text-gray-400">
-                                                    Req STR {{ item.required_strength }} / WIT {{ item.required_wit }}
+                                                    <span v-if="item.required_dexterity || item.required_constitution">
+                                                        Req DEX {{ item.required_dexterity }} / CON {{ item.required_constitution }}
+                                                    </span>
+                                                    <span v-else>
+                                                        Req STR {{ item.required_strength }} / WIT {{ item.required_wit }}
+                                                    </span>
                                                 </div>
                                             </div>
-                                            <button @click="handleEquipItem(item, 'main_hand')" class="text-xs bg-gray-900 text-white px-3 py-1.5 rounded disabled:opacity-60" :disabled="!loadout.can_edit || savingEquipment || !canEquipItem(item)">
+                                            <button @click="handleEquipItem(item)" class="text-xs bg-gray-900 text-white px-3 py-1.5 rounded disabled:opacity-60" :disabled="!loadout.can_edit || savingEquipment || !canEquipItem(item)">
                                                 {{ savingEquipment ? 'Working...' : 'Equip' }}
                                             </button>
                                         </li>
@@ -668,6 +808,14 @@ onUnmounted(() => {
                                         <span class="text-[10px] text-gray-500 italic">{{ p.weapon || 'Unarmed' }}</span>
                                         <span class="text-[10px] font-black text-gray-700">{{ p.hp }} / {{ p.max_hp }} HP</span>
                                     </div>
+                                    <div v-if="p.additional_armor && (p.additional_armor.head || p.additional_armor.chest || p.additional_armor.legs || p.additional_armor.left_arm || p.additional_armor.right_arm)" class="text-[10px] text-gray-500 mt-1">
+                                        Additional Armor:
+                                        H {{ p.additional_armor.head || 0 }}
+                                        C {{ p.additional_armor.chest || 0 }}
+                                        L {{ p.additional_armor.legs || 0 }}
+                                        LA {{ p.additional_armor.left_arm || 0 }}
+                                        RA {{ p.additional_armor.right_arm || 0 }}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -685,7 +833,7 @@ onUnmounted(() => {
                                 </div>
                                 <div v-else-if="fightState.status === 'finished'" class="bg-gray-100 border p-6 rounded-lg text-center">
                                     <h3 class="font-bold text-lg mb-2">Battle Concluded</h3>
-                                    <button @click="fightState = null" class="text-blue-600 hover:underline">Return to Lobby</button>
+                                    <button @click="handleReturnToLobby" class="text-blue-600 hover:underline">Return to Lobby</button>
                                 </div>
                                 <template v-else>
                                     <div class="bg-white rounded-lg p-4 shadow-sm border" v-if="fightState.map && fightState.positions">
@@ -716,6 +864,64 @@ onUnmounted(() => {
                                     </div>
                                 </template>
                                 <FightLog ref="logRef" :fightId="fightState.id" :fightStatus="fightState.status" :fightNumber="fightState.id" />
+                            </div>
+
+                            <!-- Shop UI -->
+                            <div v-else-if="gameState.location.name === 'Shop'">
+                                <div class="flex items-center justify-between mb-6 pb-4 border-b">
+                                    <div>
+                                        <h3 class="text-xl font-black text-gray-900 tracking-tight">The Merchant</h3>
+                                        <p class="text-sm text-gray-500 italic mt-1">{{ gameState.location.description }}</p>
+                                    </div>
+                                    <button
+                                        v-for="loc in locations.filter(l => l.name !== 'Shop')"
+                                        :key="loc.id"
+                                        @click="handleChangeLocation(loc.id)"
+                                        :disabled="changingLocation"
+                                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded text-sm transition-colors border"
+                                    >
+                                        Leave Shop
+                                    </button>
+                                </div>
+
+                                <div v-if="loadingStore" class="text-center py-8 text-gray-500 bg-gray-50 rounded border border-dashed">
+                                    Loading store inventory...
+                                </div>
+                                <div v-else-if="!storeState || storeState.length === 0" class="text-center py-8 text-gray-500 bg-gray-50 rounded border border-dashed">
+                                    The merchant has nothing to sell right now.
+                                </div>
+                                <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div v-for="item in storeState" :key="item.store_item_id" class="flex flex-col justify-between p-4 border rounded shadow-sm bg-white hover:border-gray-300 transition-colors">
+                                        <div class="mb-3 border-b border-gray-100 pb-3">
+                                            <div class="flex justify-between items-start">
+                                                <h4 class="font-bold text-gray-800 text-lg leading-tight">{{ item.item.name }}</h4>
+                                                <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 uppercase tracking-wider">{{ item.item.type }}</span>
+                                            </div>
+                                            <div class="text-sm text-gray-500 mt-2 font-medium">Price: <span class="text-yellow-600 font-bold ml-1">{{ item.price === 0 ? 'Free' : item.price + ' copper' }}</span></div>
+                                        <div class="text-xs text-gray-600 space-y-1 mt-2">
+                                            <div v-if="(item.item.min_damage || item.item.max_damage)">
+                                                Damage: {{ item.item.min_damage }}-{{ item.item.max_damage }}<span v-if="item.item.damage_type"> ({{ item.item.damage_type }})</span>
+                                            </div>
+                                            <div v-if="item.item.flat_crit_bonus">Crit Chance: +{{ item.item.flat_crit_bonus }}%</div>
+                                            <div v-if="item.item.max_damage_rating">Power: {{ item.item.max_damage_rating }}</div>
+                                            <div v-if="item.item.archetype">Archetype: {{ item.item.archetype }}</div>
+                                            <div v-if="item.item.required_dexterity || item.item.required_constitution">
+                                                Requirements:
+                                                <span v-if="item.item.required_dexterity"> DEX {{ item.item.required_dexterity }}</span>
+                                                <span v-if="item.item.required_constitution"> CON {{ item.item.required_constitution }}</span>
+                                            </div>
+                                            <div v-else-if="item.item.required_strength || item.item.required_wit">
+                                                Requirements:
+                                                <span v-if="item.item.required_strength"> STR {{ item.item.required_strength }}</span>
+                                                <span v-if="item.item.required_wit"> WIT {{ item.item.required_wit }}</span>
+                                            </div>
+                                        </div>
+                                        </div>
+                                        <button @click="handleBuyItem(item.store_item_id)" :disabled="buyingItem" class="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50">
+                                            {{ buyingItem ? 'Processing...' : 'Buy' }}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Lobby UI -->
@@ -791,6 +997,11 @@ onUnmounted(() => {
         </div>
     </AuthenticatedLayout>
 </template>
+
+
+
+
+
 
 
 
