@@ -16,6 +16,7 @@ use App\Domain\Character\Character;
 use App\Domain\DomainException;
 use App\Http\Requests\SubmitActionsRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class FightController extends Controller
@@ -33,6 +34,7 @@ class FightController extends Controller
 
     public function index(): JsonResponse
     {
+        $this->roundExpirationHandler->handleExpiredRounds();
         $user = Auth::user();
         $character = $this->characterRepository->findByUserId($user->id);
 
@@ -42,11 +44,24 @@ class FightController extends Controller
 
         $fights = $this->battleRepository->findJoinableByLocation($character->getLocationId());
 
-        return response()->json($fights);
+        $fightsPayload = array_map(function ($fight) {
+            $timeout = $fight->getStartTimeoutSeconds();
+            $expiresAt = $timeout !== null
+                ? $fight->getRoundStartedAt()->modify("+{$timeout} seconds")
+                : null;
+            $timerRemaining = $expiresAt ? max(0, $expiresAt->getTimestamp() - (new \DateTimeImmutable())->getTimestamp()) : null;
+
+            return array_merge($fight->jsonSerialize(), [
+                'timer_remaining' => $timerRemaining,
+            ]);
+        }, $fights);
+
+        return response()->json($fightsPayload);
     }
 
-    public function create(): JsonResponse
+    public function create(Request $request): JsonResponse
     {
+        $this->roundExpirationHandler->handleExpiredRounds();
         $user = Auth::user();
         $character = $this->characterRepository->findByUserId($user->id);
 
@@ -54,8 +69,17 @@ class FightController extends Controller
             return response()->json(['error' => 'Character not found.'], 404);
         }
 
+        $data = $request->validate([
+            'max_participants' => ['nullable', 'integer', 'min:2'],
+            'start_timeout_seconds' => ['nullable', 'integer', 'min:1', 'max:600'],
+        ]);
+
         try {
-            $fightId = $this->battleLobbyService->createBattle($character);
+            $fightId = $this->battleLobbyService->createBattle(
+                $character,
+                $data['max_participants'] ?? null,
+                $data['start_timeout_seconds'] ?? null
+            );
             return response()->json(['fight_id' => $fightId], 201);
         } catch (DomainException $e) {
             return response()->json(['error' => $e->getMessage()], 400);
@@ -64,6 +88,7 @@ class FightController extends Controller
 
     public function join(int $id): JsonResponse
     {
+        $this->roundExpirationHandler->handleExpiredRounds();
         $battle = $this->battleRepository->findById($id);
 
         if (!$battle) {

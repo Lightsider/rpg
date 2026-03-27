@@ -34,6 +34,8 @@ class EloquentLocationRepository implements LocationRepositoryInterface
             id: (int) $model->id,
             name: (string) $model->name,
             description: (string) ($model->description ?? ''),
+            maxPlayers: $model->max_players !== null ? (int) $model->max_players : null,
+            startTimeoutSeconds: $model->start_timeout_seconds !== null ? (int) $model->start_timeout_seconds : null,
             connectedLocationIds: [], // To be implemented later
             npcIds: [], // To be implemented later
         );

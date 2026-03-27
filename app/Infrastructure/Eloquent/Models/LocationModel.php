@@ -8,5 +8,5 @@ class LocationModel extends Model
 {
     protected $table = 'locations';
 
-    protected $fillable = ['name', 'description'];
+    protected $fillable = ['name', 'description', 'max_players', 'start_timeout_seconds'];
 }

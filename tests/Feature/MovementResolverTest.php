@@ -12,6 +12,7 @@ use App\Domain\Battle\TurnAction;
 use App\Domain\Weapon\DamageType;
 use App\Domain\Weapon\Weapon;
 use App\Infrastructure\Eloquent\Models\BattleModel;
+use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 use App\Infrastructure\Eloquent\Models\LocationModel;
 use App\Infrastructure\Eloquent\Models\User;
@@ -66,22 +67,46 @@ class MovementResolverTest extends TestCase
         $userOne = User::factory()->create();
         $userTwo = User::factory()->create();
 
+        $charOneModel = CharacterModel::create([
+            'user_id' => $userOne->id,
+            'name' => 'Char 1',
+            'strength' => 10,
+            'dexterity' => 10,
+            'constitution' => 10,
+            'wit' => 10,
+            'hp' => 100,
+            'max_hp' => 100,
+            'location_id' => $location->id,
+        ]);
+
+        $charTwoModel = CharacterModel::create([
+            'user_id' => $userTwo->id,
+            'name' => 'Char 2',
+            'strength' => 10,
+            'dexterity' => 10,
+            'constitution' => 10,
+            'wit' => 10,
+            'hp' => 100,
+            'max_hp' => 100,
+            'location_id' => $location->id,
+        ]);
+
         FighterPositionModel::create([
             'fight_id' => $battleModel->id,
-            'user_id' => $userOne->id,
+            'character_id' => $charOneModel->id,
             'x' => 1,
             'y' => 1,
         ]);
 
         FighterPositionModel::create([
             'fight_id' => $battleModel->id,
-            'user_id' => $userTwo->id,
+            'character_id' => $charTwoModel->id,
             'x' => 2,
             'y' => 1,
         ]);
 
-        $charOne = $this->createCharacter($userOne->id, 1, 1);
-        $charTwo = $this->createCharacter($userTwo->id, 2, 1);
+        $charOne = $this->createCharacter($charOneModel->id, 1, 1);
+        $charTwo = $this->createCharacter($charTwoModel->id, 2, 1);
 
         $battle = new Battle(
             id: $battleModel->id,
@@ -100,14 +125,14 @@ class MovementResolverTest extends TestCase
 
         $this->assertDatabaseHas('fighter_positions', [
             'fight_id' => $battleModel->id,
-            'user_id' => $userOne->id,
+            'character_id' => $charOneModel->id,
             'x' => 2,
             'y' => 1,
         ]);
 
         $this->assertDatabaseHas('fighter_positions', [
             'fight_id' => $battleModel->id,
-            'user_id' => $userTwo->id,
+            'character_id' => $charTwoModel->id,
             'x' => 1,
             'y' => 1,
         ]);
@@ -134,22 +159,46 @@ class MovementResolverTest extends TestCase
         $userOne = User::factory()->create();
         $userTwo = User::factory()->create();
 
+        $charOneModel = CharacterModel::create([
+            'user_id' => $userOne->id,
+            'name' => 'Char 1',
+            'strength' => 10,
+            'dexterity' => 10,
+            'constitution' => 10,
+            'wit' => 10,
+            'hp' => 100,
+            'max_hp' => 100,
+            'location_id' => $location->id,
+        ]);
+
+        $charTwoModel = CharacterModel::create([
+            'user_id' => $userTwo->id,
+            'name' => 'Char 2',
+            'strength' => 10,
+            'dexterity' => 10,
+            'constitution' => 10,
+            'wit' => 10,
+            'hp' => 100,
+            'max_hp' => 100,
+            'location_id' => $location->id,
+        ]);
+
         FighterPositionModel::create([
             'fight_id' => $battleModel->id,
-            'user_id' => $userOne->id,
+            'character_id' => $charOneModel->id,
             'x' => 0,
             'y' => 1,
         ]);
 
         FighterPositionModel::create([
             'fight_id' => $battleModel->id,
-            'user_id' => $userTwo->id,
+            'character_id' => $charTwoModel->id,
             'x' => 2,
             'y' => 1,
         ]);
 
-        $charOne = $this->createCharacter($userOne->id, 0, 1);
-        $charTwo = $this->createCharacter($userTwo->id, 2, 1);
+        $charOne = $this->createCharacter($charOneModel->id, 0, 1);
+        $charTwo = $this->createCharacter($charTwoModel->id, 2, 1);
 
         $battle = new Battle(
             id: $battleModel->id,
@@ -168,14 +217,14 @@ class MovementResolverTest extends TestCase
 
         $this->assertDatabaseHas('fighter_positions', [
             'fight_id' => $battleModel->id,
-            'user_id' => $userOne->id,
+            'character_id' => $charOneModel->id,
             'x' => 1,
             'y' => 1,
         ]);
 
         $this->assertDatabaseHas('fighter_positions', [
             'fight_id' => $battleModel->id,
-            'user_id' => $userTwo->id,
+            'character_id' => $charTwoModel->id,
             'x' => 2,
             'y' => 1,
         ]);

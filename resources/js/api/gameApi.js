@@ -16,8 +16,8 @@ export const getAvailableFights = async () => {
     return response.data;
 };
 
-export const createFight = async () => {
-    const response = await api.post('/fights');
+export const createFight = async (payload = {}) => {
+    const response = await api.post('/fights', payload);
     return response.data;
 };
 

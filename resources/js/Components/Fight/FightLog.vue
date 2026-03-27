@@ -16,6 +16,11 @@ const props = defineProps({
         type: Number,
         required: false,
         default: null
+    },
+    participants: {
+        type: Array,
+        required: false,
+        default: () => []
     }
 });
 
@@ -76,6 +81,7 @@ const getZoneDisplay = (zone) => {
 const getActionIcon = (type) => {
     switch (type) {
         case 'hit': return '💥';
+        case 'crit': return '🔥';
         case 'max_damage': return '⚡';
         case 'dodge': return '💨';
         case 'block': return '🛡️';
@@ -84,6 +90,12 @@ const getActionIcon = (type) => {
         case 'death': return '💀';
         default: return 'EVENT';
     }
+};
+
+const getNameById = (id) => {
+    if (!id) return 'Unknown';
+    const found = props.participants.find(p => p.character_id === id);
+    return found?.name || `Player ${id}`;
 };
 </script>
 
@@ -112,6 +124,7 @@ const getActionIcon = (type) => {
                         class="text-sm p-2 bg-white rounded shadow-sm border flex items-start gap-2"
                         :class="{
                             'border-red-300 bg-red-50': event.type === 'hit' || event.type === 'max_damage',
+                            'border-pink-300 bg-pink-50': event.type === 'crit',
                             'border-orange-300 bg-orange-50': event.type === 'block_break',
                             'border-green-300 bg-green-50': event.type === 'block',
                             'border-blue-300 bg-blue-50': event.type === 'dodge',
@@ -121,25 +134,28 @@ const getActionIcon = (type) => {
                         <span class="text-lg leading-none font-semibold" :title="event.type">{{ getActionIcon(event.type) }}</span>
                         <div class="flex-1">
                             <span v-if="event.type === 'hit'">
-                                Player <span class="font-bold">{{ event.actor_id }}</span> hit Player <span class="font-bold">{{ event.target_id }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> hit <span class="font-bold">{{ getNameById(event.target_id) }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
+                            </span>
+                            <span v-else-if="event.type === 'crit'">
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> landed a <span class="text-pink-600 font-bold">CRITICAL HIT</span> on <span class="font-bold">{{ getNameById(event.target_id) }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
                             </span>
                             <span v-else-if="event.type === 'dodge'">
-                                Player <span class="font-bold">{{ event.actor_id }}</span> <span class="text-blue-600 font-bold uppercase">dodged</span> an attack from Player <span class="font-bold">{{ event.target_id }}</span>.
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> <span class="text-blue-600 font-bold uppercase">dodged</span> an attack from <span class="font-bold">{{ getNameById(event.target_id) }}</span>.
                             </span>
                             <span v-else-if="event.type === 'block'">
-                                Player <span class="font-bold">{{ event.actor_id }}</span> blocked an attack from Player <span class="font-bold">{{ event.target_id }}</span>. <span v-if="event.damage > 0">(Took {{ event.damage }} partial damage)</span>
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> blocked an attack from <span class="font-bold">{{ getNameById(event.target_id) }}</span>. <span v-if="event.damage > 0">(Took {{ event.damage }} partial damage)</span>
                             </span>
                             <span v-else-if="event.type === 'block_break'">
-                                Player <span class="font-bold">{{ event.actor_id }}</span> <span class="text-orange-600 font-bold">BROKE BLOCK</span> of Player <span class="font-bold">{{ event.target_id }}</span>! Dealt <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> <span class="text-orange-600 font-bold">BROKE BLOCK</span> of <span class="font-bold">{{ getNameById(event.target_id) }}</span>! Dealt <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
                             </span>
                             <span v-else-if="event.type === 'max_damage'">
-                                Player <span class="font-bold">{{ event.actor_id }}</span> landed a <span class="text-yellow-600 font-bold">MAX DAMAGE</span> hit on Player <span class="font-bold">{{ event.target_id }}</span> for <span class="text-red-600 font-bold text-lg">{{ event.damage }}</span> damage!
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> landed a <span class="text-yellow-600 font-bold">MAX DAMAGE</span> hit on <span class="font-bold">{{ getNameById(event.target_id) }}</span> for <span class="text-red-600 font-bold text-lg">{{ event.damage }}</span> damage!
                             </span>
                             <span v-else-if="event.type === 'move'">
-                                Player <span class="font-bold">{{ event.actor_id }}</span> moved.
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> moved.
                             </span>
                             <span v-else-if="event.type === 'death'">
-                                Player <span class="font-bold">{{ event.actor_id }}</span> has fallen in battle!
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> has fallen in battle!
                             </span>
                             <span v-else class="text-gray-500">Unknown event type: {{ event.type }}</span>
                         </div>

@@ -38,7 +38,7 @@ class BattleJoined implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('battle.' . $this->payload['battleId']),
+            new PrivateChannel('battle.' . $this->payload['battle_id']),
         ];
     }
 

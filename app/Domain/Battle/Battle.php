@@ -17,10 +17,10 @@ class Battle implements \JsonSerializable
     private const int STARTING_LEFT_X = 0;
     private const int STARTING_RIGHT_OFFSET = 1;
     private const int STARTING_ROW_DIVISOR = 2;
-    private const int MAX_PARTICIPANTS = 2;
 
     /**
      * @param array<int, Character> $participants
+     * @param array<int, string> $participantTeams
      * @param array<int, TurnAction> $queuedActions
      * @param array<int> $committedCharacterIds
      */
@@ -34,7 +34,10 @@ class Battle implements \JsonSerializable
         private int $roundDurationSeconds = self::DEFAULT_ROUND_DURATION,
         private BattleState $state = BattleState::ACTIVE,
         private array $queuedActions = [],
-        private array $committedCharacterIds = []
+        private array $committedCharacterIds = [],
+        private ?int $maxParticipants = null,
+        private ?int $startTimeoutSeconds = null,
+        private array $participantTeams = []
     ) {
     }
 
@@ -44,27 +47,33 @@ class Battle implements \JsonSerializable
             throw new Exception('Can only join a battle in WAITING state.');
         }
 
-        if (count($this->participants) >= self::MAX_PARTICIPANTS) {
-            throw new Exception('Battle is already full.');
-        }
-
         if (array_key_exists($character->getId(), $this->participants)) {
             throw new Exception('Character already in battle.');
         }
 
         $this->participants[$character->getId()] = $character;
+    }
 
-        if (count($this->participants) === self::MAX_PARTICIPANTS) {
-            $this->state = BattleState::ACTIVE;
-            $this->roundStartedAt = new DateTimeImmutable();
-            // Assign initial positions for 1v1 based on the current map size.
-            $chars = array_values($this->participants);
-            $startY = intdiv($this->map->getHeight(), self::STARTING_ROW_DIVISOR);
-            $leftX = self::STARTING_LEFT_X;
-            $rightX = $this->map->getWidth() - self::STARTING_RIGHT_OFFSET;
-            $chars[0]->setPosition($leftX, $startY);
-            $chars[1]->setPosition($rightX, $startY);
+    public function assignTeam(int $characterId, string $team): void
+    {
+        if (!array_key_exists($characterId, $this->participants)) {
+            throw new Exception('Character not in battle.');
         }
+
+        $this->participantTeams[$characterId] = $team;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getParticipantTeams(): array
+    {
+        return $this->participantTeams;
+    }
+
+    public function getParticipantTeam(int $characterId): ?string
+    {
+        return $this->participantTeams[$characterId] ?? null;
     }
 
     /**
@@ -77,6 +86,25 @@ class Battle implements \JsonSerializable
         }
 
         $this->roundNumber++;
+        $this->roundStartedAt = new DateTimeImmutable();
+        $this->committedCharacterIds = [];
+        $this->queuedActions = [];
+        $this->state = BattleState::ACTIVE;
+
+        foreach ($this->participants as $participant) {
+            $participant->resetRoundState();
+        }
+    }
+
+    /**
+     * Starts the battle from WAITING state without incrementing the round number.
+     */
+    public function startFromLobby(): void
+    {
+        if ($this->state === BattleState::FINISHED) {
+            throw new Exception('Cannot start a finished battle.');
+        }
+
         $this->roundStartedAt = new DateTimeImmutable();
         $this->committedCharacterIds = [];
         $this->queuedActions = [];
@@ -165,6 +193,9 @@ class Battle implements \JsonSerializable
             // Find opponent (Assuming 1v1 as per rules)
             $opponent = $this->getOpponent($action->getCharacterId());
             if (!$opponent) {
+                if ($this->hasTeammateOnly($action->getCharacterId())) {
+                    throw new \App\Domain\DomainException('Cannot attack a teammate.');
+                }
                 throw new \App\Domain\DomainException('No opponent found to attack.');
             }
 
@@ -185,12 +216,40 @@ class Battle implements \JsonSerializable
 
     private function getOpponent(int $characterId): ?Character
     {
+        $attackerTeam = $this->participantTeams[$characterId] ?? null;
         foreach ($this->participants as $participant) {
-            if ($participant->getId() !== $characterId) {
-                return $participant;
+            if ($participant->getId() === $characterId) {
+                continue;
             }
+            $defenderTeam = $this->participantTeams[$participant->getId()] ?? null;
+            if ($attackerTeam !== null && $defenderTeam !== null && $attackerTeam === $defenderTeam) {
+                continue;
+            }
+            return $participant;
         }
         return null;
+    }
+
+    private function hasTeammateOnly(int $characterId): bool
+    {
+        $attackerTeam = $this->participantTeams[$characterId] ?? null;
+        if ($attackerTeam === null) {
+            return false;
+        }
+
+        $hasOther = false;
+        foreach ($this->participants as $participant) {
+            if ($participant->getId() === $characterId) {
+                continue;
+            }
+            $hasOther = true;
+            $defenderTeam = $this->participantTeams[$participant->getId()] ?? null;
+            if ($defenderTeam !== null && $defenderTeam !== $attackerTeam) {
+                return false;
+            }
+        }
+
+        return $hasOther;
     }
 
     /**
@@ -284,6 +343,16 @@ class Battle implements \JsonSerializable
         return $this->roundDurationSeconds;
     }
 
+    public function getMaxParticipants(): ?int
+    {
+        return $this->maxParticipants;
+    }
+
+    public function getStartTimeoutSeconds(): ?int
+    {
+        return $this->startTimeoutSeconds;
+    }
+
     public function isFinished(): bool
     {
         return $this->state === BattleState::FINISHED;
@@ -335,6 +404,9 @@ class Battle implements \JsonSerializable
             'round_number' => $this->getRoundNumber(),
             'state' => $this->getState()->value,
             'committed_character_ids' => $this->getCommittedCharacterIds(),
+            'max_participants' => $this->getMaxParticipants(),
+            'start_timeout_seconds' => $this->getStartTimeoutSeconds(),
+            'participant_teams' => $this->getParticipantTeams(),
         ];
     }
 }

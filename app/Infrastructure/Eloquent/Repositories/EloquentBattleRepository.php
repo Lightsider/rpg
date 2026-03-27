@@ -66,14 +66,21 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $model->round_number = $battle->getRoundNumber();
         $model->round_started_at = $battle->getRoundStartedAt();
         $model->round_duration_seconds = $battle->getRoundDurationSeconds();
+        $model->max_participants = $battle->getMaxParticipants();
+        $model->start_timeout_seconds = $battle->getStartTimeoutSeconds();
         $model->committed_character_ids = $battle->getCommittedCharacterIds();
         $model->map_width = $battle->getMap()->getWidth();
         $model->map_height = $battle->getMap()->getHeight();
         $model->save();
 
-        // Sync participants
+        // Sync participants with team info
         $participantIds = array_keys($battle->getParticipants());
-        $model->participants()->sync($participantIds);
+        $teams = $battle->getParticipantTeams();
+        $syncData = [];
+        foreach ($participantIds as $id) {
+            $syncData[$id] = ['team' => $teams[$id] ?? null];
+        }
+        $model->participants()->sync($syncData);
 
         // Sync actions for the current round
         $model->actions()->where('round_number', $battle->getRoundNumber())->delete();
@@ -203,17 +210,27 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                 );
             })->toArray();
 
+        $participantTeams = [];
+        foreach ($model->participants as $participantModel) {
+            if ($participantModel->pivot?->team) {
+                $participantTeams[$participantModel->id] = $participantModel->pivot->team;
+            }
+        }
+
         return new Battle(
-            $model->id,
-            $model->location_id,
-            $participantsById,
-            new Map($model->map_width, $model->map_height),
-            $model->round_number,
-            $model->round_started_at,
-            $model->round_duration_seconds,
-            BattleState::from($model->state),
-            $actions,
-            $model->committed_character_ids
+            id: $model->id,
+            locationId: $model->location_id,
+            participants: $participantsById,
+            map: new Map($model->map_width, $model->map_height),
+            roundNumber: $model->round_number,
+            roundStartedAt: $model->round_started_at ?? new \DateTimeImmutable(),
+            roundDurationSeconds: $model->round_duration_seconds,
+            state: BattleState::from($model->state),
+            queuedActions: $actions,
+            committedCharacterIds: $model->committed_character_ids,
+            maxParticipants: $model->max_participants !== null ? (int) $model->max_participants : null,
+            startTimeoutSeconds: $model->start_timeout_seconds !== null ? (int) $model->start_timeout_seconds : null,
+            participantTeams: $participantTeams
         );
     }
 

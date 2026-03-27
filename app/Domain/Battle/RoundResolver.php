@@ -115,7 +115,7 @@ class RoundResolver implements RoundResolverInterface
                     continue;
                 }
 
-                $defender = $this->findOpponent($attackerId, $participants);
+                $defender = $this->findOpponent($battle, $attackerId, $participants);
                 if (!$defender || $defender->getCurrentHp() <= 0) {
                     continue;
                 }
@@ -175,8 +175,20 @@ class RoundResolver implements RoundResolverInterface
                             damage: $result->damage
                         );
                     }
+                    if ($result->isCritical) {
+                        $logs[] = new BattleLogEntry(
+                            roundNumber: $battle->getRoundNumber(),
+                            type: BattleLogType::CRIT,
+                            actorId: $attackerId,
+                            targetId: $defender->getId(),
+                            zone: $action->getTargetZone(),
+                            damage: $result->damage
+                        );
+                    }
                 } else {
-                    $logType = $result->isMaxDamage ? BattleLogType::MAX_DAMAGE : BattleLogType::HIT;
+                    $logType = $result->isMaxDamage
+                        ? BattleLogType::MAX_DAMAGE
+                        : ($result->isCritical ? BattleLogType::CRIT : BattleLogType::HIT);
                     $logs[] = new BattleLogEntry(
                         roundNumber: $battle->getRoundNumber(),
                         type: $logType,
@@ -185,6 +197,16 @@ class RoundResolver implements RoundResolverInterface
                         zone: $action->getTargetZone(),
                         damage: $result->damage
                     );
+                    if ($result->isMaxDamage && $result->isCritical) {
+                        $logs[] = new BattleLogEntry(
+                            roundNumber: $battle->getRoundNumber(),
+                            type: BattleLogType::CRIT,
+                            actorId: $attackerId,
+                            targetId: $defender->getId(),
+                            zone: $action->getTargetZone(),
+                            damage: $result->damage
+                        );
+                    }
                 }
             }
         }
@@ -233,12 +255,18 @@ class RoundResolver implements RoundResolverInterface
         return new RoundResolutionResult($logs);
     }
 
-    private function findOpponent(int $characterId, array $participants): ?Character
+    private function findOpponent(Battle $battle, int $characterId, array $participants): ?Character
     {
+        $attackerTeam = $battle->getParticipantTeam($characterId);
         foreach ($participants as $participant) {
-            if ($participant->getId() !== $characterId) {
-                return $participant;
+            if ($participant->getId() === $characterId) {
+                continue;
             }
+            $defenderTeam = $battle->getParticipantTeam($participant->getId());
+            if ($attackerTeam !== null && $defenderTeam !== null && $attackerTeam === $defenderTeam) {
+                continue;
+            }
+            return $participant;
         }
         return null;
     }

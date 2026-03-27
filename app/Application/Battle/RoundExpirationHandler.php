@@ -13,7 +13,9 @@ use App\Domain\Battle\RoundResolverInterface;
 use App\Events\Battle\BattleEnded;
 use App\Events\Battle\BattleUpdated;
 use App\Events\Battle\RoundStarted;
+use App\Events\Location\BattleRemoved;
 use App\Infrastructure\Eloquent\Models\BattleModel;
+use App\Services\MapGenerator;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,7 +26,8 @@ class RoundExpirationHandler
     public function __construct(
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly BattleLogRepositoryInterface $battleLogRepository,
-        private readonly RoundResolverInterface $roundResolver
+        private readonly RoundResolverInterface $roundResolver,
+        private readonly MapGenerator $mapGenerator
     ) {
     }
 
@@ -57,6 +60,42 @@ class RoundExpirationHandler
                     }
 
                     $this->battleRepository->save($battle);
+                }
+            }
+
+            $waitingBattles = BattleModel::where('state', BattleState::WAITING->value)->get();
+            foreach ($waitingBattles as $waitingModel) {
+                if (!$waitingModel->start_timeout_seconds) {
+                    continue;
+                }
+
+                $expiryTime = $waitingModel->round_started_at->modify("+{$waitingModel->start_timeout_seconds} seconds");
+                if (new \DateTimeImmutable() < $expiryTime) {
+                    continue;
+                }
+
+                BattleModel::where('id', $waitingModel->id)->lockForUpdate()->first();
+                $battle = $this->battleRepository->findById($waitingModel->id);
+                if (!$battle || $battle->getState() !== BattleState::WAITING) {
+                    continue;
+                }
+
+                $participantCount = count($battle->getParticipants());
+                if ($participantCount >= 2) {
+                    $battle->startFromLobby();
+                    $this->battleRepository->save($battle);
+                    $this->mapGenerator->generateForFight($battle);
+                    $this->battleRepository->save($battle);
+
+                    $pendingEvents[] = new BattleRemoved($battle->getLocationId(), $battle->getId());
+                    $pendingEvents[] = new RoundStarted(
+                        battleId: $battle->getId(),
+                        round: $battle->getRoundNumber(),
+                        timeout: $battle->getRoundDurationSeconds(),
+                    );
+                } else {
+                    $waitingModel->delete();
+                    $pendingEvents[] = new BattleRemoved($waitingModel->location_id, $waitingModel->id);
                 }
             }
         });

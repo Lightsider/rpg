@@ -7,6 +7,7 @@ namespace App\Application\Battle;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\BattleLogEntry;
 use App\Domain\Character\Character;
+use App\Infrastructure\Eloquent\Models\FightMapModel;
 
 class BattleEventPayloadFactory
 {
@@ -22,6 +23,7 @@ class BattleEventPayloadFactory
                 'target_id' => $entry->targetId,
                 'zone' => $entry->zone?->value,
                 'damage' => $entry->damage,
+                'occurred_at' => $entry->timestamp->format(\DateTimeInterface::ATOM),
             ], fn($v) => $v !== null),
             $logs
         );
@@ -38,6 +40,7 @@ class BattleEventPayloadFactory
                     'max_hp' => $c->getMaxHp(),
                     'x' => $c->getX(),
                     'y' => $c->getY(),
+                    'team' => $battle->getParticipantTeam($c->getId()),
                 ],
                 array_values($battle->getParticipants())
             ),
@@ -56,9 +59,14 @@ class BattleEventPayloadFactory
                 'max_hp' => $c->getMaxHp(),
                 'x' => $c->getX(),
                 'y' => $c->getY(),
+                'team' => $battle->getParticipantTeam($c->getId()),
             ],
             $participants
         );
+
+        $mapModel = FightMapModel::where('fight_id', $battle->getId())->first();
+        $mapWidth = $mapModel?->width ?? $battle->getMap()->getWidth();
+        $mapHeight = $mapModel?->height ?? $battle->getMap()->getHeight();
 
         return [
             'battle_id' => $battle->getId(),
@@ -70,17 +78,19 @@ class BattleEventPayloadFactory
                 'character_id' => $p['character_id'],
                 'name' => $p['name'],
                 'hp' => $p['hp'],
-                'max_hp' => $p['max_hp']
+                'max_hp' => $p['max_hp'],
+                'team' => $p['team'],
             ], $participantsData),
             'map' => [
-                'width' => $battle->getMap()->getWidth(),
-                'height' => $battle->getMap()->getHeight(),
+                'width' => $mapWidth,
+                'height' => $mapHeight,
             ],
             'positions' => array_map(
                 fn($p) => [
                     'character_id' => $p['character_id'],
                     'x' => $p['x'],
                     'y' => $p['y'],
+                    'team' => $p['team'] ?? null,
                 ],
                 $participantsData
             ),

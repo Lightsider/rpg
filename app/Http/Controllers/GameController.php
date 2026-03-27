@@ -78,6 +78,19 @@ class GameController extends Controller
         $location = $this->locationRepository->findById($character->getLocationId());
 
         $currentFight = $this->battleRepository->findActiveBattleForCharacter($character->getId());
+        if ($currentFight && $currentFight->getState() === \App\Domain\Battle\BattleState::WAITING) {
+            $timeout = $currentFight->getStartTimeoutSeconds();
+            $expiresAt = $timeout !== null
+                ? $currentFight->getRoundStartedAt()->modify("+{$timeout} seconds")
+                : null;
+            $timerRemaining = $expiresAt ? max(0, $expiresAt->getTimestamp() - (new \DateTimeImmutable())->getTimestamp()) : null;
+
+            $currentFight = array_merge($currentFight->jsonSerialize(), [
+                'timer_remaining' => $timerRemaining,
+            ]);
+        } elseif ($currentFight) {
+            $currentFight = $currentFight->jsonSerialize();
+        }
 
         // Load available fights in the location
         $availableFights = $this->battleRepository->findActiveByLocation($character->getLocationId());

@@ -34,6 +34,7 @@ class BattleViewFactory
                 'name' => $p->getName(),
                 'hp' => $p->getCurrentHp(),
                 'max_hp' => $p->getMaxHp(),
+                'team' => $battle->getParticipantTeam($p->getId()),
                 'additional_armor' => [
                     'head' => $p->getAdArmorForZone('head'),
                     'chest' => $p->getAdArmorForZone('chest'),

@@ -10,6 +10,8 @@ class Location implements \JsonSerializable
         private readonly int $id,
         private readonly string $name,
         private readonly string $description,
+        private readonly ?int $maxPlayers = null,
+        private readonly ?int $startTimeoutSeconds = null,
         private readonly array $connectedLocationIds = [],
         private readonly array $npcIds = [],
     ) {
@@ -35,6 +37,16 @@ class Location implements \JsonSerializable
         return $this->connectedLocationIds;
     }
 
+    public function getMaxPlayers(): ?int
+    {
+        return $this->maxPlayers;
+    }
+
+    public function getStartTimeoutSeconds(): ?int
+    {
+        return $this->startTimeoutSeconds;
+    }
+
     public function getNpcIds(): array
     {
         return $this->npcIds;
@@ -46,6 +58,8 @@ class Location implements \JsonSerializable
             'id' => $this->getId(),
             'name' => $this->getName(),
             'description' => $this->getDescription(),
+            'max_players' => $this->getMaxPlayers(),
+            'start_timeout_seconds' => $this->getStartTimeoutSeconds(),
             'connected_locations' => $this->getConnectedLocationIds(),
             'npc_list' => $this->getNpcIds(),
             'available_fights' => [], // Placeholder for future-ready field

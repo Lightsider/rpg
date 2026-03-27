@@ -386,7 +386,7 @@ class BackpackService
 
     private function setArmorValueForSlot(CharacterModel $character, EquipmentSlot $slot, float $value): void
     {
-        $value = (float) round(max(0, $value), 4);
+        $value = (float) max(0, (int) round($value));
         match ($slot) {
             EquipmentSlot::HELMET => $character->ad_armor_head = $value,
             EquipmentSlot::CHEST => $character->ad_armor_chest = $value,
@@ -401,7 +401,7 @@ class BackpackService
         $chestArmor = $this->getArmorValueById($character->chest_id);
         $glovesArmor = $this->getArmorValueById($character->gloves_id);
         $armValue = ($chestArmor * 0.5) + ($glovesArmor * 0.5);
-        $armValue = (float) round(max(0, $armValue), 4);
+        $armValue = (float) max(0, (int) round($armValue));
         $character->ad_armor_left_arm = $armValue;
         $character->ad_armor_right_arm = $armValue;
     }

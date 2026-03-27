@@ -5,6 +5,7 @@ const props = defineProps({
     map: { type: Object, required: true },
     positions: { type: Array, required: true },
     myCharacterId: { type: Number, required: true },
+    myTeam: { type: String, default: null },
     selectedTile: { type: Object, default: null }
 });
 
@@ -27,6 +28,11 @@ const isAdjacent = (x, y) => {
 
 const getFighterAt = (x, y) => {
     return props.positions.find(p => p.x === x && p.y === y) || null;
+};
+
+const getTeamClass = (fighter) => {
+    if (!fighter?.team) return 'fighter-neutral';
+    return fighter.team === 'blue' ? 'fighter-blue' : 'fighter-red';
 };
 
 const isSelected = (x, y) => {
@@ -58,7 +64,10 @@ const handleClick = (x, y) => {
             >
                 <div class="tile-coord">{{ x - 1 }},{{ y - 1 }}</div>
                 <div v-if="getFighterAt(x - 1, y - 1)" class="fighter"
-                     :class="getFighterAt(x - 1, y - 1).character_id === myCharacterId ? 'fighter-me' : 'fighter-enemy'">
+                     :class="[
+                        getFighterAt(x - 1, y - 1).character_id === myCharacterId ? 'fighter-me' : 'fighter-enemy',
+                        getTeamClass(getFighterAt(x - 1, y - 1))
+                     ]">
                 </div>
             </div>
         </div>
@@ -120,10 +129,22 @@ const handleClick = (x, y) => {
 }
 
 .fighter-me {
-    background: #2563eb;
+    border: 2px solid #1d4ed8;
 }
 
 .fighter-enemy {
+    border: 2px solid #991b1b;
+}
+
+.fighter-blue {
+    background: #2563eb;
+}
+
+.fighter-red {
     background: #dc2626;
+}
+
+.fighter-neutral {
+    background: #6b7280;
 }
 </style>

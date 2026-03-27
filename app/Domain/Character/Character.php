@@ -53,6 +53,11 @@ class Character implements \JsonSerializable
         private int $dodgeFailStreak = 0,
         private int $critFailStreak = 0,
     ) {
+        $this->adArmorHead = $this->normalizeAdArmorValue($this->adArmorHead);
+        $this->adArmorChest = $this->normalizeAdArmorValue($this->adArmorChest);
+        $this->adArmorLegs = $this->normalizeAdArmorValue($this->adArmorLegs);
+        $this->adArmorLeftArm = $this->normalizeAdArmorValue($this->adArmorLeftArm);
+        $this->adArmorRightArm = $this->normalizeAdArmorValue($this->adArmorRightArm);
     }
 
     public function getUserId(): int
@@ -331,7 +336,7 @@ class Character implements \JsonSerializable
 
     public function setAdArmorForZone(string $zone, float $value): void
     {
-        $value = (float) round(max(0, $value), 4);
+        $value = $this->normalizeAdArmorValue($value);
         switch ($zone) {
             case 'head':
                 $this->adArmorHead = $value;
@@ -358,14 +363,20 @@ class Character implements \JsonSerializable
 
     public function initializeAdArmor(): void
     {
-        $this->adArmorHead = $this->getMaxAdArmorForSlot(EquipmentSlot::HELMET);
-        $this->adArmorChest = $this->getMaxAdArmorForSlot(EquipmentSlot::CHEST);
-        $this->adArmorLegs = $this->getMaxAdArmorForSlot(EquipmentSlot::LEGS);
+        $this->adArmorHead = $this->normalizeAdArmorValue($this->getMaxAdArmorForSlot(EquipmentSlot::HELMET));
+        $this->adArmorChest = $this->normalizeAdArmorValue($this->getMaxAdArmorForSlot(EquipmentSlot::CHEST));
+        $this->adArmorLegs = $this->normalizeAdArmorValue($this->getMaxAdArmorForSlot(EquipmentSlot::LEGS));
         $chestArmor = $this->adArmorChest;
         $glovesArmor = $this->getMaxAdArmorForSlot(EquipmentSlot::GLOVES);
         $armArmor = ($chestArmor * 0.5) + ($glovesArmor * 0.5);
+        $armArmor = $this->normalizeAdArmorValue($armArmor);
         $this->adArmorLeftArm = $armArmor;
         $this->adArmorRightArm = $armArmor;
+    }
+
+    private function normalizeAdArmorValue(float $value): float
+    {
+        return (float) max(0, (int) round($value));
     }
 
     private function getMaxAdArmorForSlot(EquipmentSlot $slot): float

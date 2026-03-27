@@ -15,29 +15,43 @@ use App\Events\Battle\RoundStarted;
 use App\Events\Location\BattleCreated;
 use App\Events\Location\BattleRemoved;
 use App\Services\MapGenerator;
+use App\Services\TeamAssigner;
 
 class BattleLobbyService
 {
     public function __construct(
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly LeaveWaitingBattleAction $leaveWaitingBattleAction,
-        private readonly MapGenerator $mapGenerator
+        private readonly MapGenerator $mapGenerator,
+        private readonly \App\Domain\Location\Repositories\LocationRepositoryInterface $locationRepository,
+        private readonly TeamAssigner $teamAssigner
     ) {
     }
 
-    public function createBattle(Character $character): int
+    public function createBattle(
+        Character $character,
+        ?int $maxParticipants = null,
+        ?int $startTimeoutSeconds = null
+    ): int
     {
         if ($this->battleRepository->isCharacterInBattle($character->getId())) {
             throw new DomainException('Character is already in another fight.');
         }
+
+        $location = $this->locationRepository->findById($character->getLocationId());
+        $maxParticipants = $maxParticipants ?? $location?->getMaxPlayers();
+        $startTimeoutSeconds = $startTimeoutSeconds ?? $location?->getStartTimeoutSeconds();
 
         $battle = new Battle(
             id: 0,
             locationId: $character->getLocationId(),
             participants: [$character->getId() => $character],
             map: Map::default(),
+            maxParticipants: $maxParticipants,
+            startTimeoutSeconds: $startTimeoutSeconds,
             state: BattleState::WAITING
         );
+        $battle->assignTeam($character->getId(), $this->teamAssigner->assign($battle->getParticipantTeams()));
 
         $battleId = $this->battleRepository->save($battle);
 
@@ -59,16 +73,18 @@ class BattleLobbyService
             throw new DomainException('Fight is no longer joinable.');
         }
 
-        if (count($battle->getParticipants()) >= 2) {
-            throw new DomainException('Fight is full.');
-        }
-
         if ($this->battleRepository->isCharacterInBattle($character->getId())) {
             throw new DomainException('Character is already in another fight.');
         }
 
         $battle->addParticipant($character);
+        $battle->assignTeam($character->getId(), $this->teamAssigner->assign($battle->getParticipantTeams()));
         $this->battleRepository->save($battle);
+
+        $startResult = $this->tryStartWaitingBattle($battle);
+        if ($startResult === 'cancelled') {
+            throw new DomainException('Fight expired.');
+        }
 
         $battle = $this->battleRepository->findById($battle->getId());
         if ($battle) {
@@ -105,7 +121,42 @@ class BattleLobbyService
     private function calculateTimerRemaining(Battle $battle): int
     {
         $now = new \DateTimeImmutable();
-        $expiryTime = $battle->getRoundStartedAt()->modify("+{$battle->getRoundDurationSeconds()} seconds");
+        $timeout = $battle->getStartTimeoutSeconds() ?? $battle->getRoundDurationSeconds();
+        $expiryTime = $battle->getRoundStartedAt()->modify("+{$timeout} seconds");
         return max(0, $expiryTime->getTimestamp() - $now->getTimestamp());
+    }
+
+    private function tryStartWaitingBattle(Battle $battle): ?string
+    {
+        if ($battle->getState() !== BattleState::WAITING) {
+            return null;
+        }
+
+        $max = $battle->getMaxParticipants();
+        $count = count($battle->getParticipants());
+
+        $now = new \DateTimeImmutable();
+        $timeout = $battle->getStartTimeoutSeconds();
+        $expired = $timeout !== null
+            ? $now >= $battle->getRoundStartedAt()->modify("+{$timeout} seconds")
+            : false;
+
+        if ($max !== null && $count >= $max) {
+            $battle->startFromLobby();
+            $this->battleRepository->save($battle);
+            return 'started';
+        }
+
+        if ($expired) {
+            if ($count >= 2) {
+                $battle->startFromLobby();
+                $this->battleRepository->save($battle);
+                return 'started';
+            } else {
+                return 'cancelled';
+            }
+        }
+
+        return null;
     }
 }

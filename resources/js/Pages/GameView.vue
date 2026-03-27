@@ -51,6 +51,11 @@ const equipmentError = ref('');
 const equipmentMessage = ref('');
 const savingEquipment = ref(false);
 
+const waitingTimerRemaining = ref(0);
+const createMaxPlayers = ref(null);
+const createWaitMinutes = ref(null);
+const lastLocationId = ref(null);
+
 const loading = ref(true);
 const error = ref('');
 
@@ -67,6 +72,12 @@ let countdownInterval = null;
 let refreshInterval = null;
 
 const myCharacterId = computed(() => gameState.value?.character?.id);
+const myTeam = computed(() => {
+    if (!fightState.value?.participants) return null;
+    const me = fightState.value.participants.find(p => p.character_id === myCharacterId.value);
+    return me?.team || null;
+});
+
 const myPosition = computed(() => {
     if (!fightState.value?.positions) return null;
     return fightState.value.positions.find(p => p.character_id === myCharacterId.value) || null;
@@ -103,6 +114,23 @@ const fetchGameData = async () => {
         gameState.value = await getGameState();
         fights.value = await getAvailableFights();
         locations.value = await getLocations();
+        if (gameState.value?.location && lastLocationId.value !== gameState.value.location.id) {
+            const defaultsMax = gameState.value.location.max_players;
+            const defaultsTimeout = gameState.value.location.start_timeout_seconds;
+            createMaxPlayers.value = defaultsMax !== undefined ? defaultsMax : null;
+            createWaitMinutes.value = defaultsTimeout ? Math.ceil(defaultsTimeout / 60) : null;
+            lastLocationId.value = gameState.value.location.id;
+        }
+
+        if (gameState.value?.currentFight?.state === 'waiting') {
+            if (gameState.value.currentFight.timer_remaining !== undefined) {
+                waitingTimerRemaining.value = gameState.value.currentFight.timer_remaining;
+            } else if (gameState.value.currentFight.start_timeout_seconds) {
+                waitingTimerRemaining.value = gameState.value.currentFight.start_timeout_seconds;
+            }
+        } else {
+            waitingTimerRemaining.value = 0;
+        }
         
         // If there's an active or waiting fight, fetch its state
         if (gameState.value.currentFight) {
@@ -159,11 +187,12 @@ const initWebSocket = (battleId) => {
             data.players.forEach(p => {
                 const existing = fightState.value.participants.find(part => part.character_id === p.character_id);
                 if (existing) existing.hp = p.hp;
+                if (existing && p.team) existing.team = p.team;
                 if (p.character_id === myCharacterId.value && gameState.value?.character) {
                     gameState.value.character.hp = p.hp;
                 }
             });
-            fightState.value.positions = data.players.map(p => ({ character_id: p.character_id, x: p.x, y: p.y }));
+            fightState.value.positions = data.players.map(p => ({ character_id: p.character_id, x: p.x, y: p.y, team: p.team }));
         }
         if (logRef.value && data.events) {
             logRef.value.pushRound(data.round, data.events);
@@ -304,7 +333,23 @@ const handleQueueSubmit = async (queuedActions) => {
 
 const handleCreateFight = async () => {
     try {
-        const response = await createFight();
+        const maxParticipants = createMaxPlayers.value !== null && createMaxPlayers.value !== ''
+            ? Number(createMaxPlayers.value)
+            : null;
+        const waitMinutes = createWaitMinutes.value !== null && createWaitMinutes.value !== ''
+            ? Number(createWaitMinutes.value)
+            : null;
+        if (waitMinutes !== null && waitMinutes > 10) {
+            alert('Max wait time is 10 minutes.');
+            return;
+        }
+        const waitSeconds = waitMinutes !== null ? Math.round(waitMinutes * 60) : null;
+
+        const payload = {
+            max_participants: maxParticipants,
+            start_timeout_seconds: waitSeconds,
+        };
+        const response = await createFight(payload);
         await fetchGameData();
     } catch (e) {
         alert(e.response?.data?.error || 'Failed to create fight');
@@ -430,6 +475,10 @@ const startLocalTimer = () => {
             if (fightState.value.timer_remaining === 0 && fightState.value?.id) {
                 fetchFightState(fightState.value.id);
             }
+        }
+
+        if (waitingTimerRemaining.value > 0) {
+            waitingTimerRemaining.value--;
         }
     }, 1000);
 
@@ -798,7 +847,13 @@ onUnmounted(() => {
                                 <h4 class="text-xs font-semibold uppercase text-gray-400 mb-4 tracking-wider">Battle Status</h4>
                                 <div v-for="p in fightState.participants" :key="p.character_id" class="mb-4 p-3 border rounded shadow-sm bg-gray-50" :class="{'ring-2 ring-red-400 bg-white': fightState.actions_submitted.includes(p.character_id)}">
                                     <div class="flex justify-between items-center mb-1">
-                                        <span class="font-bold text-gray-800">{{ p.name }}</span>
+                                        <span class="font-bold text-gray-800">
+                                            {{ p.name }}
+                                            <span v-if="p.team" class="ml-2 text-[10px] uppercase font-semibold"
+                                                  :class="p.team === 'blue' ? 'text-blue-600' : 'text-red-600'">
+                                                {{ p.team }}
+                                            </span>
+                                        </span>
                                         <span v-if="fightState.actions_submitted.includes(p.character_id)" class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-black tracking-tighter">READY</span>
                                     </div>
                                     <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
@@ -838,7 +893,7 @@ onUnmounted(() => {
                                 <template v-else>
                                     <div class="bg-white rounded-lg p-4 shadow-sm border" v-if="fightState.map && fightState.positions">
                                         <h3 class="font-bold text-lg mb-3">Tactical Map</h3>
-                                        <FightMap :map="fightState.map" :positions="fightState.positions" :myCharacterId="myCharacterId" :selectedTile="selectedTile" @tileSelected="handleTileSelected" />
+                                        <FightMap :map="fightState.map" :positions="fightState.positions" :myCharacterId="myCharacterId" :myTeam="myTeam" :selectedTile="selectedTile" @tileSelected="handleTileSelected" />
                                     </div>
 
                                     <div v-if="amICommitted" class="bg-green-50 border border-green-200 p-6 rounded-lg text-center">
@@ -863,7 +918,7 @@ onUnmounted(() => {
                                         </div>
                                     </div>
                                 </template>
-                                <FightLog ref="logRef" :fightId="fightState.id" :fightStatus="fightState.status" :fightNumber="fightState.id" />
+                                <FightLog ref="logRef" :fightId="fightState.id" :fightStatus="fightState.status" :fightNumber="fightState.id" :participants="fightState.participants || []" />
                             </div>
 
                             <!-- Shop UI -->
@@ -965,7 +1020,12 @@ onUnmounted(() => {
                                 <div v-if="gameState.currentFight && gameState.currentFight.state === 'waiting'" class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded flex justify-between items-center">
                                     <div>
                                         <div class="font-semibold text-yellow-800">You are waiting in Fight #{{ gameState.currentFight.id }}</div>
-                                        <div class="text-sm text-yellow-700">{{ gameState.currentFight.participant_ids.length }} / 2 joined</div>
+                                        <div class="text-sm text-yellow-700">
+                                            {{ gameState.currentFight.participant_ids.length }} / {{ gameState.currentFight.max_participants || '∞' }} joined
+                                        </div>
+                                        <div v-if="waitingTimerRemaining > 0" class="text-xs text-yellow-700 mt-1">
+                                            Starts in {{ formatTime(waitingTimerRemaining) }}
+                                        </div>
                                     </div>
                                     <div class="flex gap-2">
                                         <button @click="fetchFightState(gameState.currentFight.id)" class="bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded text-sm font-bold">Open Fight</button>
@@ -978,11 +1038,46 @@ onUnmounted(() => {
                                     <button @click="handleCreateFight" :disabled="!gameState.canCreateFight" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow disabled:opacity-50">Create New Fight</button>
                                 </div>
 
+                                <div class="mb-5 p-4 bg-gray-50 border rounded">
+                                    <div class="text-xs uppercase tracking-wide text-gray-500 mb-3">Create Settings</div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <label class="text-sm text-gray-700">
+                                            Max Players
+                                            <input
+                                                v-model="createMaxPlayers"
+                                                type="number"
+                                                min="2"
+                                                class="mt-1 w-full border rounded px-2 py-1.5 text-sm"
+                                                :placeholder="gameState.location?.max_players ?? '∞'"
+                                            />
+                                        </label>
+                                        <label class="text-sm text-gray-700">
+                                            Wait Time (minutes, max 10)
+                                            <input
+                                                v-model="createWaitMinutes"
+                                                type="number"
+                                                min="1"
+                                                max="10"
+                                                step="1"
+                                                class="mt-1 w-full border rounded px-2 py-1.5 text-sm"
+                                                :placeholder="gameState.location?.start_timeout_seconds ? Math.ceil(gameState.location.start_timeout_seconds / 60) : 10"
+                                            />
+                                        </label>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-2">Leave empty to use location defaults.</div>
+                                </div>
+
                                 <ul v-if="fights.length > 0" class="space-y-3">
                                     <li v-for="fight in fights" :key="fight.id" class="flex items-center justify-between p-4 border rounded hover:border-red-300 transition-colors">
                                         <div>
                                             <div class="font-medium">Fight #{{ fight.id }}</div>
-                                            <div class="text-sm text-gray-500">Status: <span class="uppercase font-semibold text-yellow-600">{{ fight.state }}</span> - {{ fight.participants.length }} / 2</div>
+                                            <div class="text-sm text-gray-500">
+                                                Status: <span class="uppercase font-semibold text-yellow-600">{{ fight.state }}</span> -
+                                                {{ fight.participants.length }} / {{ fight.max_participants || '∞' }}
+                                            </div>
+                                            <div v-if="fight.state === 'waiting' && fight.start_timeout_seconds" class="text-xs text-gray-400 mt-1">
+                                                Starts in {{ formatTime(fight.start_timeout_seconds) }}
+                                            </div>
                                         </div>
                                         <button @click="handleJoinFight(fight.id)" :disabled="!gameState.canCreateFight || fight.state !== 'waiting'" class="bg-gray-800 hover:bg-gray-900 text-white py-1.5 px-4 rounded text-sm disabled:opacity-50">Join Fight</button>
                                     </li>

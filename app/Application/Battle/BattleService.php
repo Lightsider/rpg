@@ -53,12 +53,14 @@ class BattleService
                 'max_hp' => $c->getMaxHp(),
                 'x' => $c->getX(),
                 'y' => $c->getY(),
+                'team' => $battle->getParticipantTeam($c->getId()),
             ], $participants),
             'participants' => array_map(fn(Character $c) => [
                 'character_id' => $c->getId(),
                 'name' => $c->getName(),
                 'hp' => $c->getCurrentHp(),
                 'max_hp' => $c->getMaxHp(),
+                'team' => $battle->getParticipantTeam($c->getId()),
             ], $participants),
             'positions' => array_map(fn(Character $c) => [
                 'character_id' => $c->getId(),
