@@ -81,9 +81,10 @@ class FullArchetypeBalanceTest extends TestCase
             minDamage: 9.0,
             maxDamage: 11.0,
             damageType: $isSword ? DamageType::SLASHING : DamageType::CHOPPING,
-            accuracyBonus: $isSword ? 0.1 : 0.0,
-            blockBreakRating: $isSword ? 20 : 70,
+            accuracyBonus: 0.0,
+            blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
+            maxDamageRating: $isSword ? 90 : 0,
             archetype: WeaponArchetype::TANK,
             requiredStrength: 10
         );
@@ -104,9 +105,10 @@ class FullArchetypeBalanceTest extends TestCase
             minDamage: 7.0,
             maxDamage: 9.0,
             damageType: $isSword ? DamageType::SLASHING : DamageType::CHOPPING,
-            accuracyBonus: $isSword ? 0.1 : 0.0,
-            blockBreakRating: $isSword ? 10 : 40,
+            accuracyBonus: 0.0,
+            blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
+            maxDamageRating: $isSword ? 90 : 0,
             flatCritBonus: 10.0,
             archetype: WeaponArchetype::CRIT,
             requiredStrength: 5,
@@ -129,9 +131,10 @@ class FullArchetypeBalanceTest extends TestCase
             minDamage: 8.5,
             maxDamage: 10.5,
             damageType: $isSword ? DamageType::SLASHING : DamageType::CHOPPING,
-            accuracyBonus: $isSword ? 0.1 : 0.0,
-            blockBreakRating: $isSword ? 30 : 60,
+            accuracyBonus: 0.0,
+            blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
+            maxDamageRating: $isSword ? 90 : 0,
             flatCritBonus: 3.0,
             archetype: WeaponArchetype::UNIVERSAL,
             requiredStrength: 7,
@@ -149,30 +152,30 @@ class FullArchetypeBalanceTest extends TestCase
     private function createTankArmor(): array
     {
         return [
-            new Armor(10, 'Guardian Helmet', 10.0, 0.0, ArmorSubtype::HELMET, 10),
-            new Armor(11, 'Guardian Chestplate', 10.0, 0.0, ArmorSubtype::BODY, 10),
-            new Armor(12, 'Guardian Boots', 10.0, 0.0, ArmorSubtype::BOOTS, 10),
-            new Armor(13, 'Guardian Gauntlets', 10.0, 0.0, ArmorSubtype::GLOVES, 10),
+            new Armor(10, 'Guardian Helmet', 10.0, 0.0, ArmorSubtype::HELMET, 0, 0, 0, 10),
+            new Armor(11, 'Guardian Chestplate', 10.0, 0.0, ArmorSubtype::BODY, 0, 0, 0, 10),
+            new Armor(12, 'Guardian Boots', 10.0, 0.0, ArmorSubtype::BOOTS, 0, 0, 0, 10),
+            new Armor(13, 'Guardian Gauntlets', 10.0, 0.0, ArmorSubtype::GLOVES, 0, 0, 0, 10),
         ];
     }
 
     private function createDodgeArmor(): array
     {
         return [
-            new Armor(14, 'Shadow Helmet', 0.0, 5.0, ArmorSubtype::HELMET, 0, 10),
-            new Armor(15, 'Shadow Chestplate', 0.0, 5.0, ArmorSubtype::BODY, 0, 10),
-            new Armor(16, 'Shadow Boots', 0.0, 5.0, ArmorSubtype::BOOTS, 0, 10),
-            new Armor(17, 'Shadow Gauntlets', 0.0, 5.0, ArmorSubtype::GLOVES, 0, 10),
+            new Armor(14, 'Shadow Helmet', 0.0, 5.0, ArmorSubtype::HELMET, 0, 0, 5, 5),
+            new Armor(15, 'Shadow Chestplate', 0.0, 5.0, ArmorSubtype::BODY, 0, 0, 5, 5),
+            new Armor(16, 'Shadow Boots', 0.0, 5.0, ArmorSubtype::BOOTS, 0, 0, 5, 5),
+            new Armor(17, 'Shadow Gauntlets', 0.0, 5.0, ArmorSubtype::GLOVES, 0, 0, 5, 5),
         ];
     }
 
     private function createUniArmor(): array
     {
         return [
-            new Armor(18, 'Balanced Helmet', 7.0, 1.5, ArmorSubtype::HELMET, 7, 3),
-            new Armor(19, 'Balanced Chestplate', 7.0, 1.5, ArmorSubtype::BODY, 7, 3),
-            new Armor(20, 'Balanced Boots', 7.0, 1.5, ArmorSubtype::BOOTS, 7, 3),
-            new Armor(21, 'Balanced Gauntlets', 7.0, 1.5, ArmorSubtype::GLOVES, 7, 3),
+            new Armor(18, 'Balanced Helmet', 7.0, 1.5, ArmorSubtype::HELMET, 0, 0, 3, 7),
+            new Armor(19, 'Balanced Chestplate', 7.0, 1.5, ArmorSubtype::BODY, 0, 0, 3, 7),
+            new Armor(20, 'Balanced Boots', 7.0, 1.5, ArmorSubtype::BOOTS, 0, 0, 3, 7),
+            new Armor(21, 'Balanced Gauntlets', 7.0, 1.5, ArmorSubtype::GLOVES, 0, 0, 3, 7),
         ];
     }
 
