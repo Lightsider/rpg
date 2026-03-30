@@ -27,6 +27,8 @@ class ItemSeeder extends Seeder
                 'required_strength' => 10,
                 'required_wit' => 0,
                 'flat_crit_bonus' => 0.0000,
+                'pierce_multiplier' => 0.50,
+                'max_damage_rating' => 90,
             ]
         );
 
@@ -45,6 +47,8 @@ class ItemSeeder extends Seeder
                 'required_strength' => 10,
                 'required_wit' => 0,
                 'flat_crit_bonus' => 0.0000,
+                'pierce_multiplier' => 0.65,
+                'max_damage_rating' => 0,
             ]
         );
 
@@ -63,6 +67,8 @@ class ItemSeeder extends Seeder
                 'required_strength' => 5,
                 'required_wit' => 5,
                 'flat_crit_bonus' => 10.0000,
+                'pierce_multiplier' => 0.50,
+                'max_damage_rating' => 90,
             ]
         );
 
@@ -81,6 +87,8 @@ class ItemSeeder extends Seeder
                 'required_strength' => 5,
                 'required_wit' => 5,
                 'flat_crit_bonus' => 10.0000,
+                'pierce_multiplier' => 0.65,
+                'max_damage_rating' => 0,
             ]
         );
 
@@ -99,6 +107,8 @@ class ItemSeeder extends Seeder
                 'required_strength' => 7,
                 'required_wit' => 3,
                 'flat_crit_bonus' => 3.0000,
+                'pierce_multiplier' => 0.50,
+                'max_damage_rating' => 90,
             ]
         );
 
@@ -117,6 +127,8 @@ class ItemSeeder extends Seeder
                 'required_strength' => 7,
                 'required_wit' => 3,
                 'flat_crit_bonus' => 3.0000,
+                'pierce_multiplier' => 0.65,
+                'max_damage_rating' => 0,
             ]
         );
 
