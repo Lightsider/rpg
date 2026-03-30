@@ -91,7 +91,7 @@ class FullArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $seals[] = new Seal(7, 'Guardian Seal', 0.6, 0.75, 0.0, WeaponArchetype::TANK, 10);
+            $seals[] = new Seal(7, 'Guardian Seal', 0.6750, 0.8250, 0.0, WeaponArchetype::TANK, 10);
         }
 
         return ['weapon' => $weapon, 'seals' => $seals];
@@ -143,7 +143,7 @@ class FullArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $seals[] = new Seal(9, 'Balanced Seal', 0.675, 0.825, 0.225, WeaponArchetype::UNIVERSAL, 7, 3);
+            $seals[] = new Seal(9, 'Balanced Seal', 0.6, 0.75, 0.225, WeaponArchetype::UNIVERSAL, 7, 3);
         }
 
         return ['weapon' => $weapon, 'seals' => $seals];
