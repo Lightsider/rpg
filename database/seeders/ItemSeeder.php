@@ -28,7 +28,7 @@ class ItemSeeder extends Seeder
                 'required_wit' => 0,
                 'flat_crit_bonus' => 0.0000,
                 'pierce_multiplier' => 0.50,
-                'max_damage_rating' => 90,
+                'max_damage_rating' => 70,
             ]
         );
 
@@ -68,7 +68,7 @@ class ItemSeeder extends Seeder
                 'required_wit' => 5,
                 'flat_crit_bonus' => 10.0000,
                 'pierce_multiplier' => 0.50,
-                'max_damage_rating' => 90,
+                'max_damage_rating' => 70,
             ]
         );
 
@@ -106,9 +106,9 @@ class ItemSeeder extends Seeder
                 'block_break_rating' => 20,
                 'required_strength' => 7,
                 'required_wit' => 3,
-                'flat_crit_bonus' => 3.0000,
+                'flat_crit_bonus' => 4.0000,
                 'pierce_multiplier' => 0.50,
-                'max_damage_rating' => 90,
+                'max_damage_rating' => 70,
             ]
         );
 
@@ -126,7 +126,7 @@ class ItemSeeder extends Seeder
                 'block_break_rating' => 60,
                 'required_strength' => 7,
                 'required_wit' => 3,
-                'flat_crit_bonus' => 3.0000,
+                'flat_crit_bonus' => 4.0000,
                 'pierce_multiplier' => 0.65,
                 'max_damage_rating' => 0,
             ]
@@ -178,7 +178,7 @@ class ItemSeeder extends Seeder
                 'damage_type' => 'blunt',
                 'required_strength' => 7,
                 'required_wit' => 3,
-                'flat_crit_bonus' => 0.2250,
+                'flat_crit_bonus' => 0.3,
             ]
         );
 
@@ -194,7 +194,7 @@ class ItemSeeder extends Seeder
         $archetypes = [
             'Tank' => ['prefix' => 'Guardian', 'archetype' => 'tank', 'ad' => 10.00, 'dodge' => 0.0, 'str' => 0, 'wit' => 0, 'dex' => 0, 'con' => 10, 'start_id' => 10],
             'Dodge' => ['prefix' => 'Shadow', 'archetype' => 'dodge', 'ad' => 0.00, 'dodge' => 5.0, 'str' => 0, 'wit' => 0, 'dex' => 5, 'con' => 5, 'start_id' => 14],
-            'Universal' => ['prefix' => 'Balanced', 'archetype' => 'universal', 'ad' => 7.00, 'dodge' => 1.5, 'str' => 0, 'wit' => 0, 'dex' => 3, 'con' => 7, 'start_id' => 18],
+            'Universal' => ['prefix' => 'Balanced', 'archetype' => 'universal', 'ad' => 7.00, 'dodge' => 2, 'str' => 0, 'wit' => 0, 'dex' => 3, 'con' => 7, 'start_id' => 18],
         ];
 
         $subtypes = [

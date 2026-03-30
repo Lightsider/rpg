@@ -52,7 +52,7 @@ class CombatBalanceSimulationTest extends TestCase
         'accuracyBonus' => 0.0,
         'blockBreakRating' => 20,
         'pierceMultiplier' => 0.50,
-        'maxDamageRating' => 90,
+        'maxDamageRating' => 70,
     ];
 
     private const AXE_TEMPLATE = [
@@ -71,7 +71,7 @@ class CombatBalanceSimulationTest extends TestCase
     {
         parent::setUp();
 
-        $bpsConfig = new BlockPenetrationConfig(150, 0.95, 0.20);
+        $bpsConfig = new BlockPenetrationConfig(120, 0.95, 0.20);
         $bps = new BlockPenetrationService($bpsConfig);
 
         $mdsConfig = new MaxDamageConfig(300, 0.80, 0.20);

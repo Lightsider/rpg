@@ -104,7 +104,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(MaxDamageService::class, function () {
             return new MaxDamageService(
                 new MaxDamageConfig(
-                    k: (int) config('combat.max_damage.k', 150),
+                    k: (int) config('combat.max_damage.k', 300),
                     maxFinalChance: (float) config('combat.max_damage.max_final_chance', 0.80),
                     prngScale: (float) config('combat.max_damage.prng_scale', 0.25),
                     debug: (bool) config('combat.max_damage.debug', false),

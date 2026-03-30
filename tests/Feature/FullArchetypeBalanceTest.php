@@ -84,7 +84,7 @@ class FullArchetypeBalanceTest extends TestCase
             accuracyBonus: 0.0,
             blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
-            maxDamageRating: $isSword ? 90 : 0,
+            maxDamageRating: $isSword ? 70 : 0,
             archetype: WeaponArchetype::TANK,
             requiredStrength: 10
         );
@@ -108,7 +108,7 @@ class FullArchetypeBalanceTest extends TestCase
             accuracyBonus: 0.0,
             blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
-            maxDamageRating: $isSword ? 90 : 0,
+            maxDamageRating: $isSword ? 70 : 0,
             flatCritBonus: 10.0,
             archetype: WeaponArchetype::CRIT,
             requiredStrength: 5,
@@ -134,8 +134,8 @@ class FullArchetypeBalanceTest extends TestCase
             accuracyBonus: 0.0,
             blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
-            maxDamageRating: $isSword ? 90 : 0,
-            flatCritBonus: 3.0,
+            maxDamageRating: $isSword ? 70 : 0,
+            flatCritBonus: 4.0,
             archetype: WeaponArchetype::UNIVERSAL,
             requiredStrength: 7,
             requiredWit: 3
@@ -143,7 +143,7 @@ class FullArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $seals[] = new Seal(9, 'Balanced Seal', 0.6, 0.75, 0.225, WeaponArchetype::UNIVERSAL, 7, 3);
+            $seals[] = new Seal(9, 'Balanced Seal', 0.6, 0.75, 0.3, WeaponArchetype::UNIVERSAL, 7, 3);
         }
 
         return ['weapon' => $weapon, 'seals' => $seals];
@@ -197,7 +197,7 @@ class FullArchetypeBalanceTest extends TestCase
         $equipment->setItem(EquipmentSlot::LEGS, $armorPieces[2]);
         $equipment->setItem(EquipmentSlot::GLOVES, $armorPieces[3]);
 
-        $maxHp = (int)round(35 + ($stats['con'] * 4.5));
+        $maxHp = (int)round(45 + ($stats['con'] * 4.5));
 
         $char = new Character(
             id: $id,

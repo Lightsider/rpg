@@ -23,7 +23,7 @@ return [
     ],
 
     'max_damage' => [
-        'k' => env('COMBAT_MAX_DAMAGE_K', 150),
+        'k' => env('COMBAT_MAX_DAMAGE_K', 300),
         'max_final_chance' => 0.80,
         'prng_scale' => 0.25,
         'debug' => env('COMBAT_MAX_DAMAGE_DEBUG', false),

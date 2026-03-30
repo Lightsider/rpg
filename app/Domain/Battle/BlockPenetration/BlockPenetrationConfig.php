@@ -10,7 +10,7 @@ namespace App\Domain\Battle\BlockPenetration;
 final class BlockPenetrationConfig
 {
     public function __construct(
-        public readonly int $k = 150,
+        public readonly int $k = 120,
         public readonly float $maxFinalChance = 0.95,
         public readonly float $upBonusFactor = 0.1,
         public readonly float $downPenaltyFactor = 0.05,
