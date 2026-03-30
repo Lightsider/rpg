@@ -9,14 +9,14 @@ use App\Domain\Battle\Rng\RandomGeneratorInterface;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Reusable service for Pseudo-Random Number Generation (PRNG) with bad-luck protection.
+ * Reusable service for Pseudo-Random Number Generation (PRNG) with pity and anti-pity protection.
  *
  * This system increases the probability of success after consecutive failures,
- * reducing streaks of bad luck and making combat results statistically stable.
+ * and decreases it after consecutive successes, making combat results statistically stable.
  *
  * Formula:
- *   baseChance = rating / (rating + K)
- *   finalChance = min(maxFinalChance, baseChance + failures * (baseChance * prngScale))
+ *   currentChance = baseChance * (1 + failStreak * upBonusFactor - successStreak * downPenaltyFactor)
+ *   capped at maxFinalChance.
  */
 class PseudoRandomService
 {
@@ -30,15 +30,16 @@ class PseudoRandomService
     }
 
     /**
-     * Perform a roll with PRNG bad-luck protection.
+     * Perform a roll with dynamic chance scaling.
      *
      * @param float $baseChance The base probability (0.0 to 1.0)
      * @param int $failureCount Number of consecutive failed attempts
+     * @param int $successCount Number of consecutive successful attempts
      * @return PRNGResult Contains success status and debug information
      */
-    public function rollWithPRNG(float $baseChance, int $failureCount): PRNGResult
+    public function rollWithPRNG(float $baseChance, int $failureCount, int $successCount = 0): PRNGResult
     {
-        $finalChance = $this->calculateFinalChance($baseChance, $failureCount);
+        $finalChance = $this->calculateFinalChance($baseChance, $failureCount, $successCount);
 
         $roll = $this->getRandom();
         $success = $roll < $finalChance;
@@ -47,6 +48,7 @@ class PseudoRandomService
             Log::debug('PRNGRoll', [
                 'base_chance' => $baseChance,
                 'failures' => $failureCount,
+                'successes' => $successCount,
                 'final_chance' => $finalChance,
                 'roll' => $roll,
                 'success' => $success,
@@ -62,15 +64,18 @@ class PseudoRandomService
     }
 
     /**
-     * Calculate the final chance after applying bad-luck protection.
+     * Calculate the final chance after applying pity/anti-pity.
      *
-     * Formula: finalChance = min(maxFinalChance, baseChance + failures * (baseChance * prngScale))
+     * Formula: finalChance = baseChance * (1 + failures * upBonus - successes * downPenalty)
      */
-    public function calculateFinalChance(float $baseChance, int $failureCount): float
+    public function calculateFinalChance(float $baseChance, int $failureCount, int $successCount): float
     {
-        $scaledIncrease = $baseChance * $failureCount * $this->config->prngScale;
-        $maxAllowed = max($this->config->maxFinalChance, $baseChance);
-        return min($maxAllowed, $baseChance + $scaledIncrease);
+        $modifier = 1.0 + ($failureCount * $this->config->upBonusFactor) - ($successCount * $this->config->downPenaltyFactor);
+        
+        $finalChance = $baseChance * $modifier;
+        
+        // Ensure final chance is between 0 and maxFinalChance
+        return (float) max(0.0, min($this->config->maxFinalChance, $finalChance));
     }
 
     /**

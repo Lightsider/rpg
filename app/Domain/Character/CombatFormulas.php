@@ -9,11 +9,11 @@ namespace App\Domain\Character;
  */
 class CombatFormulas
 {
-    private const float DODGE_CHANCE_PER_AGILITY = 0.045;
+    private const float DODGE_CHANCE_PER_AGILITY = 0.04;
     private const float CRIT_CHANCE_PER_WIT = 0.05;
     private const float BASE_CRIT_MULTIPLIER = 1.5;
     private const float CRIT_MULTIPLIER_PER_WIT = 0.05;
-    private const float STRENGTH_BONUS_MULTIPLIER = 0.5;
+    private const float STRENGTH_BONUS_MULTIPLIER = 0.4;
 
     public static function dodgeChance(int $agility): float
     {

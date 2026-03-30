@@ -95,7 +95,9 @@ class SendMessage
             'chat_id' => $chat->getId(),
             'chat_type' => $chatType->value,
             'context_id' => $contextId,
-            'message' => $message->jsonSerialize(),
+            'message' => array_merge($message->jsonSerialize(), [
+                'sender_name' => $sender->getName(),
+            ]),
         ];
     }
 }

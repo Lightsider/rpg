@@ -11,20 +11,12 @@ use App\Domain\Character\Character;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Stateful domain service that resolves "Max Damage" proc attempts.
+ * Domain service that resolves "Max Damage" proc attempts.
  *
- * State kept:
- *   - attacker_id > failed attempt counter
- *
- * Logic is similar to BlockPenetrationService but per-attacker (not per-pair).
+ * Uses the Character's internal streaks for dynamic chance adjustment.
  */
 class MaxDamageService
 {
-    /**
-     * @var array<int, int> attacker_id > failed attempt counter
-     */
-    private array $failedAttempts = [];
-
     private RandomGeneratorInterface $rng;
 
     public function __construct(
@@ -47,20 +39,20 @@ class MaxDamageService
         }
 
         $baseChance = RatingConverter::toChance($rating, $this->config->k);
-        $failures = $this->failedAttempts[$attacker->getId()] ?? 0;
+        $failures = $attacker->getMaxDamageFailStreak();
+        $successes = $attacker->getMaxDamageSuccessStreak();
 
-        $finalChance = min(
-            $this->config->maxFinalChance,
-            $baseChance + $failures * ($baseChance * $this->config->prngScale)
-        );
+        // Calculate chance using the formula: base * (1 + fail * up - success * down)
+        $modifier = 1.0 + ($failures * $this->config->upBonusFactor) - ($successes * $this->config->downPenaltyFactor);
+        $finalChance = (float) max(0.0, min($this->config->maxFinalChance, $baseChance * $modifier));
 
         $roll = $this->getRandom();
         $triggered = $roll < $finalChance;
 
         if ($triggered) {
-            $this->resetCounter($attacker->getId());
+            $attacker->recordMaxDamageSuccess();
         } else {
-            $this->incrementCounter($attacker->getId());
+            $attacker->recordMaxDamageFailure();
         }
 
         if ($this->config->debug) {
@@ -69,6 +61,7 @@ class MaxDamageService
                 'rating' => $rating,
                 'base_chance' => $baseChance,
                 'failures' => $failures,
+                'successes' => $successes,
                 'final_chance' => $finalChance,
                 'roll' => $roll,
                 'triggered' => $triggered,
@@ -83,24 +76,9 @@ class MaxDamageService
         );
     }
 
-    public function resetCounter(int $attackerId): void
-    {
-        unset($this->failedAttempts[$attackerId]);
-    }
-
-    public function resetAllCounters(): void
-    {
-        $this->failedAttempts = [];
-    }
-
     public function setRandomGenerator(RandomGeneratorInterface $rng): void
     {
         $this->rng = $rng;
-    }
-
-    private function incrementCounter(int $attackerId): void
-    {
-        $this->failedAttempts[$attackerId] = ($this->failedAttempts[$attackerId] ?? 0) + 1;
     }
 
     /**
@@ -111,4 +89,3 @@ class MaxDamageService
         return $this->rng->nextFloat();
     }
 }
-

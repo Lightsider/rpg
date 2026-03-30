@@ -17,11 +17,12 @@ class PseudoRandomServiceTest extends TestCase
 
     private function makeService(
         int $k = 150,
-        float $maxFinalChance = 0.80,
-        float $prngScale = 0.25,
+        float $maxFinalChance = 0.95,
+        float $upBonusFactor = 0.1,
+        float $downPenaltyFactor = 0.05,
     ): PseudoRandomService {
         return new PseudoRandomService(
-            new PseudoRandomConfig($k, $maxFinalChance, $prngScale)
+            new PseudoRandomConfig($k, $maxFinalChance, $upBonusFactor, $downPenaltyFactor)
         );
     }
 
@@ -47,59 +48,71 @@ class PseudoRandomServiceTest extends TestCase
     // calculateFinalChance tests
     // -------------------------------------------------------------------------
 
-    public function test_zero_failures_returns_base_chance(): void
+    public function test_zero_streaks_returns_base_chance(): void
     {
         $service = $this->makeService();
-        $baseChance = 0.375; // 90 / (90 + 150)
+        $baseChance = 0.375;
 
-        $finalChance = $service->calculateFinalChance($baseChance, 0);
+        // Formula: baseChance * (1 + 0*up - 0*down) = baseChance * 1.0
+        $finalChance = $service->calculateFinalChance($baseChance, 0, 0);
 
         $this->assertEqualsWithDelta($baseChance, $finalChance, 0.0001);
     }
 
-    public function test_one_failure_increases_chance(): void
+    public function test_one_failure_increases_chance_by_ten_percent(): void
     {
-        $service = $this->makeService();
-        $baseChance = 0.375; // 90 / (90 + 150)
-        // Formula: baseChance + failures * (baseChance * prngScale)
-        // = 0.375 + 1 * (0.375 * 0.25) = 0.375 + 0.09375 = 0.46875
+        $service = $this->makeService(upBonusFactor: 0.1);
+        $baseChance = 0.375; 
+        // Formula: 0.375 * (1 + 1 * 0.1) = 0.375 * 1.1 = 0.4125
 
-        $finalChance = $service->calculateFinalChance($baseChance, 1);
+        $finalChance = $service->calculateFinalChance($baseChance, 1, 0);
 
-        $this->assertEqualsWithDelta(0.46875, $finalChance, 0.0001);
+        $this->assertEqualsWithDelta(0.4125, $finalChance, 0.0001);
     }
 
-    public function test_two_failures_increases_chance_further(): void
+    public function test_success_decreases_chance_by_five_percent(): void
     {
-        $service = $this->makeService();
-        $baseChance = 0.375;
-        // = 0.375 + 2 * (0.375 * 0.25) = 0.375 + 0.1875 = 0.5625
+        $service = $this->makeService(downPenaltyFactor: 0.05);
+        $baseChance = 0.40;
+        // Formula: 0.40 * (1 - 1 * 0.05) = 0.40 * 0.95 = 0.38
 
-        $finalChance = $service->calculateFinalChance($baseChance, 2);
+        $finalChance = $service->calculateFinalChance($baseChance, 0, 1);
 
-        $this->assertEqualsWithDelta(0.5625, $finalChance, 0.0001);
+        $this->assertEqualsWithDelta(0.38, $finalChance, 0.0001);
     }
 
-    public function test_three_failures_continues_increase(): void
+    public function test_two_successes_decreases_chance_further(): void
     {
-        $service = $this->makeService();
-        $baseChance = 0.375;
-        // = 0.375 + 3 * (0.375 * 0.25) = 0.375 + 0.28125 = 0.65625
+        $service = $this->makeService(downPenaltyFactor: 0.05);
+        $baseChance = 0.40;
+        // Formula: 0.40 * (1 - 2 * 0.05) = 0.40 * 0.90 = 0.36
 
-        $finalChance = $service->calculateFinalChance($baseChance, 3);
+        $finalChance = $service->calculateFinalChance($baseChance, 0, 2);
 
-        $this->assertEqualsWithDelta(0.65625, $finalChance, 0.0001);
+        $this->assertEqualsWithDelta(0.36, $finalChance, 0.0001);
     }
 
     public function test_chance_is_capped_at_max(): void
     {
         $service = $this->makeService(maxFinalChance: 0.80);
-        $baseChance = 0.375;
+        $baseChance = 0.40;
 
         // With many failures, chance should be capped at 0.80
-        $finalChance = $service->calculateFinalChance($baseChance, 100);
+        $finalChance = $service->calculateFinalChance($baseChance, 100, 0);
 
         $this->assertEqualsWithDelta(0.80, $finalChance, 0.0001);
+    }
+
+    public function test_chance_cannot_go_below_zero(): void
+    {
+        $service = $this->makeService(downPenaltyFactor: 0.5); // -50% per success
+        $baseChance = 0.20;
+
+        // With 3 successes, modifier = 1.0 - 1.5 = -0.5
+        // Final chance = 0.20 * -0.5 = -0.10. Capped at 0.0
+        $finalChance = $service->calculateFinalChance($baseChance, 0, 3);
+
+        $this->assertEqualsWithDelta(0.0, $finalChance, 0.0001);
     }
 
     // -------------------------------------------------------------------------
@@ -108,80 +121,37 @@ class PseudoRandomServiceTest extends TestCase
 
     public function test_roll_succeeds_when_roll_is_less_than_chance(): void
     {
-        // baseChance = 0.5, prngScale = 0.25, failures = 0
-        // finalChance = 0.5
-        // Roll 0.3 < 0.5 → success
         $service = $this->makeServiceWithFixedRoll(0.3);
 
-        $result = $service->rollWithPRNG(0.5, 0);
+        $result = $service->rollWithPRNG(0.5, 0, 0);
 
         $this->assertTrue($result->success);
     }
 
     public function test_roll_fails_when_roll_is_greater_than_chance(): void
     {
-        // baseChance = 0.5, failures = 0
-        // finalChance = 0.5
-        // Roll 0.7 > 0.5 → fail
         $service = $this->makeServiceWithFixedRoll(0.7);
 
-        $result = $service->rollWithPRNG(0.5, 0);
+        $result = $service->rollWithPRNG(0.5, 0, 0);
 
         $this->assertFalse($result->success);
     }
 
-    public function test_probability_increases_after_failures(): void
-    {
-        // Test that with failures, a higher roll can succeed
-        // baseChance = 0.3, failures = 2, prngScale = 0.25
-        // finalChance = 0.3 + 2 * (0.3 * 0.25) = 0.3 + 0.15 = 0.45
-        // Roll 0.4 < 0.45 → success
-        $service = $this->makeServiceWithFixedRoll(0.4);
-
-        $result = $service->rollWithPRNG(0.3, 2);
-
-        $this->assertTrue($result->success);
-    }
-
     public function test_same_roll_fails_without_failures_but_succeeds_with_failures(): void
     {
-        // Same roll 0.35:
+        // Roll 0.35:
         // - With 0 failures: finalChance = 0.3, roll 0.35 > 0.3 → fail
-        // - With 1 failure: finalChance = 0.3 + 0.075 = 0.375, roll 0.35 < 0.375 → success
+        // - With 2 failures: finalChance = 0.3 * 1.2 = 0.36, roll 0.35 < 0.36 → success
 
         // First test: 0 failures
         $service0 = $this->makeServiceWithFixedRoll(0.35);
         $result0 = $service0->rollWithPRNG(0.3, 0);
         $this->assertFalse($result0->success);
 
-        // Second test: 1 failure
+        // Second test: 2 failures
         $service1 = $this->makeServiceWithFixedRoll(0.35);
-        $result1 = $service1->rollWithPRNG(0.3, 1);
+        $result1 = $service1->rollWithPRNG(0.3, 2);
         $this->assertTrue($result1->success);
-    }
-
-    public function test_cap_is_respected_with_many_failures(): void
-    {
-        // Even with many failures, capped at maxFinalChance
-        // baseChance = 0.3, maxFinalChance = 0.5, failures = 100
-        // raw = 0.3 + 100 * (0.3 * 0.25) = 0.3 + 7.5 = 7.8
-        // capped = min(0.5, 7.8) = 0.5
-        // Roll 0.6 > 0.5 → fail
-        $service = new class (0.6) extends PseudoRandomService {
-            public function __construct(private float $fixedRoll)
-            {
-                parent::__construct(new PseudoRandomConfig(150, 0.5, 0.25));
-            }
-
-            protected function getRandom(): float
-            {
-                return $this->fixedRoll;
-            }
-        };
-
-        $result = $service->rollWithPRNG(0.3, 100);
-
-        $this->assertFalse($result->success);
     }
 
     // -------------------------------------------------------------------------
@@ -190,15 +160,10 @@ class PseudoRandomServiceTest extends TestCase
 
     public function test_debug_info_is_included_when_debug_enabled(): void
     {
-        $service = new PseudoRandomService(
-            new PseudoRandomConfig(150, 0.80, 0.25, true)
-        );
-
-        // Use a mock to override getRandom
-        $serviceWithFixedRoll = new class (0.5) extends PseudoRandomService {
+        $serviceWithFixedRoll = new class (0.35) extends PseudoRandomService {
             public function __construct(private float $fixedRoll)
             {
-                parent::__construct(new PseudoRandomConfig(150, 0.80, 0.25, true));
+                parent::__construct(new PseudoRandomConfig(150, 0.80, 0.1, 0.05, 0.25, true));
             }
 
             protected function getRandom(): float
@@ -207,26 +172,22 @@ class PseudoRandomServiceTest extends TestCase
             }
         };
 
-        $result = $serviceWithFixedRoll->rollWithPRNG(0.4, 1);
+        $result = $serviceWithFixedRoll->rollWithPRNG(0.3, 2); // final: 0.3 * 1.2 = 0.36
 
         $this->assertNotNull($result->baseChance);
         $this->assertNotNull($result->finalChance);
         $this->assertNotNull($result->randomRoll);
-        $this->assertEquals(0.4, $result->baseChance);
-        $this->assertEquals(0.5, $result->finalChance); // 0.4 + 1 * (0.4 * 0.25)
-        $this->assertEquals(0.5, $result->randomRoll);
+        $this->assertEquals(0.3, $result->baseChance);
+        $this->assertEquals(0.36, $result->finalChance);
+        $this->assertEquals(0.35, $result->randomRoll);
     }
 
     public function test_debug_info_is_null_when_debug_disabled(): void
     {
-        $service = new PseudoRandomService(
-            new PseudoRandomConfig(150, 0.80, 0.25, false)
-        );
-
         $serviceWithFixedRoll = new class (0.5) extends PseudoRandomService {
             public function __construct(private float $fixedRoll)
             {
-                parent::__construct(new PseudoRandomConfig(150, 0.80, 0.25, false));
+                parent::__construct(new PseudoRandomConfig(150, 0.80, 0.1, 0.05, 0.25, false));
             }
 
             protected function getRandom(): float
@@ -251,13 +212,15 @@ class PseudoRandomServiceTest extends TestCase
         $config = PseudoRandomConfig::fromArray([
             'k' => 200,
             'max_final_chance' => 0.75,
-            'prng_scale' => 0.3,
+            'up_bonus_factor' => 0.2,
+            'down_penalty_factor' => 0.1,
             'debug' => true,
         ]);
 
         $this->assertSame(200, $config->k);
         $this->assertEqualsWithDelta(0.75, $config->maxFinalChance, 0.0001);
-        $this->assertEqualsWithDelta(0.3, $config->prngScale, 0.0001);
+        $this->assertEqualsWithDelta(0.2, $config->upBonusFactor, 0.0001);
+        $this->assertEqualsWithDelta(0.1, $config->downPenaltyFactor, 0.0001);
         $this->assertTrue($config->debug);
     }
 
@@ -266,8 +229,9 @@ class PseudoRandomServiceTest extends TestCase
         $config = PseudoRandomConfig::fromArray([]);
 
         $this->assertSame(150, $config->k);
-        $this->assertEqualsWithDelta(0.80, $config->maxFinalChance, 0.0001);
-        $this->assertEqualsWithDelta(0.25, $config->prngScale, 0.0001);
+        $this->assertEqualsWithDelta(0.95, $config->maxFinalChance, 0.0001);
+        $this->assertEqualsWithDelta(0.1, $config->upBonusFactor, 0.0001);
+        $this->assertEqualsWithDelta(0.05, $config->downPenaltyFactor, 0.0001);
         $this->assertFalse($config->debug);
     }
 
@@ -279,29 +243,21 @@ class PseudoRandomServiceTest extends TestCase
     {
         $service = $this->makeServiceWithFixedRoll(0.0);
 
-        $result = $service->rollWithPRNG(0.0, 10);
+        $result = $service->rollWithPRNG(0.0, 10, 0);
 
         $this->assertFalse($result->success);
     }
 
-    public function test_full_base_chance_always_succeeds(): void
+    public function test_high_base_chance_capped_by_max_can_still_fail(): void
     {
-        $service = $this->makeServiceWithFixedRoll(0.999);
+        // maxFinalChance = 0.95 (default)
+        // baseChance = 1.0
+        // finalChance = 0.95
+        // Roll 0.99 > 0.95 → fail
+        $service = $this->makeServiceWithFixedRoll(0.99);
 
-        $result = $service->rollWithPRNG(1.0, 0);
+        $result = $service->rollWithPRNG(1.0, 0, 0);
 
-        $this->assertTrue($result->success);
-    }
-
-    public function test_negative_failures_handled_as_zero(): void
-    {
-        $service = $this->makeService();
-
-        // Negative failures should not cause issues
-        // The formula treats negative as adding negative (reducing chance)
-        // But since we use max(0, failures) in typical use, test with 0
-        $finalChance = $service->calculateFinalChance(0.5, 0);
-
-        $this->assertEqualsWithDelta(0.5, $finalChance, 0.0001);
+        $this->assertFalse($result->success);
     }
 }

@@ -49,9 +49,15 @@ class Character implements \JsonSerializable
         private float $adArmorLegs = 0.0,
         private float $adArmorLeftArm = 0.0,
         private float $adArmorRightArm = 0.0,
-        // PRNG failure streaks
+        // PRNG streaks (fail/success)
         private int $dodgeFailStreak = 0,
+        private int $dodgeSuccessStreak = 0,
         private int $critFailStreak = 0,
+        private int $critSuccessStreak = 0,
+        private int $maxDamageFailStreak = 0,
+        private int $maxDamageSuccessStreak = 0,
+        private int $penetrationFailStreak = 0,
+        private int $penetrationSuccessStreak = 0,
     ) {
         $this->adArmorHead = $this->normalizeAdArmorValue($this->adArmorHead);
         $this->adArmorChest = $this->normalizeAdArmorValue($this->adArmorChest);
@@ -148,23 +154,26 @@ class Character implements \JsonSerializable
         $this->isCommitted = false;
     }
 
-    // -------------------------------------------------------------------------
-    // PRNG Failure Streak Management
-    // -------------------------------------------------------------------------
-
     public function getDodgeFailStreak(): int
     {
         return $this->dodgeFailStreak;
     }
 
-    public function resetDodgeFailStreak(): void
+    public function getDodgeSuccessStreak(): int
     {
+        return $this->dodgeSuccessStreak;
+    }
+
+    public function recordDodgeSuccess(): void
+    {
+        $this->dodgeSuccessStreak++;
         $this->dodgeFailStreak = 0;
     }
 
-    public function incrementDodgeFailStreak(): void
+    public function recordDodgeFailure(): void
     {
         $this->dodgeFailStreak++;
+        $this->dodgeSuccessStreak = 0;
     }
 
     public function getCritFailStreak(): int
@@ -172,23 +181,80 @@ class Character implements \JsonSerializable
         return $this->critFailStreak;
     }
 
-    public function resetCritFailStreak(): void
+    public function getCritSuccessStreak(): int
     {
+        return $this->critSuccessStreak;
+    }
+
+    public function recordCritSuccess(): void
+    {
+        $this->critSuccessStreak++;
         $this->critFailStreak = 0;
     }
 
-    public function incrementCritFailStreak(): void
+    public function recordCritFailure(): void
     {
         $this->critFailStreak++;
+        $this->critSuccessStreak = 0;
+    }
+
+    public function getMaxDamageFailStreak(): int
+    {
+        return $this->maxDamageFailStreak;
+    }
+
+    public function getMaxDamageSuccessStreak(): int
+    {
+        return $this->maxDamageSuccessStreak;
+    }
+
+    public function recordMaxDamageSuccess(): void
+    {
+        $this->maxDamageSuccessStreak++;
+        $this->maxDamageFailStreak = 0;
+    }
+
+    public function recordMaxDamageFailure(): void
+    {
+        $this->maxDamageFailStreak++;
+        $this->maxDamageSuccessStreak = 0;
+    }
+
+    public function getPenetrationFailStreak(): int
+    {
+        return $this->penetrationFailStreak;
+    }
+
+    public function getPenetrationSuccessStreak(): int
+    {
+        return $this->penetrationSuccessStreak;
+    }
+
+    public function recordPenetrationSuccess(): void
+    {
+        $this->penetrationSuccessStreak++;
+        $this->penetrationFailStreak = 0;
+    }
+
+    public function recordPenetrationFailure(): void
+    {
+        $this->penetrationFailStreak++;
+        $this->penetrationSuccessStreak = 0;
     }
 
     /**
-     * Reset all PRNG failure streaks. Call this when combat ends.
+     * Reset all PRNG streaks. Call this when combat ends.
      */
-    public function resetAllFailStreaks(): void
+    public function resetAllStreaks(): void
     {
         $this->dodgeFailStreak = 0;
+        $this->dodgeSuccessStreak = 0;
         $this->critFailStreak = 0;
+        $this->critSuccessStreak = 0;
+        $this->maxDamageFailStreak = 0;
+        $this->maxDamageSuccessStreak = 0;
+        $this->penetrationFailStreak = 0;
+        $this->penetrationSuccessStreak = 0;
     }
 
     public function calculateDodgeChance(): float
@@ -229,8 +295,8 @@ class Character implements \JsonSerializable
 
     public function calculateStrengthBonus(): float
     {
-        // 1 STR = 0.5 DMG
-        return (float) round($this->getStrength() * 0.5, 4);
+        // 1 STR = 0.4 DMG
+        return (float) round($this->getStrength() * 0.4, 4);
     }
 
     public function getId(): int

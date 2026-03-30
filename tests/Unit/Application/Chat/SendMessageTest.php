@@ -12,28 +12,33 @@ use App\Domain\Chat\Repositories\ChatMessageRepositoryInterface;
 use App\Domain\Chat\Repositories\ChatRepositoryInterface;
 use App\Domain\Character\Character;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
+use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Events\Chat\ChatMessageSent;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Event;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class SendMessageTest extends TestCase
 {
     private ChatRepositoryInterface $chatRepository;
     private ChatMessageRepositoryInterface $chatMessageRepository;
     private CharacterRepositoryInterface $characterRepository;
+    private BattleRepositoryInterface $battleRepository;
     private SendMessage $useCase;
 
     protected function setUp(): void
     {
+        parent::setUp();
         $this->chatRepository = $this->createMock(ChatRepositoryInterface::class);
         $this->chatMessageRepository = $this->createMock(ChatMessageRepositoryInterface::class);
         $this->characterRepository = $this->createMock(CharacterRepositoryInterface::class);
+        $this->battleRepository = $this->createMock(BattleRepositoryInterface::class);
 
         $this->useCase = new SendMessage(
             $this->chatRepository,
             $this->chatMessageRepository,
-            $this->characterRepository
+            $this->characterRepository,
+            $this->battleRepository
         );
     }
 

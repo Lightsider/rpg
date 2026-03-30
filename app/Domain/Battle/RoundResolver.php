@@ -239,13 +239,10 @@ class RoundResolver implements RoundResolverInterface
 
         // Reset block-penetration and max-damage counters when combat ends
         if ($battle->isFinished()) {
-            $this->blockPenetrationService->resetAllCounters();
-            $this->maxDamageService->resetAllCounters();
 
             // Restore HP to max for all participants after battle ends
             foreach ($participants as $participant) {
-                $participant->restoreHp();
-                $participant->initializeAdArmor();
+                $participant->resetAllStreaks();
             }
 
             // Save the battle with restored HP to database

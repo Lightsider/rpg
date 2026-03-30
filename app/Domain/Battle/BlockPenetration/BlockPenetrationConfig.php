@@ -6,21 +6,15 @@ namespace App\Domain\Battle\BlockPenetration;
 
 /**
  * Immutable configuration value object for the block penetration subsystem.
- *
- * K  – the denominator constant in chance = rating / (rating + K).
- *      Higher K means more rating is needed to reach a given probability.
- *
- * maxFinalChance – absolute ceiling after bad-luck bonus is applied (0.95).
- *
- * prngScale – multiplier applied to baseChance per consecutive failed attempt
- *              to provide bad-luck protection.
  */
 final class BlockPenetrationConfig
 {
     public function __construct(
         public readonly int $k = 150,
         public readonly float $maxFinalChance = 0.95,
-        public readonly float $prngScale = 0.2,
+        public readonly float $upBonusFactor = 0.1,
+        public readonly float $downPenaltyFactor = 0.05,
+        public readonly float $prngScale = 0.2, // Legacy
         public readonly bool $debug = false,
     ) {
     }

@@ -156,22 +156,32 @@ class CombatResolver
 
     private function checkDodge(Character $defender): bool
     {
-        $result = $this->dodgePRNG->rollWithPRNG($defender->calculateDodgeChance(), $defender->getDodgeFailStreak());
+        $result = $this->dodgePRNG->rollWithPRNG(
+            $defender->calculateDodgeChance(),
+            $defender->getDodgeFailStreak(),
+            $defender->getDodgeSuccessStreak()
+        );
+        
         if ($result->success) {
-            $defender->resetDodgeFailStreak();
+            $defender->recordDodgeSuccess();
         } else {
-            $defender->incrementDodgeFailStreak();
+            $defender->recordDodgeFailure();
         }
         return $result->success;
     }
 
     private function checkCritical(Character $attacker): \App\Domain\Battle\PseudoRandom\PRNGResult
     {
-        $result = $this->critPRNG->rollWithPRNG($attacker->calculateCritChance(), $attacker->getCritFailStreak());
+        $result = $this->critPRNG->rollWithPRNG(
+            $attacker->calculateCritChance(),
+            $attacker->getCritFailStreak(),
+            $attacker->getCritSuccessStreak()
+        );
+        
         if ($result->success) {
-            $attacker->resetCritFailStreak();
+            $attacker->recordCritSuccess();
         } else {
-            $attacker->incrementCritFailStreak();
+            $attacker->recordCritFailure();
         }
         return $result;
     }
