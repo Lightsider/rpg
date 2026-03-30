@@ -13,4 +13,15 @@ interface CharacterRepositoryInterface
     public function create(Character $character): Character;
     public function updateHp(int $id, int $currentHp): void;
     public function updateCurrency(int $id, int $copper): void;
+
+    /**
+     * @return Character[]
+     */
+    public function findByLocationId(int $locationId): array;
+
+    /**
+     * @param int[] $ids
+     * @return Character[]
+     */
+    public function findManyByIds(array $ids): array;
 }

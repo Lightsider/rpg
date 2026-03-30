@@ -49,6 +49,16 @@ class AppServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(
+            \App\Domain\Chat\Repositories\ChatRepositoryInterface::class,
+            \App\Infrastructure\Eloquent\Repositories\EloquentChatRepository::class
+        );
+
+        $this->app->bind(
+            \App\Domain\Chat\Repositories\ChatMessageRepositoryInterface::class,
+            \App\Infrastructure\Eloquent\Repositories\EloquentChatMessageRepository::class
+        );
+
+        $this->app->bind(
             \App\Domain\Store\Repositories\StoreRepositoryInterface::class,
             \App\Infrastructure\Persistence\EloquentStoreRepository::class
         );

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BattleController;
 use App\Http\Controllers\BackpackController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\FightController;
@@ -43,6 +44,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/fights/{id}/cancel', [FightController::class, 'cancel'])->name('api.fights.cancel');
         Route::post('/fights/{id}/actions', [FightController::class, 'submitActions'])->name('api.fights.submit_actions');
         Route::get('/fights/{id}/log', [FightController::class, 'log'])->name('api.fights.log');
+
+        Route::post('/chat/send', [ChatController::class, 'send'])->name('api.chat.send');
+        Route::get('/chat/state', [ChatController::class, 'state'])->name('api.chat.state');
+        Route::get('/chat/private', [ChatController::class, 'privateChats'])->name('api.chat.private');
+        Route::get('/chat/participants', [ChatController::class, 'participants'])->name('api.chat.participants');
     });
 });
 

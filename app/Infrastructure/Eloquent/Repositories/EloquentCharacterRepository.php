@@ -85,6 +85,34 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
         CharacterModel::where('id', $id)->update(['currency_copper' => $copper]);
     }
 
+    public function findByLocationId(int $locationId): array
+    {
+        $models = CharacterModel::with([
+            'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
+            'helmet', 'chest', 'legs', 'gloves'
+        ])
+            ->where('location_id', $locationId)
+            ->get();
+
+        return $models->map(fn(CharacterModel $model) => $this->mapModelToDomain($model))->all();
+    }
+
+    public function findManyByIds(array $ids): array
+    {
+        if (count($ids) === 0) {
+            return [];
+        }
+
+        $models = CharacterModel::with([
+            'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
+            'helmet', 'chest', 'legs', 'gloves'
+        ])
+            ->whereIn('id', $ids)
+            ->get();
+
+        return $models->map(fn(CharacterModel $model) => $this->mapModelToDomain($model))->all();
+    }
+
     private function mapModelToDomain(CharacterModel $model): Character
     {
         $weapon = null;

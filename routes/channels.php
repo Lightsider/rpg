@@ -52,3 +52,51 @@ Broadcast::channel('character.{characterId}', function ($user, int $characterId)
 Broadcast::channel('location.{locationId}', function ($user, int $locationId) {
     return (bool) $user;
 });
+
+Broadcast::channel('chat.location.{locationId}', function ($user, int $locationId) {
+    /** @var CharacterRepositoryInterface $characterRepository */
+    $characterRepository = app(CharacterRepositoryInterface::class);
+
+    $character = $characterRepository->findByUserId($user->id);
+    if ($character === null) {
+        return false;
+    }
+
+    return $character->getLocationId() === $locationId;
+});
+
+Broadcast::channel('chat.battle.{battleId}', function ($user, int $battleId) {
+    /** @var BattleRepositoryInterface $battleRepository */
+    $battleRepository = app(BattleRepositoryInterface::class);
+
+    /** @var CharacterRepositoryInterface $characterRepository */
+    $characterRepository = app(CharacterRepositoryInterface::class);
+
+    $battle = $battleRepository->findById($battleId);
+    if ($battle === null) {
+        return false;
+    }
+
+    $character = $characterRepository->findByUserId($user->id);
+    if ($character === null) {
+        return false;
+    }
+
+    return $battle->getParticipantById($character->getId()) !== null;
+});
+
+Broadcast::channel('chat.private.{chatId}', function ($user, int $chatId) {
+    /** @var CharacterRepositoryInterface $characterRepository */
+    $characterRepository = app(CharacterRepositoryInterface::class);
+
+    /** @var \App\Domain\Chat\Repositories\ChatRepositoryInterface $chatRepository */
+    $chatRepository = app(\App\Domain\Chat\Repositories\ChatRepositoryInterface::class);
+
+    $character = $characterRepository->findByUserId($user->id);
+    if ($character === null) {
+        return false;
+    }
+
+    $participants = $chatRepository->getParticipants($chatId);
+    return in_array($character->getId(), $participants, true);
+});

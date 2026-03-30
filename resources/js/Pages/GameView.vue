@@ -7,6 +7,7 @@ import FightMap from '@/Components/Fight/FightMap.vue';
 import BlockSelector from '@/Components/Fight/BlockSelector.vue';
 import FightActionPanel from '@/Components/Fight/FightActionPanel.vue';
 import CurrencyDisplay from '@/Components/CurrencyDisplay.vue';
+import ChatPanel from '@/Components/Chat/ChatPanel.vue';
 import {
     getGameState,
     getAvailableFights,
@@ -676,7 +677,7 @@ onUnmounted(() => {
                     <span class="block sm:inline"> {{ error }}</span>
                 </div>
 
-                <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div v-else class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <!-- Character Panel (Shared or specific positions) -->
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg md:col-span-1">
                         <div class="p-6 text-gray-900">
@@ -1085,6 +1086,14 @@ onUnmounted(() => {
                                 <div v-else class="text-center py-8 text-gray-500 bg-gray-50 rounded border border-dashed">No active fights. Create one!</div>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="md:col-span-1">
+                        <ChatPanel
+                            :character="gameState.character"
+                            :location="gameState.location"
+                            :currentFight="gameState.currentFight"
+                        />
                     </div>
                 </div>
 
