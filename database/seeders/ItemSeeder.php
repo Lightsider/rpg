@@ -22,7 +22,7 @@ class ItemSeeder extends Seeder
                 'min_damage' => 9.0000,
                 'max_damage' => 11.0000,
                 'damage_type' => 'slashing',
-                'accuracy_bonus' => 0.1,
+                'accuracy_bonus' => 0.0,
                 'block_break_rating' => 20,
                 'required_strength' => 10,
                 'required_wit' => 0,
@@ -41,7 +41,7 @@ class ItemSeeder extends Seeder
                 'max_damage' => 11.0000,
                 'damage_type' => 'chopping',
                 'accuracy_bonus' => 0.0,
-                'block_break_rating' => 70,
+                'block_break_rating' => 60,
                 'required_strength' => 10,
                 'required_wit' => 0,
                 'flat_crit_bonus' => 0.0000,
@@ -58,8 +58,8 @@ class ItemSeeder extends Seeder
                 'min_damage' => 7.0000,
                 'max_damage' => 9.0000,
                 'damage_type' => 'slashing',
-                'accuracy_bonus' => 0.1,
-                'block_break_rating' => 10,
+                'accuracy_bonus' => 0.0,
+                'block_break_rating' => 20,
                 'required_strength' => 5,
                 'required_wit' => 5,
                 'flat_crit_bonus' => 10.0000,
@@ -77,7 +77,7 @@ class ItemSeeder extends Seeder
                 'max_damage' => 9.0000,
                 'damage_type' => 'chopping',
                 'accuracy_bonus' => 0.0,
-                'block_break_rating' => 40,
+                'block_break_rating' => 60,
                 'required_strength' => 5,
                 'required_wit' => 5,
                 'flat_crit_bonus' => 10.0000,
@@ -94,8 +94,8 @@ class ItemSeeder extends Seeder
                 'min_damage' => 8.5000,
                 'max_damage' => 10.5000,
                 'damage_type' => 'slashing',
-                'accuracy_bonus' => 0.1,
-                'block_break_rating' => 30,
+                'accuracy_bonus' => 0.0,
+                'block_break_rating' => 20,
                 'required_strength' => 7,
                 'required_wit' => 3,
                 'flat_crit_bonus' => 3.0000,
@@ -180,9 +180,9 @@ class ItemSeeder extends Seeder
     private function createArmor(): void
     {
         $archetypes = [
-            'Tank' => ['prefix' => 'Guardian', 'archetype' => 'tank', 'ad' => 10.00, 'dodge' => 0.0, 'str' => 10, 'wit' => 0, 'dex' => 0, 'con' => 0, 'start_id' => 10],
+            'Tank' => ['prefix' => 'Guardian', 'archetype' => 'tank', 'ad' => 10.00, 'dodge' => 0.0, 'str' => 0, 'wit' => 0, 'dex' => 0, 'con' => 10, 'start_id' => 10],
             'Dodge' => ['prefix' => 'Shadow', 'archetype' => 'dodge', 'ad' => 0.00, 'dodge' => 5.0, 'str' => 0, 'wit' => 0, 'dex' => 5, 'con' => 5, 'start_id' => 14],
-            'Universal' => ['prefix' => 'Balanced', 'archetype' => 'universal', 'ad' => 7.00, 'dodge' => 1.5, 'str' => 7, 'wit' => 3, 'dex' => 0, 'con' => 0, 'start_id' => 18],
+            'Universal' => ['prefix' => 'Balanced', 'archetype' => 'universal', 'ad' => 7.00, 'dodge' => 1.5, 'str' => 0, 'wit' => 0, 'dex' => 3, 'con' => 7, 'start_id' => 18],
         ];
 
         $subtypes = [
