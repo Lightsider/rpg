@@ -28,40 +28,21 @@ use App\Domain\Weapon\Weapon;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Combat Balance Simulation Tests
- * 
- * Tests balance between different stat builds at level 1.
- * Each build distributes 20 stat points with minimum constraints:
- * - STR >= 5
- * - CON >= 5
- * - DEX and WIT may be 0
+ * Tests balance between different stat builds
+ * Maybe it doesn't make sense to test it
  */
-class CombatBalanceSimulationTest extends TestCase
+class CombatBalanceStatsOnlyTest extends TestCase
 {
-    private const int TOTAL_STAT_POINTS = 20;
-    private const int MIN_STAT = 5;
-    private const int BATTLES_PER_TEST = 30;
-    private const float BALANCE_MIN = 0.40;
-    private const float BALANCE_MAX = 0.60;
+    private const int BATTLES_PER_TEST = 100;
 
     // Weapon definitions
-    private const SWORD_TEMPLATE = [
+    private const EMPTY_WEAPON_TEMPLATE = [
         'minDamage' => 3,
-        'maxDamage' => 7,
-        'damageType' => DamageType::SLASHING,
+        'maxDamage' => 3,
+        'damageType' => DamageType::CRUSH,
         'accuracyBonus' => 0.0,
         'blockBreakRating' => 20,
         'pierceMultiplier' => 0.50,
-        'maxDamageRating' => 70,
-    ];
-
-    private const AXE_TEMPLATE = [
-        'minDamage' => 3,
-        'maxDamage' => 7,
-        'damageType' => DamageType::CHOPPING,
-        'accuracyBonus' => 0.0,
-        'blockBreakRating' => 60,
-        'pierceMultiplier' => 0.65,
         'maxDamageRating' => 0,
     ];
 
@@ -89,41 +70,41 @@ class CombatBalanceSimulationTest extends TestCase
     // =========================================================================
 
     /**
-     * Tank: CON=10, DEX=0 (focuses on constitution for HP)
+     * Tank: focuses on constitution for HP
      */
     private function createTankStats(): array
     {
         return [
-            'str' => 10,  // 10
-            'con' => 10,               // 10
-            'dex' => 0,                // 0
-            'wit' => 0,                // 0 (remaining points)
+            'str' => 8,  
+            'con' => 8,               
+            'dex' => 0,                
+            'wit' => 0,                
         ];
     }
 
     /**
-     * Dodge: CON=5, DEX=5 (focuses on evasion)
+     * Dodge: focuses on evasion
      */
     private function createDodgeStats(): array
     {
         return [
-            'str' => 10,  // 10
-            'con' => 5,               // 5
-            'dex' => 5,               // 5
-            'wit' => 0,               // 0 (remaining points)
+            'str' => 8,  
+            'con' => 4,               
+            'dex' => 4,               
+            'wit' => 0,               
         ];
     }
 
     /**
-     * Universal: CON=7, DEX=3 (balanced approach)
+     * Universal: balanced approach
      */
     private function createUniversalStats(): array
     {
         return [
-            'str' => 10,  // 10
-            'con' => 7,               // 7
-            'dex' => 3,               // 3
-            'wit' => 0,               // 0 (remaining points)
+            'str' => 8,  
+            'con' => 6,              
+            'dex' => 2,               
+            'wit' => 0,               
         ];
     }
 
@@ -132,41 +113,41 @@ class CombatBalanceSimulationTest extends TestCase
     // =========================================================================
 
     /**
-     * Power: STR=10, WIT=0 (maximum damage)
+     * Power: maximum damage
      */
     private function createPowerStats(): array
     {
         return [
-            'str' => 10,              // 10
-            'con' => 10,  // 10
-            'dex' => 0,               // 0
-            'wit' => 0,               // 0 (remaining points)
+            'str' => 8,              
+            'con' => 8,  
+            'dex' => 0,               
+            'wit' => 0,               
         ];
     }
 
     /**
-     * Crit: STR=5, WIT=5 (focuses on critical hits)
+     * Crit: focuses on critical hits
      */
     private function createCritStats(): array
     {
         return [
-            'str' => 5,  // 5
-            'con' => 10,  // 10
-            'dex' => 0,               // 0
-            'wit' => 5,              // 5
+            'str' => 4,  
+            'con' => 8,  
+            'dex' => 0,               
+            'wit' => 4,              
         ];
     }
 
     /**
-     * Hybrid: STR=7, WIT=3 (balanced offense)
+     * Hybrid: balanced offense
      */
     private function createHybridStats(): array
     {
         return [
-            'str' => 7,               // 7
-            'con' => 10,  // 10
-            'dex' => 0,               // 0
-            'wit' => 3,               // 3
+            'str' => 6,               
+            'con' => 8,  
+            'dex' => 0,               
+            'wit' => 2,               
         ];
     }
 
@@ -188,8 +169,7 @@ class CombatBalanceSimulationTest extends TestCase
         $equipment = new Equipment();
         $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
 
-        // HP formula: 35 + (CON * 4.5)
-        $maxHp = (int) round(35 + ($stats['con'] * 4.5));
+        $maxHp = (int) ceil(30 + ($stats['con'] * 5));
 
         return new Character(
             id: $id,
@@ -211,39 +191,18 @@ class CombatBalanceSimulationTest extends TestCase
         );
     }
 
-    /**
-     * Create a Sword weapon.
-     */
-    private function createSword(int $id): Weapon
+    private function createEmptyWeapon(int $id): Weapon
     {
         return new Weapon(
             $id,
-            'Sword',
-            self::SWORD_TEMPLATE['minDamage'],
-            self::SWORD_TEMPLATE['maxDamage'],
-            self::SWORD_TEMPLATE['damageType'],
-            self::SWORD_TEMPLATE['accuracyBonus'],
-            self::SWORD_TEMPLATE['blockBreakRating'],
-            self::SWORD_TEMPLATE['pierceMultiplier'],
-            self::SWORD_TEMPLATE['maxDamageRating']
-        );
-    }
-
-    /**
-     * Create an Axe weapon.
-     */
-    private function createAxe(int $id): Weapon
-    {
-        return new Weapon(
-            $id,
-            'Axe',
-            self::AXE_TEMPLATE['minDamage'],
-            self::AXE_TEMPLATE['maxDamage'],
-            self::AXE_TEMPLATE['damageType'],
-            self::AXE_TEMPLATE['accuracyBonus'],
-            self::AXE_TEMPLATE['blockBreakRating'],
-            self::AXE_TEMPLATE['pierceMultiplier'],
-            self::AXE_TEMPLATE['maxDamageRating']
+            'Empty',
+            self::EMPTY_WEAPON_TEMPLATE['minDamage'],
+            self::EMPTY_WEAPON_TEMPLATE['maxDamage'],
+            self::EMPTY_WEAPON_TEMPLATE['damageType'],
+            self::EMPTY_WEAPON_TEMPLATE['accuracyBonus'],
+            self::EMPTY_WEAPON_TEMPLATE['blockBreakRating'],
+            self::EMPTY_WEAPON_TEMPLATE['pierceMultiplier'],
+            self::EMPTY_WEAPON_TEMPLATE['maxDamageRating']
         );
     }
 
@@ -253,7 +212,6 @@ class CombatBalanceSimulationTest extends TestCase
 
     /**
      * Run a battle simulation between two characters.
-     * Returns: ['winner' => 1|2|null, 'rounds' => int, 'totalDamageA' => int, 'totalDamageB' => int]
      */
     private function simulateBattle(Character $charA, Character $charB): array
     {
@@ -262,26 +220,76 @@ class CombatBalanceSimulationTest extends TestCase
         $rounds = 0;
         $damageDealtByA = 0;
         $damageDealtByB = 0;
+        $critsA = 0;
+        $critsB = 0;
+        $blockBreaksA = 0;
+        $blockBreaksB = 0;
+        $maxDamagesA = 0;
+        $maxDamagesB = 0;
+        $dodgesA = 0;
+        $dodgesB = 0;
+        $blocksA = 0;
+        $blocksB = 0;
+        $hitsA = 0;
+        $hitsB = 0;
 
         while (!$battle->isFinished()) {
             $rounds++;
             $charA->resetRoundState();
             $charB->resetRoundState();
 
-            // Both characters use the same AI: 2 attacks + 1 defense
             $this->queueRandomActions($battle, $charA);
             $this->queueRandomActions($battle, $charB);
 
             $result = $this->resolver->resolve($battle);
 
-            // Track damage dealt
             foreach ($result->logs as $log) {
-                if ($log->damage !== null && ($log->type === BattleLogType::HIT || $log->type === BattleLogType::MAX_DAMAGE || $log->type === BattleLogType::BLOCK_BREAK)) {
-                    if ($log->actorId === $charA->getId()) {
+                $aId = $charA->getId();
+                $bId = $charB->getId();
+
+                // Damage tracking (actorId = attacker)
+                if ($log->damage !== null && in_array($log->type, [BattleLogType::HIT, BattleLogType::MAX_DAMAGE, BattleLogType::BLOCK_BREAK], true)) {
+                    if ($log->actorId === $aId) {
                         $damageDealtByA += $log->damage;
-                    } else {
+                    } elseif ($log->actorId === $bId) {
                         $damageDealtByB += $log->damage;
                     }
+                }
+
+                // Hit count (actorId = attacker, damage-dealing events — one per attack)
+                if ($log->type === BattleLogType::HIT || $log->type === BattleLogType::BLOCK_BREAK) {
+                    if ($log->actorId === $aId) $hitsA++;
+                    elseif ($log->actorId === $bId) $hitsB++;
+                }
+
+                // Crit tracking (actorId = attacker)
+                if ($log->type === BattleLogType::CRIT) {
+                    if ($log->actorId === $aId) $critsA++;
+                    elseif ($log->actorId === $bId) $critsB++;
+                }
+
+                // Block break tracking (actorId = attacker who broke through)
+                if ($log->type === BattleLogType::BLOCK_BREAK) {
+                    if ($log->actorId === $aId) $blockBreaksA++;
+                    elseif ($log->actorId === $bId) $blockBreaksB++;
+                }
+
+                // Max damage tracking (actorId = attacker)
+                if ($log->type === BattleLogType::MAX_DAMAGE) {
+                    if ($log->actorId === $aId) $maxDamagesA++;
+                    elseif ($log->actorId === $bId) $maxDamagesB++;
+                }
+
+                // Dodge tracking (actorId = defender who dodged)
+                if ($log->type === BattleLogType::DODGE) {
+                    if ($log->actorId === $aId) $dodgesA++;
+                    elseif ($log->actorId === $bId) $dodgesB++;
+                }
+
+                // Block tracking (actorId = defender who blocked)
+                if ($log->type === BattleLogType::BLOCK) {
+                    if ($log->actorId === $aId) $blocksA++;
+                    elseif ($log->actorId === $bId) $blocksB++;
                 }
             }
 
@@ -290,7 +298,6 @@ class CombatBalanceSimulationTest extends TestCase
             }
         }
 
-        // Determine winner
         $winner = null;
         if ($charA->getCurrentHp() <= 0 && $charB->getCurrentHp() > 0) {
             $winner = 2;
@@ -303,6 +310,18 @@ class CombatBalanceSimulationTest extends TestCase
             'rounds' => $rounds,
             'totalDamageA' => $damageDealtByA,
             'totalDamageB' => $damageDealtByB,
+            'critsA' => $critsA,
+            'critsB' => $critsB,
+            'blockBreaksA' => $blockBreaksA,
+            'blockBreaksB' => $blockBreaksB,
+            'maxDamagesA' => $maxDamagesA,
+            'maxDamagesB' => $maxDamagesB,
+            'dodgesA' => $dodgesA,
+            'dodgesB' => $dodgesB,
+            'blocksA' => $blocksA,
+            'blocksB' => $blocksB,
+            'hitsA' => $hitsA,
+            'hitsB' => $hitsB,
         ];
     }
 
@@ -352,6 +371,18 @@ class CombatBalanceSimulationTest extends TestCase
         $totalRounds = 0;
         $totalDamageA = 0;
         $totalDamageB = 0;
+        $totalCritsA = 0;
+        $totalCritsB = 0;
+        $totalBlockBreaksA = 0;
+        $totalBlockBreaksB = 0;
+        $totalMaxDamagesA = 0;
+        $totalMaxDamagesB = 0;
+        $totalDodgesA = 0;
+        $totalDodgesB = 0;
+        $totalBlocksA = 0;
+        $totalBlocksB = 0;
+        $totalHitsA = 0;
+        $totalHitsB = 0;
 
         for ($i = 0; $i < self::BATTLES_PER_TEST; $i++) {
             $charA = $this->createCharacter($nameA, 1, $statsA, $weaponA, 0, 0);
@@ -370,6 +401,18 @@ class CombatBalanceSimulationTest extends TestCase
             $totalRounds += $result['rounds'];
             $totalDamageA += $result['totalDamageA'];
             $totalDamageB += $result['totalDamageB'];
+            $totalCritsA += $result['critsA'];
+            $totalCritsB += $result['critsB'];
+            $totalBlockBreaksA += $result['blockBreaksA'];
+            $totalBlockBreaksB += $result['blockBreaksB'];
+            $totalMaxDamagesA += $result['maxDamagesA'];
+            $totalMaxDamagesB += $result['maxDamagesB'];
+            $totalDodgesA += $result['dodgesA'];
+            $totalDodgesB += $result['dodgesB'];
+            $totalBlocksA += $result['blocksA'];
+            $totalBlocksB += $result['blocksB'];
+            $totalHitsA += $result['hitsA'];
+            $totalHitsB += $result['hitsB'];
         }
 
         return [
@@ -379,6 +422,18 @@ class CombatBalanceSimulationTest extends TestCase
             'avgRounds' => $totalRounds / self::BATTLES_PER_TEST,
             'avgDamageA' => $totalDamageA / self::BATTLES_PER_TEST,
             'avgDamageB' => $totalDamageB / self::BATTLES_PER_TEST,
+            'avgCritsA' => $totalCritsA / self::BATTLES_PER_TEST,
+            'avgCritsB' => $totalCritsB / self::BATTLES_PER_TEST,
+            'avgBlockBreaksA' => $totalBlockBreaksA / self::BATTLES_PER_TEST,
+            'avgBlockBreaksB' => $totalBlockBreaksB / self::BATTLES_PER_TEST,
+            'avgMaxDamagesA' => $totalMaxDamagesA / self::BATTLES_PER_TEST,
+            'avgMaxDamagesB' => $totalMaxDamagesB / self::BATTLES_PER_TEST,
+            'avgDodgesA' => $totalDodgesA / self::BATTLES_PER_TEST,
+            'avgDodgesB' => $totalDodgesB / self::BATTLES_PER_TEST,
+            'avgBlocksA' => $totalBlocksA / self::BATTLES_PER_TEST,
+            'avgBlocksB' => $totalBlocksB / self::BATTLES_PER_TEST,
+            'avgHitsA' => $totalHitsA / self::BATTLES_PER_TEST,
+            'avgHitsB' => $totalHitsB / self::BATTLES_PER_TEST,
         ];
     }
 
@@ -397,6 +452,12 @@ class CombatBalanceSimulationTest extends TestCase
             "Average rounds: %.1f\n" .
             "Average damage (A): %.1f\n" .
             "Average damage (B): %.1f\n" .
+            "Hits landed       — A: %.1f  B: %.1f\n" .
+            "Crits             — A: %.1f  B: %.1f\n" .
+            "Block breaks      — A: %.1f  B: %.1f\n" .
+            "Max damage procs  — A: %.1f  B: %.1f\n" .
+            "Dodges (as def)   — A: %.1f  B: %.1f\n" .
+            "Blocks (as def)   — A: %.1f  B: %.1f\n" .
             "========================================\n",
             $title,
             $weaponType,
@@ -405,12 +466,22 @@ class CombatBalanceSimulationTest extends TestCase
             (int) round($stats['drawRate'] * 100),
             $stats['avgRounds'],
             $stats['avgDamageA'],
-            $stats['avgDamageB']
+            $stats['avgDamageB'],
+            $stats['avgHitsA'],
+            $stats['avgHitsB'],
+            $stats['avgCritsA'],
+            $stats['avgCritsB'],
+            $stats['avgBlockBreaksA'],
+            $stats['avgBlockBreaksB'],
+            $stats['avgMaxDamagesA'],
+            $stats['avgMaxDamagesB'],
+            $stats['avgDodgesA'],
+            $stats['avgDodgesB'],
+            $stats['avgBlocksA'],
+            $stats['avgBlocksB'],
         );
 
         fwrite(STDOUT, $output);
-
-        // Note: Balance assertions removed - just showing results for analysis
     }
 
     // =========================================================================
@@ -422,10 +493,9 @@ class CombatBalanceSimulationTest extends TestCase
      * Defensive builds tested: Tank, Dodge, Universal
      * Both use Power attack (STR=10, WIT=0)
      */
-    public function test_defensive_builds_sword_vs_sword(): void
+    public function test_defensive_builds(): void
     {
-        $weapon = $this->createSword(1);
-        $powerStats = $this->createPowerStats();
+        $weapon = $this->createEmptyWeapon(1);
 
         // Tank vs Dodge
         $tankStats = $this->createTankStats();
@@ -439,7 +509,7 @@ class CombatBalanceSimulationTest extends TestCase
             'Tank',
             'Dodge'
         );
-        $this->printResults('Tank vs Dodge', $results, 'Sword vs Sword');
+        $this->printResults('Tank vs Dodge', $results, 'Defensive builds');
 
         // Tank vs Universal
         $universalStats = $this->createUniversalStats();
@@ -451,7 +521,7 @@ class CombatBalanceSimulationTest extends TestCase
             'Tank',
             'Universal'
         );
-        $this->printResults('Tank vs Universal', $results, 'Sword vs Sword');
+        $this->printResults('Tank vs Universal', $results, 'Defensive builds');
 
         // Dodge vs Universal
         $results = $this->runSimulation(
@@ -462,93 +532,7 @@ class CombatBalanceSimulationTest extends TestCase
             'Dodge',
             'Universal'
         );
-        $this->printResults('Dodge vs Universal', $results, 'Sword vs Sword');
-    }
-
-    /**
-     * Test defensive build balance with Axe vs Axe.
-     */
-    public function test_defensive_builds_axe_vs_axe(): void
-    {
-        $weapon = $this->createAxe(1);
-        $powerStats = $this->createPowerStats();
-
-        $tankStats = $this->createTankStats();
-        $dodgeStats = $this->createDodgeStats();
-        $universalStats = $this->createUniversalStats();
-
-        $results = $this->runSimulation(
-            $tankStats,
-            $dodgeStats,
-            $weapon,
-            $weapon,
-            'Tank',
-            'Dodge'
-        );
-        $this->printResults('Tank vs Dodge', $results, 'Axe vs Axe');
-
-        $results = $this->runSimulation(
-            $tankStats,
-            $universalStats,
-            $weapon,
-            $weapon,
-            'Tank',
-            'Universal'
-        );
-        $this->printResults('Tank vs Universal', $results, 'Axe vs Axe');
-
-        $results = $this->runSimulation(
-            $dodgeStats,
-            $universalStats,
-            $weapon,
-            $weapon,
-            'Dodge',
-            'Universal'
-        );
-        $this->printResults('Dodge vs Universal', $results, 'Axe vs Axe');
-    }
-
-    /**
-     * Test defensive build balance with Sword vs Axe.
-     */
-    public function test_defensive_builds_sword_vs_axe(): void
-    {
-        $sword = $this->createSword(1);
-        $axe = $this->createAxe(2);
-
-        $tankStats = $this->createTankStats();
-        $dodgeStats = $this->createDodgeStats();
-        $universalStats = $this->createUniversalStats();
-
-        $results = $this->runSimulation(
-            $tankStats,
-            $dodgeStats,
-            $sword,
-            $axe,
-            'Tank',
-            'Dodge'
-        );
-        $this->printResults('Tank vs Dodge', $results, 'Sword vs Axe');
-
-        $results = $this->runSimulation(
-            $tankStats,
-            $universalStats,
-            $sword,
-            $axe,
-            'Tank',
-            'Universal'
-        );
-        $this->printResults('Tank vs Universal', $results, 'Sword vs Axe');
-
-        $results = $this->runSimulation(
-            $dodgeStats,
-            $universalStats,
-            $sword,
-            $axe,
-            'Dodge',
-            'Universal'
-        );
-        $this->printResults('Dodge vs Universal', $results, 'Sword vs Axe');
+        $this->printResults('Dodge vs Universal', $results, 'Defensive builds');
     }
 
     // =========================================================================
@@ -560,15 +544,9 @@ class CombatBalanceSimulationTest extends TestCase
      * Offensive builds tested: Power, Crit, Hybrid
      * Both use Tank defense (CON=10, DEX=0)
      */
-    public function test_offensive_builds_sword_vs_sword(): void
+    public function test_offensive_builds(): void
     {
-        $weapon = $this->createSword(1);
-        $tankDefStats = [
-            'str' => self::MIN_STAT,
-            'con' => 10,
-            'dex' => 0,
-            'wit' => 5,
-        ];
+        $weapon = $this->createEmptyWeapon(1);
 
         $powerStats = $this->createPowerStats();
         $critStats = $this->createCritStats();
@@ -583,7 +561,7 @@ class CombatBalanceSimulationTest extends TestCase
             'Power',
             'Crit'
         );
-        $this->printResults('Power vs Crit', $results, 'Sword vs Sword');
+        $this->printResults('Power vs Crit', $results, 'Offensive builds');
 
         // Power vs Hybrid
         $results = $this->runSimulation(
@@ -594,7 +572,7 @@ class CombatBalanceSimulationTest extends TestCase
             'Power',
             'Hybrid'
         );
-        $this->printResults('Power vs Hybrid', $results, 'Sword vs Sword');
+        $this->printResults('Power vs Hybrid', $results, 'Offensive builds');
 
         // Crit vs Hybrid
         $results = $this->runSimulation(
@@ -605,91 +583,6 @@ class CombatBalanceSimulationTest extends TestCase
             'Crit',
             'Hybrid'
         );
-        $this->printResults('Crit vs Hybrid', $results, 'Sword vs Sword');
-    }
-
-    /**
-     * Test offensive build balance with Axe vs Axe.
-     */
-    public function test_offensive_builds_axe_vs_axe(): void
-    {
-        $weapon = $this->createAxe(1);
-
-        $powerStats = $this->createPowerStats();
-        $critStats = $this->createCritStats();
-        $hybridStats = $this->createHybridStats();
-
-        $results = $this->runSimulation(
-            $powerStats,
-            $critStats,
-            $weapon,
-            $weapon,
-            'Power',
-            'Crit'
-        );
-        $this->printResults('Power vs Crit', $results, 'Axe vs Axe');
-
-        $results = $this->runSimulation(
-            $powerStats,
-            $hybridStats,
-            $weapon,
-            $weapon,
-            'Power',
-            'Hybrid'
-        );
-        $this->printResults('Power vs Hybrid', $results, 'Axe vs Axe');
-
-        $results = $this->runSimulation(
-            $critStats,
-            $hybridStats,
-            $weapon,
-            $weapon,
-            'Crit',
-            'Hybrid'
-        );
-        $this->printResults('Crit vs Hybrid', $results, 'Axe vs Axe');
-    }
-
-    /**
-     * Test offensive build balance with Sword vs Axe.
-     */
-    public function test_offensive_builds_sword_vs_axe(): void
-    {
-        $sword = $this->createSword(1);
-        $axe = $this->createAxe(2);
-
-        $powerStats = $this->createPowerStats();
-        $critStats = $this->createCritStats();
-        $hybridStats = $this->createHybridStats();
-
-        $results = $this->runSimulation(
-            $powerStats,
-            $critStats,
-            $sword,
-            $axe,
-            'Power',
-            'Crit'
-        );
-        $this->printResults('Power vs Crit', $results, 'Sword vs Axe');
-
-        $results = $this->runSimulation(
-            $powerStats,
-            $hybridStats,
-            $sword,
-            $axe,
-            'Power',
-            'Hybrid'
-        );
-        $this->printResults('Power vs Hybrid', $results, 'Sword vs Axe');
-
-        $results = $this->runSimulation(
-            $critStats,
-            $hybridStats,
-            $sword,
-            $axe,
-            'Crit',
-            'Hybrid'
-        );
-        $this->printResults('Crit vs Hybrid', $results, 'Sword vs Axe');
+        $this->printResults('Crit vs Hybrid', $results, 'Offensive builds');
     }
 }

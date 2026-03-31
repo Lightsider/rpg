@@ -285,18 +285,50 @@ class Character implements \JsonSerializable
 
     public function calculateCritChance(): float
     {
-        return CombatFormulas::critChance($this->wit);
+        $baseCritChance = CombatFormulas::critChance($this->wit);
+        $weaponCritBonus = $this->getWeapon()->getFlatCritBonus();
+
+        $sealsCritBonus = $this->getSealsCritBonus();
+
+        return $baseCritChance + $weaponCritBonus + $sealingBonus;
     }
 
+    public function getSealsCritBonus(): float
+    {
+        $bonus = 0.0;
+        $sealSlots = [
+            EquipmentSlot::SEAL_1,
+            EquipmentSlot::SEAL_2,
+            EquipmentSlot::SEAL_3,
+            EquipmentSlot::SEAL_4,
+        ];
+
+        foreach ($sealSlots as $slot) {
+            $item = $this->equipment->getItem($slot);
+            if ($item instanceof \App\Domain\Seals\Seal) {
+                $bonus += $item->getFlatCritBonus();
+            }
+        }
+
+        return (float) round($bonus / 100, 4);
+    }
+
+    /**
+     * Unused while using flat bonus
+     */
     public function calculateCritMultiplier(): float
     {
         return CombatFormulas::critMultiplier($this->wit);
     }
 
+    public function calculateCritFlatBonus(): float
+    {
+        return CombatFormulas::critFlatBonus($this->wit);
+    }
+
     public function calculateStrengthBonus(): float
     {
-        // 1 STR = 0.4 DMG
-        return (float) round($this->getStrength() * 0.4, 4);
+        return (float) round(CombatFormulas::strengthBonus($this->strength), 4);
     }
 
     public function getId(): int

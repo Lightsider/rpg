@@ -47,7 +47,7 @@ class FullArchetypeBalanceTest extends TestCase
     {
         parent::setUp();
 
-        $bpsConfig = new BlockPenetrationConfig(150, 0.95, 0.20);
+        $bpsConfig = new BlockPenetrationConfig(120, 0.95, 0.20);
         $bps = new BlockPenetrationService($bpsConfig);
 
         $mdsConfig = new MaxDamageConfig(300, 0.80, 0.20);
@@ -84,7 +84,7 @@ class FullArchetypeBalanceTest extends TestCase
             accuracyBonus: 0.0,
             blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
-            maxDamageRating: $isSword ? 70 : 0,
+            maxDamageRating: $isSword ? 90 : 0,
             archetype: WeaponArchetype::TANK,
             requiredStrength: 10
         );
@@ -108,7 +108,7 @@ class FullArchetypeBalanceTest extends TestCase
             accuracyBonus: 0.0,
             blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
-            maxDamageRating: $isSword ? 70 : 0,
+            maxDamageRating: $isSword ? 90 : 0,
             flatCritBonus: 10.0,
             archetype: WeaponArchetype::CRIT,
             requiredStrength: 5,
@@ -134,7 +134,7 @@ class FullArchetypeBalanceTest extends TestCase
             accuracyBonus: 0.0,
             blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
-            maxDamageRating: $isSword ? 70 : 0,
+            maxDamageRating: $isSword ? 90 : 0,
             flatCritBonus: 4.0,
             archetype: WeaponArchetype::UNIVERSAL,
             requiredStrength: 7,

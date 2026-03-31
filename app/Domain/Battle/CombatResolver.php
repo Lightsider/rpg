@@ -79,6 +79,7 @@ class CombatResolver
         if ($this->checkCritical($attacker)->success) {
             $isCritical = true;
             $currentDamage += (float)$weapon->getFlatCritBonus();
+            $currentDamage += $attacker->calculateCritFlatBonus();
             $currentDamage += $attacker->getSealsFlatCritBonus();
         }
 

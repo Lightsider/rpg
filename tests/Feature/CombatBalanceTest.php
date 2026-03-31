@@ -34,7 +34,7 @@ class CombatBalanceTest extends TestCase
         parent::setUp();
 
         // Mock configs to avoid Facade exceptions if not run in full Laravel environment
-        $bpsConfig = new BlockPenetrationConfig(150, 0.95, 0.20);
+        $bpsConfig = new BlockPenetrationConfig(120, 0.95, 0.20);
         $bps = new BlockPenetrationService($bpsConfig);
 
         $mdsConfig = new MaxDamageConfig(300, 0.80, 0.20);
@@ -60,8 +60,8 @@ class CombatBalanceTest extends TestCase
             agility: 0,
             constitution: 10,
             wit: 0,
-            maxHp: 70,
-            currentHp: 70,
+            maxHp: 80,
+            currentHp: 80,
             equipment: $equipment,
             maxActionPoints: 3,
             currentActionPoints: 3,
@@ -90,10 +90,10 @@ class CombatBalanceTest extends TestCase
         $axeFullBlocks = 0;
 
         // Sword: Base damage 3-7, 0 acc, 20 block break, +50% pierce dmg, 90 max damage rating
-        $swordTemplate = new Weapon(1, 'Sword', 3, 7, DamageType::SLASHING, 0.0, 20, 0.50, 90);
+        $swordTemplate = new Weapon(1, 'Sword', 4, 7, DamageType::SLASHING, 0.0, 20, 0.50, 90);
 
         // Axe: Base damage 3-7, 0 acc, 60 block break, +65% pierce dmg, 0 max damage rating
-        $axeTemplate = new Weapon(2, 'Axe', 3, 7, DamageType::CHOPPING, 0.0, 60, 0.65, 0);
+        $axeTemplate = new Weapon(2, 'Axe', 4, 7, DamageType::CHOPPING, 0.0, 60, 0.65, 0);
 
         $zones = [
             TargetZone::HEAD,
