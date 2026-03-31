@@ -54,6 +54,7 @@ class GetStoreItems
                         'max_damage' => $itemModel->max_damage,
                         'damage_type' => $itemModel->damage_type,
                         'flat_crit_bonus' => $itemModel->flat_crit_bonus,
+                        'crit_chance_bonus' => $itemModel->crit_chance_bonus,
                         'max_damage_rating' => $itemModel->max_damage_rating,
                         'archetype' => $itemModel->archetype,
                         'required_strength' => $itemModel->required_strength,

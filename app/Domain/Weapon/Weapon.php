@@ -28,6 +28,7 @@ class Weapon extends Item
         private readonly int $requiredStrength = 0,
         private readonly int $requiredWit = 0,
         private readonly float $flatCritBonus = 0,
+        private readonly float $critChanceBonus = 0.0,
     ) {
         parent::__construct($id, $name, ItemType::WEAPON);
     }
@@ -105,5 +106,10 @@ class Weapon extends Item
     public function getFlatCritBonus(): float
     {
         return (float) $this->flatCritBonus;
+    }
+
+    public function getCritChanceBonus(): float
+    {
+        return $this->critChanceBonus;
     }
 }

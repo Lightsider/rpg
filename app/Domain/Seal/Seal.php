@@ -18,6 +18,7 @@ class Seal extends Item
         private readonly float $minDamage,
         private readonly float $maxDamage,
         private readonly float $flatCritBonus = 0,
+        private readonly float $critChanceBonus = 0.0,
         private readonly WeaponArchetype $archetype = WeaponArchetype::UNIVERSAL,
         private readonly int $requiredStrength = 0,
         private readonly int $requiredWit = 0,
@@ -43,6 +44,7 @@ class Seal extends Item
     public function getMinDamage(): float { return $this->minDamage; }
     public function getMaxDamage(): float { return $this->maxDamage; }
     public function getFlatCritBonus(): float { return $this->flatCritBonus; }
+    public function getCritChanceBonus(): float { return $this->critChanceBonus; }
     public function getArchetype(): WeaponArchetype { return $this->archetype; }
     public function getRequiredStrength(): int { return $this->requiredStrength; }
     public function getRequiredWit(): int { return $this->requiredWit; }

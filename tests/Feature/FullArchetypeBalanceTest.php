@@ -110,6 +110,7 @@ class FullArchetypeBalanceTest extends TestCase
             pierceMultiplier: $isSword ? 0.5 : 0.65,
             maxDamageRating: $isSword ? 90 : 0,
             flatCritBonus: 10.0,
+            critChanceBonus: 5.0,
             archetype: WeaponArchetype::CRIT,
             requiredStrength: 5,
             requiredWit: 5
@@ -117,7 +118,7 @@ class FullArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $seals[] = new Seal(8, 'Executioner Seal', 0.5, 0.65, 0.80, WeaponArchetype::CRIT, 5, 5);
+            $seals[] = new Seal(8, 'Executioner Seal', 0.5, 0.65, 0.80, 1.0, WeaponArchetype::CRIT, 5, 5);
         }
 
         return ['weapon' => $weapon, 'seals' => $seals];
@@ -136,6 +137,7 @@ class FullArchetypeBalanceTest extends TestCase
             pierceMultiplier: $isSword ? 0.5 : 0.65,
             maxDamageRating: $isSword ? 90 : 0,
             flatCritBonus: 4.0,
+            critChanceBonus: 2.0,
             archetype: WeaponArchetype::UNIVERSAL,
             requiredStrength: 7,
             requiredWit: 3
@@ -143,7 +145,7 @@ class FullArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $seals[] = new Seal(9, 'Balanced Seal', 0.6, 0.75, 0.3, WeaponArchetype::UNIVERSAL, 7, 3);
+            $seals[] = new Seal(9, 'Balanced Seal', 0.6, 0.75, 0.3, 0.5, WeaponArchetype::UNIVERSAL, 7, 3);
         }
 
         return ['weapon' => $weapon, 'seals' => $seals];

@@ -50,6 +50,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'pierceMultiplier'=> 0.50,
         'maxDamageRating' => 90,
         'flatCritBonus'   => 0.0,
+        'critChanceBonus' => 0.0,
         'archetype'       => WeaponArchetype::TANK,
     ];
 
@@ -63,6 +64,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'pierceMultiplier'=> 0.65,
         'maxDamageRating' => 0,
         'flatCritBonus'   => 0.0,
+        'critChanceBonus' => 0.0,
         'archetype'       => WeaponArchetype::TANK,
     ];
 
@@ -76,6 +78,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'pierceMultiplier'=> 0.50,
         'maxDamageRating' => 90,
         'flatCritBonus'   => 10.0,
+        'critChanceBonus' => 5.0,
         'archetype'       => WeaponArchetype::CRIT,
     ];
 
@@ -89,6 +92,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'pierceMultiplier'=> 0.65,
         'maxDamageRating' => 0,
         'flatCritBonus'   => 10.0,
+        'critChanceBonus' => 5.0,
         'archetype'       => WeaponArchetype::CRIT,
     ];
 
@@ -102,6 +106,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'pierceMultiplier'=> 0.50,
         'maxDamageRating' => 90,
         'flatCritBonus'   => 4.0,
+        'critChanceBonus' => 2.0,
         'archetype'       => WeaponArchetype::UNIVERSAL,
     ];
 
@@ -115,6 +120,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'pierceMultiplier'=> 0.65,
         'maxDamageRating' => 0,
         'flatCritBonus'   => 4.0,
+        'critChanceBonus' => 2.0,
         'archetype'       => WeaponArchetype::UNIVERSAL,
     ];
 
@@ -157,6 +163,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
             requiredStrength: 0,
             requiredWit: 0,
             flatCritBonus: $tpl['flatCritBonus'],
+            critChanceBonus: $tpl['critChanceBonus'] ?? 0.0,
         );
     }
 

@@ -324,6 +324,7 @@ class BackpackService
             'required_dexterity' => $item->required_dexterity,
             'required_constitution' => $item->required_constitution,
             'flat_crit_bonus' => $item->flat_crit_bonus,
+            'crit_chance_bonus' => $item->crit_chance_bonus,
             'ad_armor' => $item->ad_armor,
             'dodge_bonus' => $item->dodge_bonus,
             'armor_subtype' => $item->armor_subtype,

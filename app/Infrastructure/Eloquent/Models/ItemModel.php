@@ -24,6 +24,7 @@ class ItemModel extends Model
         'required_dexterity',
         'required_constitution',
         'flat_crit_bonus',
+        'crit_chance_bonus',
         'ad_armor',
         'dodge_bonus',
         'armor_subtype',
@@ -33,6 +34,7 @@ class ItemModel extends Model
         'min_damage' => 'float',
         'max_damage' => 'float',
         'flat_crit_bonus' => 'float',
+        'crit_chance_bonus' => 'float',
         'ad_armor' => 'float',
         'dodge_bonus' => 'float',
     ];

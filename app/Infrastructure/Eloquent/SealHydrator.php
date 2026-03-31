@@ -18,6 +18,7 @@ class SealHydrator
             minDamage: (float) $item->min_damage,
             maxDamage: (float) $item->max_damage,
             flatCritBonus: (float) $item->flat_crit_bonus,
+            critChanceBonus: (float) ($item->crit_chance_bonus ?? 0),
             archetype: WeaponArchetype::from($item->archetype ?? 'universal'),
             requiredStrength: $item->required_strength ?? 0,
             requiredWit: $item->required_wit ?? 0

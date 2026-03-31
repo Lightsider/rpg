@@ -27,6 +27,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 10,
                 'required_wit' => 0,
                 'flat_crit_bonus' => 0.0000,
+                'crit_chance_bonus' => 0.0000,
                 'pierce_multiplier' => 0.50,
                 'max_damage_rating' => 90,
             ]
@@ -47,6 +48,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 10,
                 'required_wit' => 0,
                 'flat_crit_bonus' => 0.0000,
+                'crit_chance_bonus' => 0.0000,
                 'pierce_multiplier' => 0.65,
                 'max_damage_rating' => 0,
             ]
@@ -67,6 +69,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 5,
                 'required_wit' => 5,
                 'flat_crit_bonus' => 10.0000,
+                'crit_chance_bonus' => 5.0000,
                 'pierce_multiplier' => 0.50,
                 'max_damage_rating' => 90,
             ]
@@ -87,6 +90,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 5,
                 'required_wit' => 5,
                 'flat_crit_bonus' => 10.0000,
+                'crit_chance_bonus' => 5.0000,
                 'pierce_multiplier' => 0.65,
                 'max_damage_rating' => 0,
             ]
@@ -107,6 +111,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 7,
                 'required_wit' => 3,
                 'flat_crit_bonus' => 4.0000,
+                'crit_chance_bonus' => 2.0000,
                 'pierce_multiplier' => 0.50,
                 'max_damage_rating' => 90,
             ]
@@ -127,6 +132,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 7,
                 'required_wit' => 3,
                 'flat_crit_bonus' => 4.0000,
+                'crit_chance_bonus' => 2.0000,
                 'pierce_multiplier' => 0.65,
                 'max_damage_rating' => 0,
             ]
@@ -147,6 +153,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 10,
                 'required_wit' => 0,
                 'flat_crit_bonus' => 0.0000,
+                'crit_chance_bonus' => 0.0000,
             ]
         );
 
@@ -163,6 +170,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 5,
                 'required_wit' => 5,
                 'flat_crit_bonus' => 0.8000,
+                'crit_chance_bonus' => 1.0000,
             ]
         );
 
@@ -179,6 +187,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 7,
                 'required_wit' => 3,
                 'flat_crit_bonus' => 0.3,
+                'crit_chance_bonus' => 0.5000,
             ]
         );
 

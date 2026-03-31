@@ -26,7 +26,8 @@ class WeaponHydrator
             archetype: WeaponArchetype::from($item->archetype ?? 'universal'),
             requiredStrength: $item->required_strength ?? 0,
             requiredWit: $item->required_wit ?? 0,
-            flatCritBonus: $item->flat_crit_bonus ?? 0
+            flatCritBonus: $item->flat_crit_bonus ?? 0,
+            critChanceBonus: (float) ($item->crit_chance_bonus ?? 0),
         );
     }
 
