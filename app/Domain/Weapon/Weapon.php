@@ -24,7 +24,7 @@ class Weapon extends Item
         private readonly int $blockBreakRating = 0,
         private readonly float $pierceMultiplier = 0.0,
         private readonly int $maxDamageRating = 0,
-        private readonly WeaponArchetype $archetype = WeaponArchetype::UNIVERSAL,
+        private readonly WeaponArchetype $archetype = WeaponArchetype::HYBRID,
         private readonly int $requiredStrength = 0,
         private readonly int $requiredWit = 0,
         private readonly float $flatCritBonus = 0,

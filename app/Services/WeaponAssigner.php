@@ -19,11 +19,11 @@ class WeaponAssigner
         $wit = (int) ($character->wit ?? 10);
 
         if ($strength >= 10) {
-            $weaponId = ($character->user_id % 2 === 0) ? 2 : 1; // Guardian Axe/Sword
+            $weaponId = ($character->user_id % 2 === 0) ? 2 : 1; // Steadfast Axe/Sword
         } elseif ($wit >= 5) {
             $weaponId = ($character->user_id % 2 === 0) ? 4 : 3; // Executioner Axe/Sword
         } else {
-            $weaponId = ($character->user_id % 2 === 0) ? 6 : 5; // Balanced Axe/Sword
+            $weaponId = ($character->user_id % 2 === 0) ? 6 : 5; // Versatile Axe/Sword
         }
 
         $character->update([

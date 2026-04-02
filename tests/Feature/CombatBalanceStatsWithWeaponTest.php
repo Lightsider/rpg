@@ -40,8 +40,8 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
 
     // ── Weapon templates (from ItemSeeder) ──────────────────────────────
 
-    private const GUARDIAN_SWORD = [
-        'name'            => 'Guardian Sword',
+    private const STEADFAST_SWORD = [
+        'name'            => 'Steadfast Sword',
         'minDamage'       => 9.0,
         'maxDamage'       => 11.0,
         'damageType'      => DamageType::SLASHING,
@@ -51,11 +51,11 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'maxDamageRating' => 90,
         'flatCritBonus'   => 0.0,
         'critChanceBonus' => 0.0,
-        'archetype'       => WeaponArchetype::TANK,
+        'archetype'       => WeaponArchetype::STABLE,
     ];
 
-    private const GUARDIAN_AXE = [
-        'name'            => 'Guardian Axe',
+    private const STEADFAST_AXE = [
+        'name'            => 'Steadfast Axe',
         'minDamage'       => 9.0,
         'maxDamage'       => 11.0,
         'damageType'      => DamageType::CHOPPING,
@@ -65,7 +65,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'maxDamageRating' => 0,
         'flatCritBonus'   => 0.0,
         'critChanceBonus' => 0.0,
-        'archetype'       => WeaponArchetype::TANK,
+        'archetype'       => WeaponArchetype::STABLE,
     ];
 
     private const EXECUTIONER_SWORD = [
@@ -96,8 +96,8 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'archetype'       => WeaponArchetype::CRIT,
     ];
 
-    private const BALANCED_SWORD = [
-        'name'            => 'Balanced Sword',
+    private const VERSATILE_SWORD = [
+        'name'            => 'Versatile Sword',
         'minDamage'       => 8.5,
         'maxDamage'       => 10.5,
         'damageType'      => DamageType::SLASHING,
@@ -107,11 +107,11 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'maxDamageRating' => 90,
         'flatCritBonus'   => 4.0,
         'critChanceBonus' => 2.0,
-        'archetype'       => WeaponArchetype::UNIVERSAL,
+        'archetype'       => WeaponArchetype::HYBRID,
     ];
 
-    private const BALANCED_AXE = [
-        'name'            => 'Balanced Axe',
+    private const VERSATILE_AXE = [
+        'name'            => 'Versatile Axe',
         'minDamage'       => 8.5,
         'maxDamage'       => 10.5,
         'damageType'      => DamageType::CHOPPING,
@@ -121,7 +121,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'maxDamageRating' => 0,
         'flatCritBonus'   => 4.0,
         'critChanceBonus' => 2.0,
-        'archetype'       => WeaponArchetype::UNIVERSAL,
+        'archetype'       => WeaponArchetype::HYBRID,
     ];
 
     private RoundResolver $resolver;
@@ -173,10 +173,10 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
     private function archetypeWeapon(string $build, bool $isSword, int $id): Weapon
     {
         return match ($build) {
-            'Power', 'Tank' => $this->createWeapon($id, $isSword ? self::GUARDIAN_SWORD : self::GUARDIAN_AXE),
+            'Stable', 'Tank' => $this->createWeapon($id, $isSword ? self::STEADFAST_SWORD : self::STEADFAST_AXE),
             'Crit'          => $this->createWeapon($id, $isSword ? self::EXECUTIONER_SWORD : self::EXECUTIONER_AXE),
             'Hybrid', 'Universal', 'Dodge'
-                            => $this->createWeapon($id, $isSword ? self::BALANCED_SWORD : self::BALANCED_AXE),
+                            => $this->createWeapon($id, $isSword ? self::VERSATILE_SWORD : self::VERSATILE_AXE),
             default         => throw new \InvalidArgumentException("Unknown build: {$build}"),
         };
     }
@@ -185,7 +185,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
     // Stat definitions (20 point pool)
     // =====================================================================
 
-    private function createPowerStats(): array
+    private function createStableStats(): array
     {
         return ['str' => 8, 'con' => 8, 'dex' => 0, 'wit' => 0];
     }
@@ -515,28 +515,28 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
     // =====================================================================
 
     /**
-     * Power (Guardian) vs Crit (Executioner) — Sword
-     * Power (Guardian) vs Hybrid (Balanced)  — Sword
-     * Crit  (Executioner) vs Hybrid (Balanced) — Sword
+     * Stable (Steadfast) vs Crit (Executioner) — Sword
+     * Stable (Steadfast) vs Hybrid (Versatile)  — Sword
+     * Crit  (Executioner) vs Hybrid (Versatile) — Sword
      */
     public function test_offensive_sword(): void
     {
-        $powerW  = $this->archetypeWeapon('Power',  true, 1);
+        $stableW = $this->archetypeWeapon('Stable', true, 1);
         $critW   = $this->archetypeWeapon('Crit',   true, 2);
         $hybridW = $this->archetypeWeapon('Hybrid', true, 3);
 
-        $p = $this->createPowerStats();
+        $s = $this->createStableStats();
         $c = $this->createCritStats();
         $h = $this->createHybridStats();
 
-        $r = $this->runSimulation($p, $c, $powerW, $critW, 'Power', 'Crit');
-        $this->printResults('Power vs Crit', 'Guardian Sword vs Executioner Sword', $r);
+        $r = $this->runSimulation($s, $c, $stableW, $critW, 'Stable', 'Crit');
+        $this->printResults('Stable vs Crit', 'Steadfast Sword vs Executioner Sword', $r);
 
-        $r = $this->runSimulation($p, $h, $powerW, $hybridW, 'Power', 'Hybrid');
-        $this->printResults('Power vs Hybrid', 'Guardian Sword vs Balanced Sword', $r);
+        $r = $this->runSimulation($s, $h, $stableW, $hybridW, 'Stable', 'Hybrid');
+        $this->printResults('Stable vs Hybrid', 'Steadfast Sword vs Versatile Sword', $r);
 
         $r = $this->runSimulation($c, $h, $critW, $hybridW, 'Crit', 'Hybrid');
-        $this->printResults('Crit vs Hybrid', 'Executioner Sword vs Balanced Sword', $r);
+        $this->printResults('Crit vs Hybrid', 'Executioner Sword vs Versatile Sword', $r);
     }
 
     /**
@@ -544,22 +544,22 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
      */
     public function test_offensive_axe(): void
     {
-        $powerW  = $this->archetypeWeapon('Power',  false, 1);
+        $stableW = $this->archetypeWeapon('Stable', false, 1);
         $critW   = $this->archetypeWeapon('Crit',   false, 2);
         $hybridW = $this->archetypeWeapon('Hybrid', false, 3);
 
-        $p = $this->createPowerStats();
+        $s = $this->createStableStats();
         $c = $this->createCritStats();
         $h = $this->createHybridStats();
 
-        $r = $this->runSimulation($p, $c, $powerW, $critW, 'Power', 'Crit');
-        $this->printResults('Power vs Crit', 'Guardian Axe vs Executioner Axe', $r);
+        $r = $this->runSimulation($s, $c, $stableW, $critW, 'Stable', 'Crit');
+        $this->printResults('Stable vs Crit', 'Steadfast Axe vs Executioner Axe', $r);
 
-        $r = $this->runSimulation($p, $h, $powerW, $hybridW, 'Power', 'Hybrid');
-        $this->printResults('Power vs Hybrid', 'Guardian Axe vs Balanced Axe', $r);
+        $r = $this->runSimulation($s, $h, $stableW, $hybridW, 'Stable', 'Hybrid');
+        $this->printResults('Stable vs Hybrid', 'Steadfast Axe vs Versatile Axe', $r);
 
         $r = $this->runSimulation($c, $h, $critW, $hybridW, 'Crit', 'Hybrid');
-        $this->printResults('Crit vs Hybrid', 'Executioner Axe vs Balanced Axe', $r);
+        $this->printResults('Crit vs Hybrid', 'Executioner Axe vs Versatile Axe', $r);
     }
 
     // =====================================================================
@@ -567,9 +567,9 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
     // =====================================================================
 
     /**
-     * Tank (Guardian Sword) vs Dodge (Balanced Sword)
-     * Tank (Guardian Sword) vs Universal (Balanced Sword)
-     * Dodge (Balanced Sword) vs Universal (Balanced Sword)
+     * Tank (Steadfast Sword) vs Dodge (Versatile Sword)
+     * Tank (Steadfast Sword) vs Universal (Versatile Sword)
+     * Dodge (Versatile Sword) vs Universal (Versatile Sword)
      */
     public function test_defensive_sword(): void
     {
@@ -582,13 +582,13 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         $u = $this->createUniversalStats();
 
         $r = $this->runSimulation($t, $d, $tankW, $dodgeW, 'Tank', 'Dodge');
-        $this->printResults('Tank vs Dodge', 'Guardian Sword vs Balanced Sword', $r);
+        $this->printResults('Tank vs Dodge', 'Steadfast Sword vs Versatile Sword', $r);
 
         $r = $this->runSimulation($t, $u, $tankW, $uniW, 'Tank', 'Universal');
-        $this->printResults('Tank vs Universal', 'Guardian Sword vs Balanced Sword', $r);
+        $this->printResults('Tank vs Universal', 'Steadfast Sword vs Versatile Sword', $r);
 
         $r = $this->runSimulation($d, $u, $dodgeW, $uniW, 'Dodge', 'Universal');
-        $this->printResults('Dodge vs Universal', 'Balanced Sword vs Balanced Sword', $r);
+        $this->printResults('Dodge vs Universal', 'Versatile Sword vs Versatile Sword', $r);
     }
 
     /**
@@ -605,12 +605,12 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         $u = $this->createUniversalStats();
 
         $r = $this->runSimulation($t, $d, $tankW, $dodgeW, 'Tank', 'Dodge');
-        $this->printResults('Tank vs Dodge', 'Guardian Axe vs Balanced Axe', $r);
+        $this->printResults('Tank vs Dodge', 'Steadfast Axe vs Versatile Axe', $r);
 
         $r = $this->runSimulation($t, $u, $tankW, $uniW, 'Tank', 'Universal');
-        $this->printResults('Tank vs Universal', 'Guardian Axe vs Balanced Axe', $r);
+        $this->printResults('Tank vs Universal', 'Steadfast Axe vs Versatile Axe', $r);
 
         $r = $this->runSimulation($d, $u, $dodgeW, $uniW, 'Dodge', 'Universal');
-        $this->printResults('Dodge vs Universal', 'Balanced Axe vs Balanced Axe', $r);
+        $this->printResults('Dodge vs Universal', 'Versatile Axe vs Versatile Axe', $r);
     }
 }

@@ -12,13 +12,13 @@ class ItemSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Guardian Sword (TANK)
+        // 1. Steadfast Sword (STABLE)
         $gSword = ItemModel::updateOrCreate(
             ['id' => 1],
             [
-                'name' => 'Guardian Sword',
+                'name' => 'Steadfast Sword',
                 'type' => 'weapon',
-                'archetype' => 'tank',
+                'archetype' => 'stable',
                 'min_damage' => 9.0000,
                 'max_damage' => 11.0000,
                 'damage_type' => 'slashing',
@@ -33,13 +33,13 @@ class ItemSeeder extends Seeder
             ]
         );
 
-        // 2. Guardian Axe (TANK)
+        // 2. Steadfast Axe (STABLE)
         $gAxe = ItemModel::updateOrCreate(
             ['id' => 2],
             [
-                'name' => 'Guardian Axe',
+                'name' => 'Steadfast Axe',
                 'type' => 'weapon',
-                'archetype' => 'tank',
+                'archetype' => 'stable',
                 'min_damage' => 9.0000,
                 'max_damage' => 11.0000,
                 'damage_type' => 'chopping',
@@ -96,13 +96,13 @@ class ItemSeeder extends Seeder
             ]
         );
 
-        // 5. Balanced Sword (UNIVERSAL)
+        // 5. Versatile Sword (HYBRID)
         $bSword = ItemModel::updateOrCreate(
             ['id' => 5],
             [
-                'name' => 'Balanced Sword',
+                'name' => 'Versatile Sword',
                 'type' => 'weapon',
-                'archetype' => 'universal',
+                'archetype' => 'hybrid',
                 'min_damage' => 8.5000,
                 'max_damage' => 10.5000,
                 'damage_type' => 'slashing',
@@ -117,13 +117,13 @@ class ItemSeeder extends Seeder
             ]
         );
 
-        // 6. Balanced Axe (UNIVERSAL)
+        // 6. Versatile Axe (HYBRID)
         $bAxe = ItemModel::updateOrCreate(
             ['id' => 6],
             [
-                'name' => 'Balanced Axe',
+                'name' => 'Versatile Axe',
                 'type' => 'weapon',
-                'archetype' => 'universal',
+                'archetype' => 'hybrid',
                 'min_damage' => 8.5000,
                 'max_damage' => 10.5000,
                 'damage_type' => 'chopping',
@@ -140,13 +140,13 @@ class ItemSeeder extends Seeder
 
         // --- Combat Seals (30% power) ---
 
-        // 7. Guardian Seal (TANK) - 30% of 12-14 DMG = 3.6-4.2 DMG. Each: 0.9-1.05.
+        // 7. Steadfast Seal (STABLE) - 30% of 12-14 DMG = 3.6-4.2 DMG. Each: 0.9-1.05.
         $gSeal = ItemModel::updateOrCreate(
             ['id' => 7],
             [
-                'name' => 'Guardian Seal',
+                'name' => 'Steadfast Seal',
                 'type' => 'seal',
-                'archetype' => 'tank',
+                'archetype' => 'stable',
                 'min_damage' => 0.6750,
                 'max_damage' => 0.8250,
                 'damage_type' => 'blunt',
@@ -174,13 +174,13 @@ class ItemSeeder extends Seeder
             ]
         );
 
-        // 9. Balanced Seal (UNIVERSAL) - 30% of 9-11 DMG, 3 Crit = 2.7-3.3 DMG, 0.9 Crit. Each: 0.675-0.825 DMG, 0.225 Crit.
+        // 9. Versatile Seal (HYBRID) - 30% of 9-11 DMG, 3 Crit = 2.7-3.3 DMG, 0.9 Crit. Each: 0.675-0.825 DMG, 0.225 Crit.
         $bSeal = ItemModel::updateOrCreate(
             ['id' => 9],
             [
-                'name' => 'Balanced Seal',
+                'name' => 'Versatile Seal',
                 'type' => 'seal',
-                'archetype' => 'universal',
+                'archetype' => 'hybrid',
                 'min_damage' => 0.6,
                 'max_damage' => 0.75,
                 'damage_type' => 'blunt',

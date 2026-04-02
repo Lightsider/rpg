@@ -113,9 +113,9 @@ class CombatBalanceStatsOnlyTest extends TestCase
     // =========================================================================
 
     /**
-     * Power: maximum damage
+     * Stable: maximum damage, consistent
      */
-    private function createPowerStats(): array
+    private function createStableStats(): array
     {
         return [
             'str' => 8,              
@@ -491,7 +491,7 @@ class CombatBalanceStatsOnlyTest extends TestCase
     /**
      * Test defensive build balance with Sword vs Sword.
      * Defensive builds tested: Tank, Dodge, Universal
-     * Both use Power attack (STR=10, WIT=0)
+     * Both use Stable attack (STR=10, WIT=0)
      */
     public function test_defensive_builds(): void
     {
@@ -541,38 +541,38 @@ class CombatBalanceStatsOnlyTest extends TestCase
 
     /**
      * Test offensive build balance with Sword vs Sword.
-     * Offensive builds tested: Power, Crit, Hybrid
+     * Offensive builds tested: Stable, Crit, Hybrid
      * Both use Tank defense (CON=10, DEX=0)
      */
     public function test_offensive_builds(): void
     {
         $weapon = $this->createEmptyWeapon(1);
 
-        $powerStats = $this->createPowerStats();
+        $stableStats = $this->createStableStats();
         $critStats = $this->createCritStats();
         $hybridStats = $this->createHybridStats();
 
-        // Power vs Crit
+        // Stable vs Crit
         $results = $this->runSimulation(
-            $powerStats,
+            $stableStats,
             $critStats,
             $weapon,
             $weapon,
-            'Power',
+            'Stable',
             'Crit'
         );
-        $this->printResults('Power vs Crit', $results, 'Offensive builds');
+        $this->printResults('Stable vs Crit', $results, 'Offensive builds');
 
-        // Power vs Hybrid
+        // Stable vs Hybrid
         $results = $this->runSimulation(
-            $powerStats,
+            $stableStats,
             $hybridStats,
             $weapon,
             $weapon,
-            'Power',
+            'Stable',
             'Hybrid'
         );
-        $this->printResults('Power vs Hybrid', $results, 'Offensive builds');
+        $this->printResults('Stable vs Hybrid', $results, 'Offensive builds');
 
         // Crit vs Hybrid
         $results = $this->runSimulation(

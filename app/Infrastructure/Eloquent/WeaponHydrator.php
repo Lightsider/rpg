@@ -23,7 +23,7 @@ class WeaponHydrator
             blockBreakRating: $item->block_break_rating,
             pierceMultiplier: $item->pierce_multiplier,
             maxDamageRating: $item->max_damage_rating,
-            archetype: WeaponArchetype::from($item->archetype ?? 'universal'),
+            archetype: WeaponArchetype::from($item->archetype ?? 'hybrid'),
             requiredStrength: $item->required_strength ?? 0,
             requiredWit: $item->required_wit ?? 0,
             flatCritBonus: $item->flat_crit_bonus ?? 0,
@@ -34,13 +34,13 @@ class WeaponHydrator
     public function fromLegacyName(?string $weaponType): Weapon
     {
         if ($weaponType === 'sword') {
-            return new Weapon(1, 'Sword', 9, 11, DamageType::SLASHING, 0.0, 20, 0.50, 90, WeaponArchetype::UNIVERSAL, 7, 3, 3);
+            return new Weapon(1, 'Sword', 9, 11, DamageType::SLASHING, 0.0, 20, 0.50, 90, WeaponArchetype::HYBRID, 7, 3, 3);
         }
 
         if ($weaponType === 'axe') {
-            return new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 60, 0.65, 0, WeaponArchetype::UNIVERSAL, 7, 3, 3);
+            return new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 60, 0.65, 0, WeaponArchetype::HYBRID, 7, 3, 3);
         }
 
-        return new Weapon(0, 'Fists', 1, 3, DamageType::BLUNT, 0.0, 0, 0.10, 0, WeaponArchetype::UNIVERSAL, 0, 0, 0);
+        return new Weapon(0, 'Fists', 1, 3, DamageType::BLUNT, 0.0, 0, 0.10, 0, WeaponArchetype::HYBRID, 0, 0, 0);
     }
 }

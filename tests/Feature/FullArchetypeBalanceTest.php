@@ -64,20 +64,20 @@ class FullArchetypeBalanceTest extends TestCase
     // Stats Builders
     // =========================================================================
 
-    private function getTankStats(): array { return ['str' => 10, 'con' => 10, 'dex' => 0, 'wit' => 0]; }
+    private function getStableStats(): array { return ['str' => 10, 'con' => 10, 'dex' => 0, 'wit' => 0]; }
     private function getCritStats(): array { return ['str' => 5, 'con' => 10, 'dex' => 0, 'wit' => 5]; }
-    private function getUniStats(): array { return ['str' => 7, 'con' => 10, 'dex' => 0, 'wit' => 3]; }
+    private function getHybridStats(): array { return ['str' => 7, 'con' => 10, 'dex' => 0, 'wit' => 3]; }
     private function getDodgeStats(): array { return ['str' => 0, 'con' => 10, 'dex' => 10, 'wit' => 0]; } // Extreme dodge stats if needed
 
     // =========================================================================
     // Gear Builders (Matching ItemSeeder)
     // =========================================================================
 
-    private function createTankGear(bool $isSword): array
+    private function createStableGear(bool $isSword): array
     {
         $weapon = new Weapon(
             id: $isSword ? 1 : 2,
-            name: $isSword ? 'Guardian Sword' : 'Guardian Axe',
+            name: $isSword ? 'Steadfast Sword' : 'Steadfast Axe',
             minDamage: 9.0,
             maxDamage: 11.0,
             damageType: $isSword ? DamageType::SLASHING : DamageType::CHOPPING,
@@ -85,13 +85,13 @@ class FullArchetypeBalanceTest extends TestCase
             blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
             maxDamageRating: $isSword ? 90 : 0,
-            archetype: WeaponArchetype::TANK,
+            archetype: WeaponArchetype::STABLE,
             requiredStrength: 10
         );
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $seals[] = new Seal(7, 'Guardian Seal', 0.6750, 0.8250, 0.0, WeaponArchetype::TANK, 10);
+            $seals[] = new Seal(7, 'Steadfast Seal', 0.6750, 0.8250, 0.0, WeaponArchetype::STABLE, 10);
         }
 
         return ['weapon' => $weapon, 'seals' => $seals];
@@ -124,11 +124,11 @@ class FullArchetypeBalanceTest extends TestCase
         return ['weapon' => $weapon, 'seals' => $seals];
     }
 
-    private function createUniGear(bool $isSword): array
+    private function createHybridGear(bool $isSword): array
     {
         $weapon = new Weapon(
             id: $isSword ? 5 : 6,
-            name: $isSword ? 'Balanced Sword' : 'Balanced Axe',
+            name: $isSword ? 'Versatile Sword' : 'Versatile Axe',
             minDamage: 8.5,
             maxDamage: 10.5,
             damageType: $isSword ? DamageType::SLASHING : DamageType::CHOPPING,
@@ -138,14 +138,14 @@ class FullArchetypeBalanceTest extends TestCase
             maxDamageRating: $isSword ? 90 : 0,
             flatCritBonus: 4.0,
             critChanceBonus: 2.0,
-            archetype: WeaponArchetype::UNIVERSAL,
+            archetype: WeaponArchetype::HYBRID,
             requiredStrength: 7,
             requiredWit: 3
         );
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $seals[] = new Seal(9, 'Balanced Seal', 0.6, 0.75, 0.3, 0.5, WeaponArchetype::UNIVERSAL, 7, 3);
+            $seals[] = new Seal(9, 'Versatile Seal', 0.6, 0.75, 0.3, 0.5, WeaponArchetype::HYBRID, 7, 3);
         }
 
         return ['weapon' => $weapon, 'seals' => $seals];
@@ -314,29 +314,29 @@ class FullArchetypeBalanceTest extends TestCase
         $weapons = ['Sword' => true, 'Axe' => false];
 
         foreach ($weapons as $wName => $isSword) {
-            // Tank vs Crit
+            // Stable vs Crit
             $res = $this->runSimulation(
-                fn($id) => $this->createFighter('TankAtk', $id, $this->getTankStats(), $this->createTankGear($isSword), $fixedArmor),
+                fn($id) => $this->createFighter('StableAtk', $id, $this->getStableStats(), $this->createStableGear($isSword), $fixedArmor),
                 fn($id) => $this->createFighter('CritAtk', $id, $this->getCritStats(), $this->createCritGear($isSword), $fixedArmor),
-                'Tank', 'Crit'
+                'Stable', 'Crit'
             );
-            $this->printResults($title, "Tank vs Crit ($wName)", $res);
+            $this->printResults($title, "Stable vs Crit ($wName)", $res);
 
-            // Tank vs Uni
+            // Stable vs Hybrid
             $res = $this->runSimulation(
-                fn($id) => $this->createFighter('TankAtk', $id, $this->getTankStats(), $this->createTankGear($isSword), $fixedArmor),
-                fn($id) => $this->createFighter('UniAtk', $id, $this->getUniStats(), $this->createUniGear($isSword), $fixedArmor),
-                'Tank', 'Uni'
+                fn($id) => $this->createFighter('StableAtk', $id, $this->getStableStats(), $this->createStableGear($isSword), $fixedArmor),
+                fn($id) => $this->createFighter('HybridAtk', $id, $this->getHybridStats(), $this->createHybridGear($isSword), $fixedArmor),
+                'Stable', 'Hybrid'
             );
-            $this->printResults($title, "Tank vs Uni ($wName)", $res);
+            $this->printResults($title, "Stable vs Hybrid ($wName)", $res);
 
-            // Crit vs Uni
+            // Crit vs Hybrid
             $res = $this->runSimulation(
                 fn($id) => $this->createFighter('CritAtk', $id, $this->getCritStats(), $this->createCritGear($isSword), $fixedArmor),
-                fn($id) => $this->createFighter('UniAtk', $id, $this->getUniStats(), $this->createUniGear($isSword), $fixedArmor),
-                'Crit', 'Uni'
+                fn($id) => $this->createFighter('HybridAtk', $id, $this->getHybridStats(), $this->createHybridGear($isSword), $fixedArmor),
+                'Crit', 'Hybrid'
             );
-            $this->printResults($title, "Crit vs Uni ($wName)", $res);
+            $this->printResults($title, "Crit vs Hybrid ($wName)", $res);
         }
     }
 
@@ -346,7 +346,7 @@ class FullArchetypeBalanceTest extends TestCase
 
     public function test_defense_balance_vs_tank_attack(): void
     {
-        $this->runDefenseFocusTests('Vs Tank Atk', fn($sword) => $this->createTankGear($sword), $this->getTankStats());
+        $this->runDefenseFocusTests('Vs Stable Atk', fn($sword) => $this->createStableGear($sword), $this->getStableStats());
         $this->assertTrue(true);
     }
 
@@ -358,7 +358,7 @@ class FullArchetypeBalanceTest extends TestCase
 
     public function test_defense_balance_vs_universal_attack(): void
     {
-        $this->runDefenseFocusTests('Vs Uni Atk', fn($sword) => $this->createUniGear($sword), $this->getUniStats());
+        $this->runDefenseFocusTests('Vs Hybrid Atk', fn($sword) => $this->createHybridGear($sword), $this->getHybridStats());
         $this->assertTrue(true);
     }
 
@@ -371,24 +371,24 @@ class FullArchetypeBalanceTest extends TestCase
 
             // Tank vs Dodge
             $res = $this->runSimulation(
-                fn($id) => $this->createFighter('TankDef', $id, $this->getTankStats(), $gear, $this->createTankArmor()),
-                fn($id) => $this->createFighter('DodgeDef', $id, $this->getUniStats(), $gear, $this->createDodgeArmor()), // Use Uni stats or 5/10/5/0 usually
+                fn($id) => $this->createFighter('TankDef', $id, $this->getStableStats(), $gear, $this->createTankArmor()),
+                fn($id) => $this->createFighter('DodgeDef', $id, $this->getHybridStats(), $gear, $this->createDodgeArmor()), // Use Uni stats or 5/10/5/0 usually
                 'Tank', 'Dodge'
             );
             $this->printResults($title, "Tank vs Dodge ($wName)", $res);
 
             // Tank vs Uni
             $res = $this->runSimulation(
-                fn($id) => $this->createFighter('TankDef', $id, $this->getTankStats(), $gear, $this->createTankArmor()),
-                fn($id) => $this->createFighter('UniDef', $id, $this->getUniStats(), $gear, $this->createUniArmor()),
+                fn($id) => $this->createFighter('TankDef', $id, $this->getStableStats(), $gear, $this->createTankArmor()),
+                fn($id) => $this->createFighter('UniDef', $id, $this->getHybridStats(), $gear, $this->createUniArmor()),
                 'Tank', 'Uni'
             );
             $this->printResults($title, "Tank vs Uni ($wName)", $res);
 
             // Dodge vs Uni
             $res = $this->runSimulation(
-                fn($id) => $this->createFighter('DodgeDef', $id, $this->getUniStats(), $gear, $this->createDodgeArmor()),
-                fn($id) => $this->createFighter('UniDef', $id, $this->getUniStats(), $gear, $this->createUniArmor()),
+                fn($id) => $this->createFighter('DodgeDef', $id, $this->getHybridStats(), $gear, $this->createDodgeArmor()),
+                fn($id) => $this->createFighter('UniDef', $id, $this->getHybridStats(), $gear, $this->createUniArmor()),
                 'Dodge', 'Uni'
             );
             $this->printResults($title, "Dodge vs Uni ($wName)", $res);

@@ -960,7 +960,7 @@ onUnmounted(() => {
                                             </div>
                                             <div v-if="item.item.flat_crit_bonus">Crit Chance: +{{ item.item.flat_crit_bonus }}%</div>
                                             <div v-if="item.item.max_damage_rating">Power: {{ item.item.max_damage_rating }}</div>
-                                            <div v-if="item.item.archetype">Archetype: {{ item.item.archetype }}</div>
+                                            <div v-if="item.item.archetype">Archetype: <span class="capitalize">{{ item.item.archetype }}</span></div>
                                             <div v-if="item.item.required_dexterity || item.item.required_constitution">
                                                 Requirements:
                                                 <span v-if="item.item.required_dexterity"> DEX {{ item.item.required_dexterity }}</span>

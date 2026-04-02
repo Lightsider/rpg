@@ -9,7 +9,7 @@ namespace App\Domain\Weapon;
  */
 enum WeaponArchetype: string
 {
-    case TANK = 'tank';           // High base damage, no/low crit
+    case STABLE = 'stable';       // High base damage, consistent output
     case CRIT = 'crit';           // Low base damage, high burst (flat crit bonus)
-    case UNIVERSAL = 'universal'; // Balanced performance
+    case HYBRID = 'hybrid';       // Balanced damage + moderate crit
 }

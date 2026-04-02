@@ -19,7 +19,7 @@ class Seal extends Item
         private readonly float $maxDamage,
         private readonly float $flatCritBonus = 0,
         private readonly float $critChanceBonus = 0.0,
-        private readonly WeaponArchetype $archetype = WeaponArchetype::UNIVERSAL,
+        private readonly WeaponArchetype $archetype = WeaponArchetype::HYBRID,
         private readonly int $requiredStrength = 0,
         private readonly int $requiredWit = 0,
     ) {
