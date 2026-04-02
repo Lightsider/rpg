@@ -41,87 +41,87 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
     // ── Weapon templates (from ItemSeeder) ──────────────────────────────
 
     private const STEADFAST_SWORD = [
-        'name'            => 'Steadfast Sword',
-        'minDamage'       => 9.0,
-        'maxDamage'       => 11.0,
-        'damageType'      => DamageType::SLASHING,
-        'accuracyBonus'   => 0.0,
-        'blockBreakRating'=> 20,
-        'pierceMultiplier'=> 0.50,
+        'name' => 'Steadfast Sword',
+        'minDamage' => 9.0,
+        'maxDamage' => 11.0,
+        'damageType' => DamageType::SLASHING,
+        'accuracyBonus' => 0.0,
+        'blockBreakRating' => 20,
+        'pierceMultiplier' => 0.50,
         'maxDamageRating' => 90,
-        'flatCritBonus'   => 0.0,
+        'flatCritBonus' => 0.0,
         'critChanceBonus' => 0.0,
-        'archetype'       => WeaponArchetype::STABLE,
+        'archetype' => WeaponArchetype::STABLE,
     ];
 
     private const STEADFAST_AXE = [
-        'name'            => 'Steadfast Axe',
-        'minDamage'       => 9.0,
-        'maxDamage'       => 11.0,
-        'damageType'      => DamageType::CHOPPING,
-        'accuracyBonus'   => 0.0,
-        'blockBreakRating'=> 60,
-        'pierceMultiplier'=> 0.65,
+        'name' => 'Steadfast Axe',
+        'minDamage' => 9.0,
+        'maxDamage' => 11.0,
+        'damageType' => DamageType::CHOPPING,
+        'accuracyBonus' => 0.0,
+        'blockBreakRating' => 60,
+        'pierceMultiplier' => 0.65,
         'maxDamageRating' => 0,
-        'flatCritBonus'   => 0.0,
+        'flatCritBonus' => 0.0,
         'critChanceBonus' => 0.0,
-        'archetype'       => WeaponArchetype::STABLE,
+        'archetype' => WeaponArchetype::STABLE,
     ];
 
     private const EXECUTIONER_SWORD = [
-        'name'            => 'Executioner Sword',
-        'minDamage'       => 7.0,
-        'maxDamage'       => 9.0,
-        'damageType'      => DamageType::SLASHING,
-        'accuracyBonus'   => 0.0,
-        'blockBreakRating'=> 20,
-        'pierceMultiplier'=> 0.50,
+        'name' => 'Executioner Sword',
+        'minDamage' => 7.0,
+        'maxDamage' => 9.0,
+        'damageType' => DamageType::SLASHING,
+        'accuracyBonus' => 0.0,
+        'blockBreakRating' => 20,
+        'pierceMultiplier' => 0.50,
         'maxDamageRating' => 90,
-        'flatCritBonus'   => 10.0,
-        'critChanceBonus' => 20.0,
-        'archetype'       => WeaponArchetype::CRIT,
+        'flatCritBonus' => 10.0,
+        'critChanceBonus' => 7.0,
+        'archetype' => WeaponArchetype::CRIT,
     ];
 
     private const EXECUTIONER_AXE = [
-        'name'            => 'Executioner Axe',
-        'minDamage'       => 7.0,
-        'maxDamage'       => 9.0,
-        'damageType'      => DamageType::CHOPPING,
-        'accuracyBonus'   => 0.0,
-        'blockBreakRating'=> 60,
-        'pierceMultiplier'=> 0.65,
+        'name' => 'Executioner Axe',
+        'minDamage' => 7.0,
+        'maxDamage' => 9.0,
+        'damageType' => DamageType::CHOPPING,
+        'accuracyBonus' => 0.0,
+        'blockBreakRating' => 60,
+        'pierceMultiplier' => 0.65,
         'maxDamageRating' => 0,
-        'flatCritBonus'   => 10.0,
-        'critChanceBonus' => 20.0,
-        'archetype'       => WeaponArchetype::CRIT,
+        'flatCritBonus' => 10.0,
+        'critChanceBonus' => 7.0,
+        'archetype' => WeaponArchetype::CRIT,
     ];
 
     private const VERSATILE_SWORD = [
-        'name'            => 'Versatile Sword',
-        'minDamage'       => 8.5,
-        'maxDamage'       => 10.5,
-        'damageType'      => DamageType::SLASHING,
-        'accuracyBonus'   => 0.0,
-        'blockBreakRating'=> 20,
-        'pierceMultiplier'=> 0.50,
+        'name' => 'Versatile Sword',
+        'minDamage' => 8.5,
+        'maxDamage' => 10.5,
+        'damageType' => DamageType::SLASHING,
+        'accuracyBonus' => 0.0,
+        'blockBreakRating' => 20,
+        'pierceMultiplier' => 0.50,
         'maxDamageRating' => 90,
-        'flatCritBonus'   => 10.0,
-        'critChanceBonus' => 10.0,
-        'archetype'       => WeaponArchetype::HYBRID,
+        'flatCritBonus' => 4.0,
+        'critChanceBonus' => 3.0,
+        'archetype' => WeaponArchetype::HYBRID,
     ];
 
     private const VERSATILE_AXE = [
-        'name'            => 'Versatile Axe',
-        'minDamage'       => 8.5,
-        'maxDamage'       => 10.5,
-        'damageType'      => DamageType::CHOPPING,
-        'accuracyBonus'   => 0.0,
-        'blockBreakRating'=> 60,
-        'pierceMultiplier'=> 0.65,
+        'name' => 'Versatile Axe',
+        'minDamage' => 8.5,
+        'maxDamage' => 10.5,
+        'damageType' => DamageType::CHOPPING,
+        'accuracyBonus' => 0.0,
+        'blockBreakRating' => 60,
+        'pierceMultiplier' => 0.65,
         'maxDamageRating' => 0,
-        'flatCritBonus'   => 10.0,
-        'critChanceBonus' => 10.0,
-        'archetype'       => WeaponArchetype::HYBRID,
+        'flatCritBonus' => 4.0,
+        'critChanceBonus' => 2.0,
+        'archetype' => WeaponArchetype::HYBRID,
     ];
 
     private RoundResolver $resolver;
@@ -174,9 +174,9 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
     {
         return match ($build) {
             'Stable', 'Tank', 'Universal', 'Dodge' => $this->createWeapon($id, $isSword ? self::STEADFAST_SWORD : self::STEADFAST_AXE),
-            'Crit'          => $this->createWeapon($id, $isSword ? self::EXECUTIONER_SWORD : self::EXECUTIONER_AXE),
-            'Hybrid'        => $this->createWeapon($id, $isSword ? self::VERSATILE_SWORD : self::VERSATILE_AXE),
-            default         => throw new \InvalidArgumentException("Unknown build: {$build}"),
+            'Crit' => $this->createWeapon($id, $isSword ? self::EXECUTIONER_SWORD : self::EXECUTIONER_AXE),
+            'Hybrid' => $this->createWeapon($id, $isSword ? self::VERSATILE_SWORD : self::VERSATILE_AXE),
+            default => throw new \InvalidArgumentException("Unknown build: {$build}"),
         };
     }
 
@@ -229,7 +229,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         $equipment = new Equipment();
         $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
 
-        $maxHp = (int) ceil(50 + ($stats['con'] * 8));
+        $maxHp = (int) ceil(30 + ($stats['con'] * 10));
 
         return new Character(
             id: $id,
@@ -260,8 +260,8 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         $battle = new Battle(1, 1, [$charA, $charB], new Map(10, 10));
 
         $rounds = 0;
-        $damageDealtByA = 0;
-        $damageDealtByB = 0;
+        $initialHpA = $charA->getCurrentHp();
+        $initialHpB = $charB->getCurrentHp();
         $critsA = 0;
         $critsB = 0;
         $blockBreaksA = 0;
@@ -289,42 +289,46 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
                 $aId = $charA->getId();
                 $bId = $charB->getId();
 
-                if ($log->damage !== null && in_array($log->type, [BattleLogType::HIT, BattleLogType::MAX_DAMAGE, BattleLogType::BLOCK_BREAK], true)) {
-                    if ($log->actorId === $aId) {
-                        $damageDealtByA += $log->damage;
-                    } elseif ($log->actorId === $bId) {
-                        $damageDealtByB += $log->damage;
-                    }
-                }
-
                 if ($log->type === BattleLogType::HIT || $log->type === BattleLogType::BLOCK_BREAK) {
-                    if ($log->actorId === $aId) $hitsA++;
-                    elseif ($log->actorId === $bId) $hitsB++;
+                    if ($log->actorId === $aId)
+                        $hitsA++;
+                    elseif ($log->actorId === $bId)
+                        $hitsB++;
                 }
 
                 if ($log->type === BattleLogType::CRIT) {
-                    if ($log->actorId === $aId) $critsA++;
-                    elseif ($log->actorId === $bId) $critsB++;
+                    if ($log->actorId === $aId)
+                        $critsA++;
+                    elseif ($log->actorId === $bId)
+                        $critsB++;
                 }
 
                 if ($log->type === BattleLogType::BLOCK_BREAK) {
-                    if ($log->actorId === $aId) $blockBreaksA++;
-                    elseif ($log->actorId === $bId) $blockBreaksB++;
+                    if ($log->actorId === $aId)
+                        $blockBreaksA++;
+                    elseif ($log->actorId === $bId)
+                        $blockBreaksB++;
                 }
 
                 if ($log->type === BattleLogType::MAX_DAMAGE) {
-                    if ($log->actorId === $aId) $maxDamagesA++;
-                    elseif ($log->actorId === $bId) $maxDamagesB++;
+                    if ($log->actorId === $aId)
+                        $maxDamagesA++;
+                    elseif ($log->actorId === $bId)
+                        $maxDamagesB++;
                 }
 
                 if ($log->type === BattleLogType::DODGE) {
-                    if ($log->actorId === $aId) $dodgesA++;
-                    elseif ($log->actorId === $bId) $dodgesB++;
+                    if ($log->actorId === $aId)
+                        $dodgesA++;
+                    elseif ($log->actorId === $bId)
+                        $dodgesB++;
                 }
 
                 if ($log->type === BattleLogType::BLOCK) {
-                    if ($log->actorId === $aId) $blocksA++;
-                    elseif ($log->actorId === $bId) $blocksB++;
+                    if ($log->actorId === $aId)
+                        $blocksA++;
+                    elseif ($log->actorId === $bId)
+                        $blocksB++;
                 }
             }
 
@@ -332,6 +336,9 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
                 $battle->startNewRound();
             }
         }
+
+        $damageDealtByA = max(0, $initialHpB - $charB->getCurrentHp());
+        $damageDealtByB = max(0, $initialHpA - $charA->getCurrentHp());
 
         $winner = null;
         if ($charA->getCurrentHp() <= 0 && $charB->getCurrentHp() > 0) {
@@ -341,22 +348,22 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         }
 
         return [
-            'winner'       => $winner,
-            'rounds'       => $rounds,
+            'winner' => $winner,
+            'rounds' => $rounds,
             'totalDamageA' => $damageDealtByA,
             'totalDamageB' => $damageDealtByB,
-            'critsA'       => $critsA,
-            'critsB'       => $critsB,
+            'critsA' => $critsA,
+            'critsB' => $critsB,
             'blockBreaksA' => $blockBreaksA,
             'blockBreaksB' => $blockBreaksB,
-            'maxDamagesA'  => $maxDamagesA,
-            'maxDamagesB'  => $maxDamagesB,
-            'dodgesA'      => $dodgesA,
-            'dodgesB'      => $dodgesB,
-            'blocksA'      => $blocksA,
-            'blocksB'      => $blocksB,
-            'hitsA'        => $hitsA,
-            'hitsB'        => $hitsB,
+            'maxDamagesA' => $maxDamagesA,
+            'maxDamagesB' => $maxDamagesB,
+            'dodgesA' => $dodgesA,
+            'dodgesB' => $dodgesB,
+            'blocksA' => $blocksA,
+            'blocksB' => $blocksB,
+            'hitsA' => $hitsA,
+            'hitsB' => $hitsB,
         ];
     }
 
@@ -447,29 +454,34 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         }
 
         return [
-            'winRateA'        => $winsA / self::BATTLES_PER_TEST,
-            'winRateB'        => $winsB / self::BATTLES_PER_TEST,
-            'drawRate'        => $draws / self::BATTLES_PER_TEST,
-            'avgRounds'       => $totalRounds / self::BATTLES_PER_TEST,
-            'avgDamageA'      => $totalDamageA / self::BATTLES_PER_TEST,
-            'avgDamageB'      => $totalDamageB / self::BATTLES_PER_TEST,
-            'avgCritsA'       => $totalCritsA / self::BATTLES_PER_TEST,
-            'avgCritsB'       => $totalCritsB / self::BATTLES_PER_TEST,
+            'winRateA' => $winsA / self::BATTLES_PER_TEST,
+            'winRateB' => $winsB / self::BATTLES_PER_TEST,
+            'drawRate' => $draws / self::BATTLES_PER_TEST,
+            'avgRounds' => $totalRounds / self::BATTLES_PER_TEST,
+            'avgDamageA' => $totalDamageA / self::BATTLES_PER_TEST,
+            'avgDamageB' => $totalDamageB / self::BATTLES_PER_TEST,
+            'avgCritsA' => $totalCritsA / self::BATTLES_PER_TEST,
+            'avgCritsB' => $totalCritsB / self::BATTLES_PER_TEST,
             'avgBlockBreaksA' => $totalBlockBreaksA / self::BATTLES_PER_TEST,
             'avgBlockBreaksB' => $totalBlockBreaksB / self::BATTLES_PER_TEST,
-            'avgMaxDamagesA'  => $totalMaxDamagesA / self::BATTLES_PER_TEST,
-            'avgMaxDamagesB'  => $totalMaxDamagesB / self::BATTLES_PER_TEST,
-            'avgDodgesA'      => $totalDodgesA / self::BATTLES_PER_TEST,
-            'avgDodgesB'      => $totalDodgesB / self::BATTLES_PER_TEST,
-            'avgBlocksA'      => $totalBlocksA / self::BATTLES_PER_TEST,
-            'avgBlocksB'      => $totalBlocksB / self::BATTLES_PER_TEST,
-            'avgHitsA'        => $totalHitsA / self::BATTLES_PER_TEST,
-            'avgHitsB'        => $totalHitsB / self::BATTLES_PER_TEST,
+            'avgMaxDamagesA' => $totalMaxDamagesA / self::BATTLES_PER_TEST,
+            'avgMaxDamagesB' => $totalMaxDamagesB / self::BATTLES_PER_TEST,
+            'avgDodgesA' => $totalDodgesA / self::BATTLES_PER_TEST,
+            'avgDodgesB' => $totalDodgesB / self::BATTLES_PER_TEST,
+            'avgBlocksA' => $totalBlocksA / self::BATTLES_PER_TEST,
+            'avgBlocksB' => $totalBlocksB / self::BATTLES_PER_TEST,
+            'avgHitsA' => $totalHitsA / self::BATTLES_PER_TEST,
+            'avgHitsB' => $totalHitsB / self::BATTLES_PER_TEST,
         ];
     }
 
     private function printResults(string $title, string $weaponLabel, array $stats): void
     {
+        $avgIncomingA = 2 * $stats['avgRounds'];
+        $avgIncomingB = 2 * $stats['avgRounds'];
+        $avgDodgeRateA = $avgIncomingA > 0 ? ($stats['avgDodgesA'] / $avgIncomingA) * 100 : 0.0;
+        $avgDodgeRateB = $avgIncomingB > 0 ? ($stats['avgDodgesB'] / $avgIncomingB) * 100 : 0.0;
+
         $output = sprintf(
             "\n========================================\n" .
             "  %s [%s]\n" .
@@ -482,6 +494,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
             "Block breaks — A: %.1f  B: %.1f\n" .
             "Max dmg procs— A: %.1f  B: %.1f\n" .
             "Dodges (def) — A: %.1f  B: %.1f\n" .
+            "Dodge rate   — A: %.1f%% B: %.1f%% (2 attacks/round)\n" .
             "Blocks (def) — A: %.1f  B: %.1f\n" .
             "========================================\n",
             $title,
@@ -502,6 +515,8 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
             $stats['avgMaxDamagesB'],
             $stats['avgDodgesA'],
             $stats['avgDodgesB'],
+            $avgDodgeRateA,
+            $avgDodgeRateB,
             $stats['avgBlocksA'],
             $stats['avgBlocksB'],
         );
@@ -521,7 +536,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
     public function test_offensive_sword(): void
     {
         $stableW = $this->archetypeWeapon('Stable', true, 1);
-        $critW   = $this->archetypeWeapon('Crit',   true, 2);
+        $critW = $this->archetypeWeapon('Crit', true, 2);
         $hybridW = $this->archetypeWeapon('Hybrid', true, 3);
 
         $s = $this->createStableStats();
@@ -544,7 +559,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
     public function test_offensive_axe(): void
     {
         $stableW = $this->archetypeWeapon('Stable', false, 1);
-        $critW   = $this->archetypeWeapon('Crit',   false, 2);
+        $critW = $this->archetypeWeapon('Crit', false, 2);
         $hybridW = $this->archetypeWeapon('Hybrid', false, 3);
 
         $s = $this->createStableStats();
@@ -572,9 +587,9 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
      */
     public function test_defensive_sword(): void
     {
-        $tankW  = $this->archetypeWeapon('Tank',  true, 1);
+        $tankW = $this->archetypeWeapon('Tank', true, 1);
         $dodgeW = $this->archetypeWeapon('Dodge', true, 2);
-        $uniW   = $this->archetypeWeapon('Universal', true, 3);
+        $uniW = $this->archetypeWeapon('Universal', true, 3);
 
         $t = $this->createTankStats();
         $d = $this->createDodgeStats();
@@ -595,21 +610,21 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
      */
     public function test_defensive_axe(): void
     {
-        $tankW  = $this->archetypeWeapon('Tank',  false, 1);
+        $tankW = $this->archetypeWeapon('Tank', false, 1);
         $dodgeW = $this->archetypeWeapon('Dodge', false, 2);
-        $uniW   = $this->archetypeWeapon('Universal', false, 3);
+        $uniW = $this->archetypeWeapon('Universal', false, 3);
 
         $t = $this->createTankStats();
         $d = $this->createDodgeStats();
         $u = $this->createUniversalStats();
 
         $r = $this->runSimulation($t, $d, $tankW, $dodgeW, 'Tank', 'Dodge');
-        $this->printResults('Tank vs Dodge', 'Steadfast Axe vs Versatile Axe', $r);
+        $this->printResults('Tank vs Dodge', 'Steadfast Axe vs Steadfast Axe', $r);
 
         $r = $this->runSimulation($t, $u, $tankW, $uniW, 'Tank', 'Universal');
-        $this->printResults('Tank vs Universal', 'Steadfast Axe vs Versatile Axe', $r);
+        $this->printResults('Tank vs Universal', 'Steadfast Axe vs Steadfast Axe', $r);
 
         $r = $this->runSimulation($d, $u, $dodgeW, $uniW, 'Dodge', 'Universal');
-        $this->printResults('Dodge vs Universal', 'Versatile Axe vs Versatile Axe', $r);
+        $this->printResults('Dodge vs Universal', 'Steadfast Axe vs Steadfast Axe', $r);
     }
 }
