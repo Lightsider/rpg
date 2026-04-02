@@ -37,10 +37,10 @@ class GameController extends Controller
 
         if (!$character) {
             $defaultStats = [
-                'str' => 5,
-                'con' => 5,
-                'dex' => 5,
-                'wit' => 5,
+                'str' => 4,
+                'con' => 4,
+                'dex' => 4,
+                'wit' => 4,
             ];
 
             try {

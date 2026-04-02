@@ -31,13 +31,13 @@ const gameState = ref(null);
 const fights = ref([]);
 const locations = ref([]);
 const loadout = ref({
-    stats: { strength: 10, dexterity: 10, constitution: 10, wit: 10 },
+    stats: { strength: 4, dexterity: 4, constitution: 4, wit: 4 },
     equipment: { main_hand: null, seal_1: null, seal_2: null, seal_3: null, seal_4: null, helmet: null, chest: null, legs: null, gloves: null },
     backpack: [],
     can_edit: true,
     blocked_reason: null,
 });
-const loadoutForm = ref({ strength: 10, dexterity: 10, constitution: 10, wit: 10 });
+const loadoutForm = ref({ strength: 4, dexterity: 4, constitution: 4, wit: 4 });
 const loadoutErrors = ref({});
 const loadoutMessage = ref('');
 const savingLoadout = ref(false);

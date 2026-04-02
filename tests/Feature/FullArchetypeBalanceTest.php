@@ -64,10 +64,10 @@ class FullArchetypeBalanceTest extends TestCase
     // Stats Builders
     // =========================================================================
 
-    private function getStableStats(): array { return ['str' => 10, 'con' => 10, 'dex' => 0, 'wit' => 0]; }
-    private function getCritStats(): array { return ['str' => 5, 'con' => 10, 'dex' => 0, 'wit' => 5]; }
-    private function getHybridStats(): array { return ['str' => 7, 'con' => 10, 'dex' => 0, 'wit' => 3]; }
-    private function getDodgeStats(): array { return ['str' => 0, 'con' => 10, 'dex' => 10, 'wit' => 0]; } // Extreme dodge stats if needed
+    private function getStableStats(): array { return ['str' => 8, 'con' => 8, 'dex' => 0, 'wit' => 0]; }
+    private function getCritStats(): array { return ['str' => 4, 'con' => 8, 'dex' => 0, 'wit' => 4]; }
+    private function getHybridStats(): array { return ['str' => 6, 'con' => 8, 'dex' => 0, 'wit' => 2]; }
+    private function getDodgeStats(): array { return ['str' => 8, 'con' => 4, 'dex' => 4, 'wit' => 0]; } // Extreme dodge stats if needed
 
     // =========================================================================
     // Gear Builders (Matching ItemSeeder)

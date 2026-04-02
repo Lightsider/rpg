@@ -182,7 +182,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
     }
 
     // =====================================================================
-    // Stat definitions (20 point pool)
+    // Stat definitions (16 point pool)
     // =====================================================================
 
     private function createStableStats(): array

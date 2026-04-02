@@ -106,10 +106,10 @@ class CharacterLoadoutController extends Controller
         return response()->json([
             'character' => $updatedCharacter,
             'stats' => [
-                'strength' => (int) ($characterModel?->strength ?? 10),
-                'dexterity' => (int) ($characterModel?->dexterity ?? 10),
-                'constitution' => (int) ($characterModel?->constitution ?? 10),
-                'wit' => (int) ($characterModel?->wit ?? 10),
+                'strength' => (int) ($characterModel?->strength ?? 4),
+                'dexterity' => (int) ($characterModel?->dexterity ?? 4),
+                'constitution' => (int) ($characterModel?->constitution ?? 4),
+                'wit' => (int) ($characterModel?->wit ?? 4),
             ],
         ]);
     }
