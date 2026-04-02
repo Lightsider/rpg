@@ -37,8 +37,8 @@ class CombatBalanceStatsOnlyTest extends TestCase
 
     // Weapon definitions
     private const EMPTY_WEAPON_TEMPLATE = [
-        'minDamage' => 3,
-        'maxDamage' => 3,
+        'minDamage' => 0,
+        'maxDamage' => 0,
         'damageType' => DamageType::CRUSH,
         'accuracyBonus' => 0.0,
         'blockBreakRating' => 20,
@@ -169,7 +169,7 @@ class CombatBalanceStatsOnlyTest extends TestCase
         $equipment = new Equipment();
         $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
 
-        $maxHp = (int) ceil(30 + ($stats['con'] * 5));
+        $maxHp = (int) ceil(0 + ($stats['con'] * 10));
 
         return new Character(
             id: $id,

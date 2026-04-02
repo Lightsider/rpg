@@ -89,25 +89,31 @@ class CombatResolver
         // 4. Hit Zone Selection
         $hitZone = $targetZone ? $targetZone->value : $this->selectHitZone();
 
-        // 5. Armor Reduction (50% to AD, 50% to HP)
-        $finalDamageInt = $this->applyArmorReduction($defender, $hitZone, $currentDamage, $attacker);
-
-        // 6. Block handling (Applied AFTER armor reduction? Typically block is total mitigation/penetration)
-        // In this system, weapon block penetration deals 'damage' which is already calculated.
+        // 5. Block handling
+        $isPierced = false;
         if ($isBlocked) {
-            $penetrationResult = $this->blockPenetrationService->checkBlockBreak($attacker, $defender, $finalDamageInt);
-            return new AttackResult(
-                damage: $penetrationResult->damage,
-                isCritical: $isCritical,
-                isDodged: false,
-                isMiss: false,
-                damageType: $damageType,
-                isPierced: $penetrationResult->penetrated,
-                isMaxDamage: $maxDamageProc->triggered
-            );
+            $penetrationResult = $this->blockPenetrationService->checkBlockBreak($attacker, $defender, (int) round($currentDamage));
+            
+            if (!$penetrationResult->penetrated) {
+                return new AttackResult(
+                    damage: 0,
+                    isCritical: $isCritical,
+                    isDodged: false,
+                    isMiss: false,
+                    damageType: $damageType,
+                    isPierced: false,
+                    isMaxDamage: $maxDamageProc->triggered
+                );
+            }
+            
+            $currentDamage = (float) $penetrationResult->damage;
+            $isPierced = true;
         }
 
-        return new AttackResult($finalDamageInt, $isCritical, false, false, $damageType, false, $maxDamageProc->triggered);
+        // 6. Armor Reduction (50% to AD, 50% to HP)
+        $finalDamageInt = $this->applyArmorReduction($defender, $hitZone, $currentDamage, $attacker);
+
+        return new AttackResult($finalDamageInt, $isCritical, false, false, $damageType, $isPierced, $maxDamageProc->triggered);
     }
 
     protected function selectHitZone(): string
@@ -116,7 +122,7 @@ class CombatResolver
         if ($roll <= 15) return TargetZone::HEAD->value;
         if ($roll <= 60) return TargetZone::TORSO->value;
         if ($roll <= 80) return TargetZone::LEGS->value;
-        return (mt_rand(0, 1) === 0) ? TargetZone::LEFT_ARM->value : TargetZone::RIGHT_ARM->value;
+        return ($this->rng->nextFloat() < 0.5) ? TargetZone::LEFT_ARM->value : TargetZone::RIGHT_ARM->value;
     }
 
     private function applyArmorReduction(Character $defender, string $zone, float $incomingDamage, Character $attacker): int

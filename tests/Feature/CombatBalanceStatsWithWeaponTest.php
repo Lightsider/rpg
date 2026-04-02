@@ -78,7 +78,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'pierceMultiplier'=> 0.50,
         'maxDamageRating' => 90,
         'flatCritBonus'   => 10.0,
-        'critChanceBonus' => 5.0,
+        'critChanceBonus' => 20.0,
         'archetype'       => WeaponArchetype::CRIT,
     ];
 
@@ -92,7 +92,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'pierceMultiplier'=> 0.65,
         'maxDamageRating' => 0,
         'flatCritBonus'   => 10.0,
-        'critChanceBonus' => 5.0,
+        'critChanceBonus' => 20.0,
         'archetype'       => WeaponArchetype::CRIT,
     ];
 
@@ -105,8 +105,8 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'blockBreakRating'=> 20,
         'pierceMultiplier'=> 0.50,
         'maxDamageRating' => 90,
-        'flatCritBonus'   => 4.0,
-        'critChanceBonus' => 2.0,
+        'flatCritBonus'   => 10.0,
+        'critChanceBonus' => 10.0,
         'archetype'       => WeaponArchetype::HYBRID,
     ];
 
@@ -119,8 +119,8 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         'blockBreakRating'=> 60,
         'pierceMultiplier'=> 0.65,
         'maxDamageRating' => 0,
-        'flatCritBonus'   => 4.0,
-        'critChanceBonus' => 2.0,
+        'flatCritBonus'   => 10.0,
+        'critChanceBonus' => 10.0,
         'archetype'       => WeaponArchetype::HYBRID,
     ];
 
@@ -173,10 +173,9 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
     private function archetypeWeapon(string $build, bool $isSword, int $id): Weapon
     {
         return match ($build) {
-            'Stable', 'Tank' => $this->createWeapon($id, $isSword ? self::STEADFAST_SWORD : self::STEADFAST_AXE),
+            'Stable', 'Tank', 'Universal', 'Dodge' => $this->createWeapon($id, $isSword ? self::STEADFAST_SWORD : self::STEADFAST_AXE),
             'Crit'          => $this->createWeapon($id, $isSword ? self::EXECUTIONER_SWORD : self::EXECUTIONER_AXE),
-            'Hybrid', 'Universal', 'Dodge'
-                            => $this->createWeapon($id, $isSword ? self::VERSATILE_SWORD : self::VERSATILE_AXE),
+            'Hybrid'        => $this->createWeapon($id, $isSword ? self::VERSATILE_SWORD : self::VERSATILE_AXE),
             default         => throw new \InvalidArgumentException("Unknown build: {$build}"),
         };
     }
@@ -230,7 +229,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         $equipment = new Equipment();
         $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
 
-        $maxHp = (int) ceil(8 + ($stats['con'] * 5));
+        $maxHp = (int) ceil(50 + ($stats['con'] * 8));
 
         return new Character(
             id: $id,
@@ -582,13 +581,13 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         $u = $this->createUniversalStats();
 
         $r = $this->runSimulation($t, $d, $tankW, $dodgeW, 'Tank', 'Dodge');
-        $this->printResults('Tank vs Dodge', 'Steadfast Sword vs Versatile Sword', $r);
+        $this->printResults('Tank vs Dodge', 'Steadfast Sword vs Steadfast Sword', $r);
 
         $r = $this->runSimulation($t, $u, $tankW, $uniW, 'Tank', 'Universal');
-        $this->printResults('Tank vs Universal', 'Steadfast Sword vs Versatile Sword', $r);
+        $this->printResults('Tank vs Universal', 'Steadfast Sword vs Steadfast Sword', $r);
 
         $r = $this->runSimulation($d, $u, $dodgeW, $uniW, 'Dodge', 'Universal');
-        $this->printResults('Dodge vs Universal', 'Versatile Sword vs Versatile Sword', $r);
+        $this->printResults('Dodge vs Universal', 'Steadfast Sword vs Steadfast Sword', $r);
     }
 
     /**

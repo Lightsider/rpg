@@ -9,10 +9,10 @@ namespace App\Domain\Character;
  */
 class CombatFormulas
 {
-    private const float DODGE_CHANCE_PER_AGILITY = 0.05;
-    private const float CRIT_CHANCE_PER_WIT = 0.08;
-    private const float CRIT_FLAT_BONUS_PER_WIT = 1.2;
-    private const float STRENGTH_BONUS_MULTIPLIER = 0.36;
+    private const float DODGE_CHANCE_PER_AGILITY = 0.07;
+    private const float CRIT_CHANCE_PER_WIT = 0.05;
+    private const float CRIT_FLAT_BONUS_PER_WIT = 0.0;
+    private const float STRENGTH_BONUS_MULTIPLIER = 0.50;
 
     /**
      * unused for now
