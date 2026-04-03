@@ -12,20 +12,20 @@ return new class extends Migration {
             ->where('name', 'like', 'Guardian %')
             ->update([
                 'archetype' => 'tank',
-                'required_strength' => 10,
+                'required_strength' => 0,
                 'required_wit' => 0,
                 'required_dexterity' => 0,
-                'required_constitution' => 0,
+                'required_constitution' => 8,
             ]);
 
         (clone $armorItems)
             ->where('name', 'like', 'Balanced %')
             ->update([
                 'archetype' => 'universal',
-                'required_strength' => 7,
-                'required_wit' => 3,
-                'required_dexterity' => 0,
-                'required_constitution' => 0,
+                'required_strength' => 0,
+                'required_wit' => 0,
+                'required_dexterity' => 2,
+                'required_constitution' => 6,
             ]);
 
         (clone $armorItems)
@@ -34,8 +34,8 @@ return new class extends Migration {
                 'archetype' => 'dodge',
                 'required_strength' => 0,
                 'required_wit' => 0,
-                'required_dexterity' => 5,
-                'required_constitution' => 5,
+                'required_dexterity' => 4,
+                'required_constitution' => 4,
             ]);
     }
 

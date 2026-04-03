@@ -35,8 +35,8 @@ return new class extends Migration {
                 'archetype' => 'dodge',
                 'required_strength' => 0,
                 'required_wit' => 0,
-                'required_dexterity' => 5,
-                'required_constitution' => 5,
+                'required_dexterity' => 4,
+                'required_constitution' => 4,
             ]);
     }
 
