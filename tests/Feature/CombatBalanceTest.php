@@ -52,16 +52,18 @@ class CombatBalanceTest extends TestCase
         $equipment = new Equipment();
         $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
 
+        $maxHp = (int) ceil(40 + (8 * 8.5));
+
         return new Character(
             id: $id,
             userId: $id,
             name: $name,
-            strength: 10,
+            strength: 8,
             agility: 0,
-            constitution: 10,
+            constitution: 8,
             wit: 0,
-            maxHp: 80,
-            currentHp: 80,
+            maxHp: $maxHp,
+            currentHp: $maxHp,
             equipment: $equipment,
             maxActionPoints: 3,
             currentActionPoints: 3,
@@ -89,11 +91,11 @@ class CombatBalanceTest extends TestCase
         $swordFullBlocks = 0;
         $axeFullBlocks = 0;
 
-        // Sword: Base damage 3-7, 0 acc, 20 block break, +50% pierce dmg, 90 max damage rating
-        $swordTemplate = new Weapon(1, 'Sword', 4, 7, DamageType::SLASHING, 0.0, 20, 0.50, 90);
+        // Sword: Base damage 9-11, 0 acc, 20 block break, +50% pierce dmg, 75 max damage rating
+        $swordTemplate = new Weapon(1, 'Sword', 9, 11, DamageType::SLASHING, 0.0, 20, 0.50, 75);
 
-        // Axe: Base damage 3-7, 0 acc, 60 block break, +65% pierce dmg, 0 max damage rating
-        $axeTemplate = new Weapon(2, 'Axe', 4, 7, DamageType::CHOPPING, 0.0, 60, 0.65, 0);
+        // Axe: Base damage 9-11, 0 acc, 60 block break, +65% pierce dmg, 0 max damage rating
+        $axeTemplate = new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 60, 0.65, 0);
 
         $zones = [
             TargetZone::HEAD,
@@ -231,5 +233,3 @@ class CombatBalanceTest extends TestCase
         $this->assertTrue(true); // Dummy assertion to fulfill PHPUnit test requirement
     }
 }
-
-

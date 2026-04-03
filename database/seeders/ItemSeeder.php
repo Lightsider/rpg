@@ -29,7 +29,7 @@ class ItemSeeder extends Seeder
                 'flat_crit_bonus' => 0.0000,
                 'crit_chance_bonus' => 0.0000,
                 'pierce_multiplier' => 0.50,
-                'max_damage_rating' => 90,
+                'max_damage_rating' => 75,
             ]
         );
 
@@ -71,7 +71,7 @@ class ItemSeeder extends Seeder
                 'flat_crit_bonus' => 10.0000,
                 'crit_chance_bonus' => 5.0000,
                 'pierce_multiplier' => 0.50,
-                'max_damage_rating' => 90,
+                'max_damage_rating' => 75,
             ]
         );
 
@@ -113,7 +113,7 @@ class ItemSeeder extends Seeder
                 'flat_crit_bonus' => 4.0000,
                 'crit_chance_bonus' => 3.0000,
                 'pierce_multiplier' => 0.50,
-                'max_damage_rating' => 90,
+                'max_damage_rating' => 75,
             ]
         );
 
