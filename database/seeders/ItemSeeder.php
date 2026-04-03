@@ -111,7 +111,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 7,
                 'required_wit' => 3,
                 'flat_crit_bonus' => 4.0000,
-                'crit_chance_bonus' => 2.0000,
+                'crit_chance_bonus' => 3.0000,
                 'pierce_multiplier' => 0.50,
                 'max_damage_rating' => 90,
             ]
@@ -170,7 +170,7 @@ class ItemSeeder extends Seeder
                 'required_strength' => 5,
                 'required_wit' => 5,
                 'flat_crit_bonus' => 0.8000,
-                'crit_chance_bonus' => 1.0000,
+                'crit_chance_bonus' => 0.7000,
             ]
         );
 
@@ -201,9 +201,9 @@ class ItemSeeder extends Seeder
     private function createArmor(): void
     {
         $archetypes = [
-            'Tank' => ['prefix' => 'Guardian', 'archetype' => 'tank', 'ad' => 10.00, 'dodge' => 0.0, 'str' => 0, 'wit' => 0, 'dex' => 0, 'con' => 10, 'start_id' => 10],
-            'Dodge' => ['prefix' => 'Shadow', 'archetype' => 'dodge', 'ad' => 0.00, 'dodge' => 5.0, 'str' => 0, 'wit' => 0, 'dex' => 5, 'con' => 5, 'start_id' => 14],
-            'Universal' => ['prefix' => 'Balanced', 'archetype' => 'universal', 'ad' => 7.00, 'dodge' => 2, 'str' => 0, 'wit' => 0, 'dex' => 3, 'con' => 7, 'start_id' => 18],
+            'Tank' => ['prefix' => 'Guardian', 'archetype' => 'tank', 'ad' => 6.00, 'dodge' => 0.0, 'str' => 0, 'wit' => 0, 'dex' => 0, 'con' => 10, 'start_id' => 10],
+            'Dodge' => ['prefix' => 'Shadow', 'archetype' => 'dodge', 'ad' => 0.00, 'dodge' => 3.0, 'str' => 0, 'wit' => 0, 'dex' => 5, 'con' => 5, 'start_id' => 14],
+            'Universal' => ['prefix' => 'Balanced', 'archetype' => 'universal', 'ad' => 4.00, 'dodge' => 1.2, 'str' => 0, 'wit' => 0, 'dex' => 3, 'con' => 7, 'start_id' => 18],
         ];
 
         $subtypes = [
@@ -236,5 +236,3 @@ class ItemSeeder extends Seeder
         }
     }
 }
-
-

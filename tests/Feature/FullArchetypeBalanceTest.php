@@ -67,7 +67,9 @@ class FullArchetypeBalanceTest extends TestCase
     private function getStableStats(): array { return ['str' => 8, 'con' => 8, 'dex' => 0, 'wit' => 0]; }
     private function getCritStats(): array { return ['str' => 4, 'con' => 8, 'dex' => 0, 'wit' => 4]; }
     private function getHybridStats(): array { return ['str' => 6, 'con' => 8, 'dex' => 0, 'wit' => 2]; }
-    private function getDodgeStats(): array { return ['str' => 8, 'con' => 4, 'dex' => 4, 'wit' => 0]; } // Extreme dodge stats if needed
+    private function getTankStats(): array { return ['str' => 8, 'con' => 8, 'dex' => 0, 'wit' => 0]; }
+    private function getDodgeStats(): array { return ['str' => 8, 'con' => 4, 'dex' => 4, 'wit' => 0]; }
+    private function getUniversalStats(): array { return ['str' => 8, 'con' => 6, 'dex' => 2, 'wit' => 0]; }
 
     // =========================================================================
     // Gear Builders (Matching ItemSeeder)
@@ -91,7 +93,17 @@ class FullArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $seals[] = new Seal(7, 'Steadfast Seal', 0.6750, 0.8250, 0.0, WeaponArchetype::STABLE, 10);
+            $seals[] = new Seal(
+                7,
+                'Steadfast Seal',
+                0.6750,
+                0.8250,
+                0.0,
+                0.0,
+                WeaponArchetype::STABLE,
+                10,
+                0
+            );
         }
 
         return ['weapon' => $weapon, 'seals' => $seals];
@@ -118,7 +130,17 @@ class FullArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $seals[] = new Seal(8, 'Executioner Seal', 0.5, 0.65, 0.80, 1.0, WeaponArchetype::CRIT, 5, 5);
+            $seals[] = new Seal(
+                8,
+                'Executioner Seal',
+                0.5,
+                0.65,
+                0.80,
+                0.7,
+                WeaponArchetype::CRIT,
+                5,
+                5
+            );
         }
 
         return ['weapon' => $weapon, 'seals' => $seals];
@@ -137,7 +159,7 @@ class FullArchetypeBalanceTest extends TestCase
             pierceMultiplier: $isSword ? 0.5 : 0.65,
             maxDamageRating: $isSword ? 90 : 0,
             flatCritBonus: 4.0,
-            critChanceBonus: 2.0,
+            critChanceBonus: 3.0,
             archetype: WeaponArchetype::HYBRID,
             requiredStrength: 7,
             requiredWit: 3
@@ -145,7 +167,17 @@ class FullArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $seals[] = new Seal(9, 'Versatile Seal', 0.6, 0.75, 0.3, 0.5, WeaponArchetype::HYBRID, 7, 3);
+            $seals[] = new Seal(
+                9,
+                'Versatile Seal',
+                0.6,
+                0.75,
+                0.3,
+                0.5,
+                WeaponArchetype::HYBRID,
+                7,
+                3
+            );
         }
 
         return ['weapon' => $weapon, 'seals' => $seals];
@@ -154,30 +186,30 @@ class FullArchetypeBalanceTest extends TestCase
     private function createTankArmor(): array
     {
         return [
-            new Armor(10, 'Guardian Helmet', 10.0, 0.0, ArmorSubtype::HELMET, 0, 0, 0, 10),
-            new Armor(11, 'Guardian Chestplate', 10.0, 0.0, ArmorSubtype::BODY, 0, 0, 0, 10),
-            new Armor(12, 'Guardian Boots', 10.0, 0.0, ArmorSubtype::BOOTS, 0, 0, 0, 10),
-            new Armor(13, 'Guardian Gauntlets', 10.0, 0.0, ArmorSubtype::GLOVES, 0, 0, 0, 10),
+            new Armor(10, 'Guardian Helmet', 6.0, 0.0, ArmorSubtype::HELMET, 0, 0, 0, 10),
+            new Armor(11, 'Guardian Chestplate', 6.0, 0.0, ArmorSubtype::BODY, 0, 0, 0, 10),
+            new Armor(12, 'Guardian Boots', 6.0, 0.0, ArmorSubtype::BOOTS, 0, 0, 0, 10),
+            new Armor(13, 'Guardian Gauntlets', 6.0, 0.0, ArmorSubtype::GLOVES, 0, 0, 0, 10),
         ];
     }
 
     private function createDodgeArmor(): array
     {
         return [
-            new Armor(14, 'Shadow Helmet', 0.0, 5.0, ArmorSubtype::HELMET, 0, 0, 5, 5),
-            new Armor(15, 'Shadow Chestplate', 0.0, 5.0, ArmorSubtype::BODY, 0, 0, 5, 5),
-            new Armor(16, 'Shadow Boots', 0.0, 5.0, ArmorSubtype::BOOTS, 0, 0, 5, 5),
-            new Armor(17, 'Shadow Gauntlets', 0.0, 5.0, ArmorSubtype::GLOVES, 0, 0, 5, 5),
+            new Armor(14, 'Shadow Helmet', 0.0, 3.0, ArmorSubtype::HELMET, 0, 0, 5, 5),
+            new Armor(15, 'Shadow Chestplate', 0.0, 3.0, ArmorSubtype::BODY, 0, 0, 5, 5),
+            new Armor(16, 'Shadow Boots', 0.0, 3.0, ArmorSubtype::BOOTS, 0, 0, 5, 5),
+            new Armor(17, 'Shadow Gauntlets', 0.0, 3.0, ArmorSubtype::GLOVES, 0, 0, 5, 5),
         ];
     }
 
     private function createUniArmor(): array
     {
         return [
-            new Armor(18, 'Balanced Helmet', 7.0, 1.5, ArmorSubtype::HELMET, 0, 0, 3, 7),
-            new Armor(19, 'Balanced Chestplate', 7.0, 1.5, ArmorSubtype::BODY, 0, 0, 3, 7),
-            new Armor(20, 'Balanced Boots', 7.0, 1.5, ArmorSubtype::BOOTS, 0, 0, 3, 7),
-            new Armor(21, 'Balanced Gauntlets', 7.0, 1.5, ArmorSubtype::GLOVES, 0, 0, 3, 7),
+            new Armor(18, 'Balanced Helmet', 4.0, 1.2, ArmorSubtype::HELMET, 0, 0, 3, 7),
+            new Armor(19, 'Balanced Chestplate', 4.0, 1.2, ArmorSubtype::BODY, 0, 0, 3, 7),
+            new Armor(20, 'Balanced Boots', 4.0, 1.2, ArmorSubtype::BOOTS, 0, 0, 3, 7),
+            new Armor(21, 'Balanced Gauntlets', 4.0, 1.2, ArmorSubtype::GLOVES, 0, 0, 3, 7),
         ];
     }
 
@@ -199,7 +231,7 @@ class FullArchetypeBalanceTest extends TestCase
         $equipment->setItem(EquipmentSlot::LEGS, $armorPieces[2]);
         $equipment->setItem(EquipmentSlot::GLOVES, $armorPieces[3]);
 
-        $maxHp = (int)round(45 + ($stats['con'] * 4.5));
+        $maxHp = (int) ceil(40 + ($stats['con'] * 8.5));
 
         $char = new Character(
             id: $id,
@@ -227,6 +259,20 @@ class FullArchetypeBalanceTest extends TestCase
     {
         $winsA = 0; $winsB = 0; $draws = 0;
         $totalRounds = 0;
+        $totalDamageA = 0;
+        $totalDamageB = 0;
+        $totalCritsA = 0;
+        $totalCritsB = 0;
+        $totalBlockBreaksA = 0;
+        $totalBlockBreaksB = 0;
+        $totalMaxDamagesA = 0;
+        $totalMaxDamagesB = 0;
+        $totalDodgesA = 0;
+        $totalDodgesB = 0;
+        $totalBlocksA = 0;
+        $totalBlocksB = 0;
+        $totalHitsA = 0;
+        $totalHitsB = 0;
 
         for ($i = 0; $i < self::BATTLES_PER_TEST; $i++) {
             $charA = $factoryA(1);
@@ -234,6 +280,8 @@ class FullArchetypeBalanceTest extends TestCase
             $battle = new Battle($i, 1, [$charA, $charB], new Map(10, 10));
 
             $deadA = false; $deadB = false;
+            $initialHpA = $charA->getCurrentHp();
+            $initialHpB = $charB->getCurrentHp();
 
             while (!$battle->isFinished()) {
                 $totalRounds++;
@@ -243,6 +291,39 @@ class FullArchetypeBalanceTest extends TestCase
                 
                 $result = $this->resolver->resolve($battle);
                 foreach ($result->logs as $log) {
+                    $aId = $charA->getId();
+                    $bId = $charB->getId();
+
+                    if ($log->type === BattleLogType::HIT || $log->type === BattleLogType::BLOCK_BREAK) {
+                        if ($log->actorId === $aId) $totalHitsA++;
+                        elseif ($log->actorId === $bId) $totalHitsB++;
+                    }
+
+                    if ($log->type === BattleLogType::CRIT) {
+                        if ($log->actorId === $aId) $totalCritsA++;
+                        elseif ($log->actorId === $bId) $totalCritsB++;
+                    }
+
+                    if ($log->type === BattleLogType::BLOCK_BREAK) {
+                        if ($log->actorId === $aId) $totalBlockBreaksA++;
+                        elseif ($log->actorId === $bId) $totalBlockBreaksB++;
+                    }
+
+                    if ($log->type === BattleLogType::MAX_DAMAGE) {
+                        if ($log->actorId === $aId) $totalMaxDamagesA++;
+                        elseif ($log->actorId === $bId) $totalMaxDamagesB++;
+                    }
+
+                    if ($log->type === BattleLogType::DODGE) {
+                        if ($log->actorId === $aId) $totalDodgesA++;
+                        elseif ($log->actorId === $bId) $totalDodgesB++;
+                    }
+
+                    if ($log->type === BattleLogType::BLOCK) {
+                        if ($log->actorId === $aId) $totalBlocksA++;
+                        elseif ($log->actorId === $bId) $totalBlocksB++;
+                    }
+
                     if ($log->type === BattleLogType::DEATH) {
                         if ($log->actorId === 1) $deadA = true;
                         if ($log->actorId === 2) $deadB = true;
@@ -252,16 +333,33 @@ class FullArchetypeBalanceTest extends TestCase
                 if (!$battle->isFinished()) $battle->startNewRound();
             }
 
+            $totalDamageA += max(0, $initialHpB - $charB->getCurrentHp());
+            $totalDamageB += max(0, $initialHpA - $charA->getCurrentHp());
+
             if ($deadB && !$deadA) $winsA++;
             elseif ($deadA && !$deadB) $winsB++;
             else $draws++;
         }
 
         return [
-            'winRateA' => ($winsA / self::BATTLES_PER_TEST) * 100,
-            'winRateB' => ($winsB / self::BATTLES_PER_TEST) * 100,
-            'drawRate' => ($draws / self::BATTLES_PER_TEST) * 100,
-            'avgRounds' => $totalRounds / self::BATTLES_PER_TEST
+            'winRateA' => ($winsA / self::BATTLES_PER_TEST),
+            'winRateB' => ($winsB / self::BATTLES_PER_TEST),
+            'drawRate' => ($draws / self::BATTLES_PER_TEST),
+            'avgRounds' => $totalRounds / self::BATTLES_PER_TEST,
+            'avgDamageA' => $totalDamageA / self::BATTLES_PER_TEST,
+            'avgDamageB' => $totalDamageB / self::BATTLES_PER_TEST,
+            'avgCritsA' => $totalCritsA / self::BATTLES_PER_TEST,
+            'avgCritsB' => $totalCritsB / self::BATTLES_PER_TEST,
+            'avgBlockBreaksA' => $totalBlockBreaksA / self::BATTLES_PER_TEST,
+            'avgBlockBreaksB' => $totalBlockBreaksB / self::BATTLES_PER_TEST,
+            'avgMaxDamagesA' => $totalMaxDamagesA / self::BATTLES_PER_TEST,
+            'avgMaxDamagesB' => $totalMaxDamagesB / self::BATTLES_PER_TEST,
+            'avgDodgesA' => $totalDodgesA / self::BATTLES_PER_TEST,
+            'avgDodgesB' => $totalDodgesB / self::BATTLES_PER_TEST,
+            'avgBlocksA' => $totalBlocksA / self::BATTLES_PER_TEST,
+            'avgBlocksB' => $totalBlocksB / self::BATTLES_PER_TEST,
+            'avgHitsA' => $totalHitsA / self::BATTLES_PER_TEST,
+            'avgHitsB' => $totalHitsB / self::BATTLES_PER_TEST,
         ];
     }
 
@@ -281,10 +379,51 @@ class FullArchetypeBalanceTest extends TestCase
 
     private function printResults(string $title, string $matchup, array $results): void
     {
-        fwrite(STDOUT, sprintf(
-            "[%-30s] %-25s: A:%3d%% | B:%3d%% | D:%2d%% | Rounds:%.1f\n",
-            $title, $matchup, $results['winRateA'], $results['winRateB'], $results['drawRate'], $results['avgRounds']
-        ));
+        $avgIncomingA = 2 * $results['avgRounds'];
+        $avgIncomingB = 2 * $results['avgRounds'];
+        $avgDodgeRateA = $avgIncomingA > 0 ? ($results['avgDodgesA'] / $avgIncomingA) * 100 : 0.0;
+        $avgDodgeRateB = $avgIncomingB > 0 ? ($results['avgDodgesB'] / $avgIncomingB) * 100 : 0.0;
+
+        $output = sprintf(
+            "\n========================================\n" .
+            "  %s [%s]\n" .
+            "========================================\n" .
+            "A win: %d%%  B win: %d%%  Draw: %d%%\n" .
+            "Avg rounds: %.1f\n" .
+            "Avg damage   — A: %.1f  B: %.1f\n" .
+            "Hits landed  — A: %.1f  B: %.1f\n" .
+            "Crits        — A: %.1f  B: %.1f\n" .
+            "Block breaks — A: %.1f  B: %.1f\n" .
+            "Max dmg procs— A: %.1f  B: %.1f\n" .
+            "Dodges (def) — A: %.1f  B: %.1f\n" .
+            "Dodge rate   — A: %.1f%% B: %.1f%% (2 attacks/round)\n" .
+            "Blocks (def) — A: %.1f  B: %.1f\n" .
+            "========================================\n",
+            $title,
+            $matchup,
+            (int) round($results['winRateA'] * 100),
+            (int) round($results['winRateB'] * 100),
+            (int) round($results['drawRate'] * 100),
+            $results['avgRounds'],
+            $results['avgDamageA'],
+            $results['avgDamageB'],
+            $results['avgHitsA'],
+            $results['avgHitsB'],
+            $results['avgCritsA'],
+            $results['avgCritsB'],
+            $results['avgBlockBreaksA'],
+            $results['avgBlockBreaksB'],
+            $results['avgMaxDamagesA'],
+            $results['avgMaxDamagesB'],
+            $results['avgDodgesA'],
+            $results['avgDodgesB'],
+            $avgDodgeRateA,
+            $avgDodgeRateB,
+            $results['avgBlocksA'],
+            $results['avgBlocksB'],
+        );
+
+        fwrite(STDOUT, $output);
     }
 
     // =========================================================================
@@ -371,24 +510,24 @@ class FullArchetypeBalanceTest extends TestCase
 
             // Tank vs Dodge
             $res = $this->runSimulation(
-                fn($id) => $this->createFighter('TankDef', $id, $this->getStableStats(), $gear, $this->createTankArmor()),
-                fn($id) => $this->createFighter('DodgeDef', $id, $this->getHybridStats(), $gear, $this->createDodgeArmor()), // Use Uni stats or 5/10/5/0 usually
+                fn($id) => $this->createFighter('TankDef', $id, $this->getTankStats(), $gear, $this->createTankArmor()),
+                fn($id) => $this->createFighter('DodgeDef', $id, $this->getDodgeStats(), $gear, $this->createDodgeArmor()),
                 'Tank', 'Dodge'
             );
             $this->printResults($title, "Tank vs Dodge ($wName)", $res);
 
             // Tank vs Uni
             $res = $this->runSimulation(
-                fn($id) => $this->createFighter('TankDef', $id, $this->getStableStats(), $gear, $this->createTankArmor()),
-                fn($id) => $this->createFighter('UniDef', $id, $this->getHybridStats(), $gear, $this->createUniArmor()),
+                fn($id) => $this->createFighter('TankDef', $id, $this->getTankStats(), $gear, $this->createTankArmor()),
+                fn($id) => $this->createFighter('UniDef', $id, $this->getUniversalStats(), $gear, $this->createUniArmor()),
                 'Tank', 'Uni'
             );
             $this->printResults($title, "Tank vs Uni ($wName)", $res);
 
             // Dodge vs Uni
             $res = $this->runSimulation(
-                fn($id) => $this->createFighter('DodgeDef', $id, $this->getHybridStats(), $gear, $this->createDodgeArmor()),
-                fn($id) => $this->createFighter('UniDef', $id, $this->getHybridStats(), $gear, $this->createUniArmor()),
+                fn($id) => $this->createFighter('DodgeDef', $id, $this->getDodgeStats(), $gear, $this->createDodgeArmor()),
+                fn($id) => $this->createFighter('UniDef', $id, $this->getUniversalStats(), $gear, $this->createUniArmor()),
                 'Dodge', 'Uni'
             );
             $this->printResults($title, "Dodge vs Uni ($wName)", $res);

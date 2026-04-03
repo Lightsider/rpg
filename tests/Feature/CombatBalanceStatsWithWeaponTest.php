@@ -229,7 +229,7 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         $equipment = new Equipment();
         $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
 
-        $maxHp = (int) ceil(30 + ($stats['con'] * 10));
+        $maxHp = (int) ceil(40 + ($stats['con'] * 8.5));
 
         return new Character(
             id: $id,
