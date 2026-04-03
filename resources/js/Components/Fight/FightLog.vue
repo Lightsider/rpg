@@ -28,12 +28,48 @@ const logs = ref([]);
 const loading = ref(true);
 const error = ref('');
 
+const normalizeEvent = (event) => {
+    if (event.type === 'attack') return event;
+    if (event.type === 'hit') return { ...event, type: 'attack', outcome: 'hit' };
+    if (event.type === 'crit') return { ...event, type: 'attack', outcome: 'hit', is_crit: true };
+    if (event.type === 'max_damage') return { ...event, type: 'attack', outcome: 'hit', is_max: true };
+    if (event.type === 'block') return { ...event, type: 'attack', outcome: 'block' };
+    if (event.type === 'block_break') return { ...event, type: 'attack', outcome: 'block_break' };
+    if (event.type === 'dodge') return { ...event, type: 'attack', outcome: 'dodge' };
+    return event;
+};
+
+const dedupeEvents = (events) => {
+    const seen = new Set();
+    return events.filter((event) => {
+        const key = [
+            event.type,
+            event.actor_id,
+            event.target_id,
+            event.zone,
+            event.damage,
+            event.outcome,
+            event.is_crit ? 1 : 0,
+            event.is_max ? 1 : 0,
+            event.occurred_at,
+        ].join('|');
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+};
+
+const normalizeRound = (round) => {
+    const normalized = round.events.map(normalizeEvent);
+    return { ...round, events: dedupeEvents(normalized) };
+};
+
 const fetchLogs = async () => {
     if (!props.fightId) return;
     loading.value = true;
     try {
         const data = await getFightLogs(props.fightId);
-        logs.value = data;
+        logs.value = data.map(normalizeRound);
     } catch (e) {
         error.value = 'Failed to load combat logs.';
         console.error(e);
@@ -59,13 +95,14 @@ defineExpose({
             actor_id: e.actorId || e.actor_id,
             target_id: e.targetId || e.target_id,
         }));
+        const normalizedEvents = dedupeEvents(mappedEvents.map(normalizeEvent));
         
         // Check if round already exists to avoid duplicates
         const existing = logs.value.find(r => r.round === round);
         if (existing) {
-            existing.events = mappedEvents;
+            existing.events = normalizedEvents;
         } else {
-            logs.value.push({ round, events: mappedEvents });
+            logs.value.push({ round, events: normalizedEvents });
             // Sort by round desc or asc? The template loops as is. 
             // Usually logs are newest at top? No, Round 1, Round 2...
             logs.value.sort((a, b) => a.round - b.round);
@@ -80,6 +117,7 @@ const getZoneDisplay = (zone) => {
 
 const getActionIcon = (type) => {
     switch (type) {
+        case 'attack': return '⚔️';
         case 'hit': return '💥';
         case 'crit': return '🔥';
         case 'max_damage': return '⚡';
@@ -88,6 +126,8 @@ const getActionIcon = (type) => {
         case 'block_break': return '💢';
         case 'move': return '👟';
         case 'death': return '💀';
+        case 'skip': return '⏭️';
+        case 'victory': return '🏆';
         default: return 'EVENT';
     }
 };
@@ -96,6 +136,14 @@ const getNameById = (id) => {
     if (!id) return 'Unknown';
     const found = props.participants.find(p => p.character_id === id);
     return found?.name || `Player ${id}`;
+};
+
+const getAttackOutcome = (event) => {
+    if (event.outcome) return event.outcome;
+    if (event.type === 'block_break') return 'block_break';
+    if (event.type === 'block') return 'block';
+    if (event.type === 'dodge') return 'dodge';
+    return 'hit';
 };
 </script>
 
@@ -123,39 +171,45 @@ const getNameById = (id) => {
                     <li v-for="event in roundGroup.events" :key="event.occurred_at + '-' + event.actor_id" 
                         class="text-sm p-2 bg-white rounded shadow-sm border flex items-start gap-2"
                         :class="{
-                            'border-red-300 bg-red-50': event.type === 'hit' || event.type === 'max_damage',
-                            'border-pink-300 bg-pink-50': event.type === 'crit',
-                            'border-orange-300 bg-orange-50': event.type === 'block_break',
-                            'border-green-300 bg-green-50': event.type === 'block',
-                            'border-blue-300 bg-blue-50': event.type === 'dodge',
+                            'border-orange-300 bg-orange-50': event.type === 'attack' && getAttackOutcome(event) === 'block_break',
+                            'border-green-300 bg-green-50': event.type === 'attack' && getAttackOutcome(event) === 'block',
+                            'border-blue-300 bg-blue-50': event.type === 'attack' && getAttackOutcome(event) === 'dodge',
+                            'border-red-300 bg-red-50': event.type === 'attack' && getAttackOutcome(event) === 'hit',
                             'border-gray-200': event.type === 'move',
-                            'border-purple-300 bg-purple-50': event.type === 'death'
+                            'border-purple-300 bg-purple-50': event.type === 'death',
+                            'border-yellow-300 bg-yellow-50': event.type === 'skip',
+                            'border-emerald-300 bg-emerald-50': event.type === 'victory'
                         }">
                         <span class="text-lg leading-none font-semibold" :title="event.type">{{ getActionIcon(event.type) }}</span>
                         <div class="flex-1">
-                            <span v-if="event.type === 'hit'">
-                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> hit <span class="font-bold">{{ getNameById(event.target_id) }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
-                            </span>
-                            <span v-else-if="event.type === 'crit'">
-                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> landed a <span class="text-pink-600 font-bold">CRITICAL HIT</span> on <span class="font-bold">{{ getNameById(event.target_id) }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
-                            </span>
-                            <span v-else-if="event.type === 'dodge'">
-                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> <span class="text-blue-600 font-bold uppercase">dodged</span> an attack from <span class="font-bold">{{ getNameById(event.target_id) }}</span>.
-                            </span>
-                            <span v-else-if="event.type === 'block'">
-                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> blocked an attack from <span class="font-bold">{{ getNameById(event.target_id) }}</span>. <span v-if="event.damage > 0">(Took {{ event.damage }} partial damage)</span>
-                            </span>
-                            <span v-else-if="event.type === 'block_break'">
-                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> <span class="text-orange-600 font-bold">BROKE BLOCK</span> of <span class="font-bold">{{ getNameById(event.target_id) }}</span>! Dealt <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
-                            </span>
-                            <span v-else-if="event.type === 'max_damage'">
-                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> landed a <span class="text-yellow-600 font-bold">MAX DAMAGE</span> hit on <span class="font-bold">{{ getNameById(event.target_id) }}</span> for <span class="text-red-600 font-bold text-lg">{{ event.damage }}</span> damage!
+                            <span v-if="event.type === 'attack'">
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span>
+                                <span v-if="getAttackOutcome(event) === 'dodge'">
+                                    <span class="text-blue-600 font-bold uppercase">missed</span> <span class="font-bold">{{ getNameById(event.target_id) }}</span>.
+                                </span>
+                                <span v-else-if="getAttackOutcome(event) === 'block'">
+                                    hit <span class="font-bold">{{ getNameById(event.target_id) }}</span> in the {{ getZoneDisplay(event.zone) }} but the attack was <span class="text-green-700 font-bold">blocked</span>.
+                                </span>
+                                <span v-else-if="getAttackOutcome(event) === 'block_break'">
+                                    <span class="text-orange-600 font-bold">BROKE BLOCK</span> of <span class="font-bold">{{ getNameById(event.target_id) }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
+                                </span>
+                                <span v-else>
+                                    hit <span class="font-bold">{{ getNameById(event.target_id) }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
+                                </span>
+                                <span v-if="event.is_max" class="ml-1 text-yellow-700 font-bold">MAX</span>
+                                <span v-if="event.is_crit" class="ml-1 text-pink-600 font-bold">CRIT</span>
                             </span>
                             <span v-else-if="event.type === 'move'">
                                 <span class="font-bold">{{ getNameById(event.actor_id) }}</span> moved.
                             </span>
                             <span v-else-if="event.type === 'death'">
                                 <span class="font-bold">{{ getNameById(event.actor_id) }}</span> has fallen in battle!
+                            </span>
+                            <span v-else-if="event.type === 'skip'">
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> skipped the turn and auto-blocked.
+                            </span>
+                            <span v-else-if="event.type === 'victory'">
+                                <span class="font-bold">{{ getNameById(event.actor_id) }}</span> wins the battle!
                             </span>
                             <span v-else class="text-gray-500">Unknown event type: {{ event.type }}</span>
                         </div>

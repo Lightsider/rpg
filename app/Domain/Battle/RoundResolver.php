@@ -51,11 +51,18 @@ class RoundResolver implements RoundResolverInterface
 
         $queuedActions = $battle->getQueuedActions();
         $participants = $battle->getParticipants();
+        $preHp = [];
 
         // Map ID to Character for quick access
         $characterMap = [];
         foreach ($participants as $participant) {
             $characterMap[$participant->getId()] = $participant;
+            $preHp[$participant->getId()] = $participant->getCurrentHp();
+        }
+
+        $actionsByCharacter = [];
+        foreach ($queuedActions as $action) {
+            $actionsByCharacter[$action->getCharacterId()][] = $action;
         }
 
         // 1. Resolve ALL MOVE actions first
@@ -74,8 +81,38 @@ class RoundResolver implements RoundResolverInterface
             }
         }
 
+        $skipBlocks = [];
+        foreach ($participants as $participant) {
+            if ($participant->getCurrentHp() <= 0) {
+                continue;
+            }
+
+            $characterId = $participant->getId();
+            if (!isset($actionsByCharacter[$characterId]) || count($actionsByCharacter[$characterId]) === 0) {
+                $blockCount = min(
+                    $participant->getCurrentActionPoints(),
+                    count(TargetZone::cases())
+                );
+                $skipBlocks[$characterId] = $this->pickRandomSkipBlocks($battle, $characterId, $blockCount);
+
+                $logs[] = new BattleLogEntry(
+                    roundNumber: $battle->getRoundNumber(),
+                    type: BattleLogType::SKIP,
+                    actorId: $characterId
+                );
+            }
+        }
+
         // 2. Register DEFENSE zones (including blocks attached to move actions)
         $defenses = [];
+        foreach ($skipBlocks as $charId => $zones) {
+            if (!isset($defenses[$charId])) {
+                $defenses[$charId] = [];
+            }
+            foreach ($zones as $zone) {
+                $defenses[$charId][] = $zone;
+            }
+        }
         foreach ($queuedActions as $action) {
             if ($action->getType() === ActionType::DEFEND) {
                 $characterId = $action->getCharacterId();
@@ -107,108 +144,115 @@ class RoundResolver implements RoundResolverInterface
 
         // 3. Resolve ATTACK actions (calculate results, don't apply yet)
         $attackResults = [];
+        $attackContexts = [];
         foreach ($queuedActions as $action) {
-            if ($action->getType() === ActionType::ATTACK) {
-                $attackerId = $action->getCharacterId();
-                $attacker = $characterMap[$attackerId] ?? null;
-                if (!$attacker || $attacker->getCurrentHp() <= 0) {
-                    continue;
-                }
+            if ($action->getType() !== ActionType::ATTACK) {
+                continue;
+            }
 
-                $defender = $this->findOpponent($battle, $attackerId, $participants);
-                if (!$defender || $defender->getCurrentHp() <= 0) {
-                    continue;
-                }
+            $attackerId = $action->getCharacterId();
+            $attacker = $characterMap[$attackerId] ?? null;
+            if (!$attacker || $attacker->getCurrentHp() <= 0) {
+                continue;
+            }
 
-                // POST-MOVEMENT adjacency check
+            $targetId = $action->getTargetId();
+            $defender = $targetId !== null ? $battle->getParticipantById($targetId) : null;
+            if ($defender && $defender->getCurrentHp() <= 0) {
+                $defender = null;
+            }
+
+            if ($targetId === null && !$defender) {
+                $defender = $this->findOpponentInRange($battle, $attacker, $participants);
+            }
+
+            $inRange = false;
+            if ($defender) {
                 $dx = abs($attacker->getX() - $defender->getX());
                 $dy = abs($attacker->getY() - $defender->getY());
-                if ($dx > 1 || $dy > 1) {
-                    $logs[] = new BattleLogEntry(
-                        roundNumber: $battle->getRoundNumber(),
-                        type: BattleLogType::DODGE,
-                        actorId: $defender->getId(),
-                        targetId: $attackerId
-                    );
-                    continue;
-                }
-
-                $isBlocked = isset($defenses[$defender->getId()])
-                    && in_array($action->getTargetZone()->value, $defenses[$defender->getId()], true);
-
-                $result = $this->combatResolver->resolveAttack($attacker, $defender, $isBlocked, $action->getTargetZone());
-                $attackResults[] = ['defender' => $defender, 'result' => $result, 'attacker' => $attacker, 'zone' => $action->getTargetZone()->value];
-
-                if ($result->isDodged || $result->isMiss) {
-                    $logs[] = new BattleLogEntry(
-                        roundNumber: $battle->getRoundNumber(),
-                        type: BattleLogType::DODGE,
-                        actorId: $defender->getId(),
-                        targetId: $attackerId
-                    );
-                } elseif ($result->damage === 0 && $isBlocked) {
-                    $logs[] = new BattleLogEntry(
-                        roundNumber: $battle->getRoundNumber(),
-                        type: BattleLogType::BLOCK,
-                        actorId: $defender->getId(),
-                        targetId: $attackerId,
-                        zone: $action->getTargetZone()
-                    );
-                } elseif ($result->isPierced) {
-                    // Block was broken (penetrated)
-                    $logs[] = new BattleLogEntry(
-                        roundNumber: $battle->getRoundNumber(),
-                        type: BattleLogType::BLOCK_BREAK,
-                        actorId: $attackerId,
-                        targetId: $defender->getId(),
-                        zone: $action->getTargetZone(),
-                        damage: $result->damage
-                    );
-                    // Also log max_damage if it triggered
-                    if ($result->isMaxDamage) {
-                        $logs[] = new BattleLogEntry(
-                            roundNumber: $battle->getRoundNumber(),
-                            type: BattleLogType::MAX_DAMAGE,
-                            actorId: $attackerId,
-                            targetId: $defender->getId(),
-                            zone: $action->getTargetZone(),
-                            damage: $result->damage
-                        );
-                    }
-                    if ($result->isCritical) {
-                        $logs[] = new BattleLogEntry(
-                            roundNumber: $battle->getRoundNumber(),
-                            type: BattleLogType::CRIT,
-                            actorId: $attackerId,
-                            targetId: $defender->getId(),
-                            zone: $action->getTargetZone(),
-                            damage: $result->damage
-                        );
-                    }
-                } else {
-                    $logType = $result->isMaxDamage
-                        ? BattleLogType::MAX_DAMAGE
-                        : ($result->isCritical ? BattleLogType::CRIT : BattleLogType::HIT);
-                    $logs[] = new BattleLogEntry(
-                        roundNumber: $battle->getRoundNumber(),
-                        type: $logType,
-                        actorId: $attackerId,
-                        targetId: $defender->getId(),
-                        zone: $action->getTargetZone(),
-                        damage: $result->damage
-                    );
-                    if ($result->isMaxDamage && $result->isCritical) {
-                        $logs[] = new BattleLogEntry(
-                            roundNumber: $battle->getRoundNumber(),
-                            type: BattleLogType::CRIT,
-                            actorId: $attackerId,
-                            targetId: $defender->getId(),
-                            zone: $action->getTargetZone(),
-                            damage: $result->damage
-                        );
-                    }
-                }
+                $inRange = $dx <= 1 && $dy <= 1;
             }
+
+            if ($targetId === null && !$defender) {
+                $defender = $this->findOpponent($battle, $attackerId, $participants);
+            }
+            if (!$defender || $defender->getCurrentHp() <= 0) {
+                continue;
+            }
+
+            $attackContexts[] = [
+                'action' => $action,
+                'attacker' => $attacker,
+                'defender' => $defender,
+                'inRange' => $inRange,
+            ];
+        }
+
+        foreach ($attackContexts as $context) {
+            if ($context['inRange']) {
+                continue;
+            }
+
+            /** @var Character $attacker */
+            $attacker = $context['attacker'];
+            $attackerId = $attacker->getId();
+            $defenses = $this->addAutoBlocks(
+                $battle,
+                $attacker,
+                $defenses,
+                'out_of_range'
+            );
+        }
+
+        foreach ($attackContexts as $context) {
+            /** @var Character $attacker */
+            $attacker = $context['attacker'];
+            /** @var Character $defender */
+            $defender = $context['defender'];
+            $action = $context['action'];
+            $attackerId = $attacker->getId();
+
+            if (!$context['inRange']) {
+                $logs[] = new BattleLogEntry(
+                    roundNumber: $battle->getRoundNumber(),
+                    type: BattleLogType::ATTACK,
+                    actorId: $attackerId,
+                    targetId: $defender->getId(),
+                    zone: $action->getTargetZone(),
+                    damage: 0,
+                    outcome: 'dodge'
+                );
+                continue;
+            }
+
+            $isBlocked = isset($defenses[$defender->getId()])
+                && in_array($action->getTargetZone()->value, $defenses[$defender->getId()], true);
+
+            $result = $this->combatResolver->resolveAttack($attacker, $defender, $isBlocked, $action->getTargetZone());
+            $attackResults[] = ['defender' => $defender, 'result' => $result, 'attacker' => $attacker, 'zone' => $action->getTargetZone()->value];
+
+            $outcome = 'hit';
+            $damage = $result->damage;
+            if ($result->isDodged || $result->isMiss) {
+                $outcome = 'dodge';
+                $damage = 0;
+            } elseif ($result->damage === 0 && $isBlocked) {
+                $outcome = 'block';
+            } elseif ($result->isPierced) {
+                $outcome = 'block_break';
+            }
+
+            $logs[] = new BattleLogEntry(
+                roundNumber: $battle->getRoundNumber(),
+                type: BattleLogType::ATTACK,
+                actorId: $attackerId,
+                targetId: $defender->getId(),
+                zone: $action->getTargetZone(),
+                damage: $damage,
+                outcome: $outcome,
+                isCrit: $result->isCritical,
+                isMax: $result->isMaxDamage
+            );
         }
 
         // 4. Apply damage
@@ -225,7 +269,8 @@ class RoundResolver implements RoundResolverInterface
 
         // 5. Mark dead characters
         foreach ($participants as $participant) {
-            if ($participant->getCurrentHp() <= 0) {
+            $before = $preHp[$participant->getId()] ?? $participant->getCurrentHp();
+            if ($before > 0 && $participant->getCurrentHp() <= 0) {
                 $logs[] = new BattleLogEntry(
                     roundNumber: $battle->getRoundNumber(),
                     type: BattleLogType::DEATH,
@@ -237,11 +282,23 @@ class RoundResolver implements RoundResolverInterface
         $battle->clearQueuedActions();
         $battle->finishResolving();
 
+        if ($battle->isFinished()) {
+            foreach ($battle->getVictoryWinners() as $winner) {
+                $logs[] = new BattleLogEntry(
+                    roundNumber: $battle->getRoundNumber(),
+                    type: BattleLogType::VICTORY,
+                    actorId: $winner->getId()
+                );
+            }
+        }
+
         // Reset block-penetration and max-damage counters when combat ends
         if ($battle->isFinished()) {
 
-            // Restore HP to max for all participants after battle ends
+            // Restore HP to max and reset streaks after battle ends
             foreach ($participants as $participant) {
+                $participant->restoreHp();
+                $participant->initializeAdArmor();
                 $participant->resetAllStreaks();
             }
 
@@ -266,5 +323,119 @@ class RoundResolver implements RoundResolverInterface
             return $participant;
         }
         return null;
+    }
+
+    private function findOpponentInRange(Battle $battle, Character $attacker, array $participants): ?Character
+    {
+        $attackerTeam = $battle->getParticipantTeam($attacker->getId());
+        foreach ($participants as $participant) {
+            if ($participant->getId() === $attacker->getId()) {
+                continue;
+            }
+            if ($participant->getCurrentHp() <= 0) {
+                continue;
+            }
+            $defenderTeam = $battle->getParticipantTeam($participant->getId());
+            if ($attackerTeam !== null && $defenderTeam !== null && $attackerTeam === $defenderTeam) {
+                continue;
+            }
+            $dx = abs($attacker->getX() - $participant->getX());
+            $dy = abs($attacker->getY() - $participant->getY());
+            if ($dx <= 1 && $dy <= 1) {
+                return $participant;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function pickRandomSkipBlocks(Battle $battle, int $characterId, int $count): array
+    {
+        if ($count <= 0) {
+            return [];
+        }
+
+        $zones = array_map(
+            fn(TargetZone $zone) => $zone->value,
+            TargetZone::cases()
+        );
+
+        $seed = (int) sprintf(
+            '%u',
+            crc32($battle->getId() . ':' . $battle->getRoundNumber() . ':skip:' . $characterId)
+        );
+        $rng = new DeterministicRandomGenerator($seed);
+        $zones = $this->shuffleZones($zones, $rng);
+
+        return array_slice($zones, 0, min($count, count($zones)));
+    }
+
+    /**
+     * @param array<int, array<int, string>> $defenses
+     * @return array<int, array<int, string>>
+     */
+    private function addAutoBlocks(
+        Battle $battle,
+        Character $character,
+        array $defenses,
+        string $reason
+    ): array {
+        $characterId = $character->getId();
+        $existing = $defenses[$characterId] ?? [];
+        $remainingAp = $character->getCurrentActionPoints();
+        if ($remainingAp <= 0) {
+            return $defenses;
+        }
+
+        $availableZones = array_filter(
+            array_map(fn(TargetZone $zone) => $zone->value, TargetZone::cases()),
+            fn(string $zone) => !in_array($zone, $existing, true)
+        );
+
+        if (count($availableZones) === 0) {
+            return $defenses;
+        }
+
+        $blockCount = min($remainingAp, count($availableZones));
+        if ($blockCount <= 0) {
+            return $defenses;
+        }
+
+        $seed = (int) sprintf(
+            '%u',
+            crc32($battle->getId() . ':' . $battle->getRoundNumber() . ':' . $reason . ':' . $characterId)
+        );
+        $rng = new DeterministicRandomGenerator($seed);
+        $availableZones = $this->shuffleZones(array_values($availableZones), $rng);
+        $selected = array_slice($availableZones, 0, $blockCount);
+
+        if (!isset($defenses[$characterId])) {
+            $defenses[$characterId] = [];
+        }
+        foreach ($selected as $zone) {
+            $defenses[$characterId][] = $zone;
+        }
+
+        return $defenses;
+    }
+
+    /**
+     * @param array<int, string> $zones
+     * @return array<int, string>
+     */
+    private function shuffleZones(array $zones, DeterministicRandomGenerator $rng): array
+    {
+        $count = count($zones);
+        for ($i = $count - 1; $i > 0; $i--) {
+            $j = (int) floor($rng->nextFloat() * ($i + 1));
+            $temp = $zones[$i];
+            $zones[$i] = $zones[$j];
+            $zones[$j] = $temp;
+        }
+
+        return $zones;
     }
 }

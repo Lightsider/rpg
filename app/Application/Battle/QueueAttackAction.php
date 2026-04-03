@@ -28,9 +28,9 @@ class QueueAttackAction
      *
      * @throws DomainException If battle not found, not character's turn, or cannot queue attack.
      */
-    public function execute(int $battleId, int $characterId, string $targetZone): void
+    public function execute(int $battleId, int $characterId, string $targetZone, ?int $targetCharacterId = null): void
     {
-        DB::transaction(function () use ($battleId, $characterId, $targetZone) {
+        DB::transaction(function () use ($battleId, $characterId, $targetZone, $targetCharacterId) {
             // 1. Load battle
             $battle = $this->battleRepository->findById($battleId);
             if (!$battle) {
@@ -66,7 +66,8 @@ class QueueAttackAction
             $action = new TurnAction(
                 $characterId,
                 ActionType::ATTACK,
-                TargetZone::from($targetZone)
+                TargetZone::from($targetZone),
+                $targetCharacterId
             );
 
             // 6. Add to battle queue (performs spatial validation: attacker/target alive and adjacent)

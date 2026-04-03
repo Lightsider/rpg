@@ -88,6 +88,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             BattleActionModel::create([
                 'battle_id' => $model->id,
                 'character_id' => $action->getCharacterId(),
+                'target_id' => $action->getTargetId(),
                 'type' => $action->getType()->value,
                 'target_zone' => $action->getTargetZone()?->value,
                 'from_x' => $action->getFromX(),
@@ -199,14 +200,15 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             ->get()
             ->map(function (BattleActionModel $actionModel) {
                 return new TurnAction(
-                    $actionModel->character_id,
-                    ActionType::from($actionModel->type),
-                    $actionModel->target_zone ? TargetZone::from($actionModel->target_zone) : null,
-                    $actionModel->from_x,
-                    $actionModel->from_y,
-                    $actionModel->to_x,
-                    $actionModel->to_y,
-                    $actionModel->blocks ?? []
+                    characterId: $actionModel->character_id,
+                    type: ActionType::from($actionModel->type),
+                    targetZone: $actionModel->target_zone ? TargetZone::from($actionModel->target_zone) : null,
+                    targetId: $actionModel->target_id,
+                    fromX: $actionModel->from_x,
+                    fromY: $actionModel->from_y,
+                    toX: $actionModel->to_x,
+                    toY: $actionModel->to_y,
+                    blocks: $actionModel->blocks ?? []
                 );
             })->toArray();
 

@@ -23,6 +23,9 @@ class BattleEventPayloadFactory
                 'target_id' => $entry->targetId,
                 'zone' => $entry->zone?->value,
                 'damage' => $entry->damage,
+                'outcome' => $entry->outcome,
+                'is_crit' => $entry->isCrit,
+                'is_max' => $entry->isMax,
                 'occurred_at' => $entry->timestamp->format(\DateTimeInterface::ATOM),
             ], fn($v) => $v !== null),
             $logs
@@ -109,17 +112,14 @@ class BattleEventPayloadFactory
 
     public static function ended(Battle $battle): array
     {
-        $winner = null;
-        foreach ($battle->getParticipants() as $participant) {
-            if ($participant->getCurrentHp() > 0) {
-                $winner = $participant;
-                break;
-            }
-        }
+        $winners = $battle->getVictoryWinners();
+        $winner = $winners[0] ?? null;
 
         return [
             'battle_id' => $battle->getId(),
             'winner_id' => $winner?->getId(),
+            'winner_ids' => array_map(fn(Character $c) => $c->getId(), $winners),
+            'winner_team' => $battle->getWinningTeamName(),
             'reason' => $winner === null ? 'draw' : 'knockout',
         ];
     }

@@ -19,11 +19,16 @@ class BattleLogModel extends Model
         'target_id',
         'damage',
         'zone',
+        'outcome',
+        'is_crit',
+        'is_max',
         'occurred_at',
     ];
 
     protected $casts = [
         'occurred_at' => 'immutable_datetime',
+        'is_crit' => 'boolean',
+        'is_max' => 'boolean',
     ];
 
     public function battle(): BelongsTo
@@ -33,11 +38,11 @@ class BattleLogModel extends Model
 
     public function actor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'actor_id');
+        return $this->belongsTo(CharacterModel::class, 'actor_id');
     }
 
     public function target(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'target_id');
+        return $this->belongsTo(CharacterModel::class, 'target_id');
     }
 }

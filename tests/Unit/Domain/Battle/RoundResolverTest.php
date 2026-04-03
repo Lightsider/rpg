@@ -23,11 +23,18 @@ use PHPUnit\Framework\TestCase;
 
 class RoundResolverTest extends TestCase
 {
-    private function createCharacter(int $id, int $x = 0, int $y = 0): Character
+    private function createCharacter(
+        int $id,
+        int $x = 0,
+        int $y = 0,
+        int $maxActionPoints = 3,
+        ?int $currentActionPoints = null
+    ): Character
     {
         $weapon = new Weapon(1, "Sword", 10, 10, DamageType::SLASHING, 0, 0, 0.0);
         $equipment = new \App\Domain\Equipment\Equipment();
         $equipment->setItem(\App\Domain\Equipment\EquipmentSlot::MAIN_HAND, $weapon);
+        $currentActionPoints = $currentActionPoints ?? $maxActionPoints;
 
         return new Character(
             id: $id,
@@ -40,6 +47,8 @@ class RoundResolverTest extends TestCase
             maxHp: 100,
             currentHp: 100,
             equipment: $equipment,
+            maxActionPoints: $maxActionPoints,
+            currentActionPoints: $currentActionPoints,
             x: $x,
             y: $y
         );
@@ -64,13 +73,31 @@ class RoundResolverTest extends TestCase
         $battle = new Battle(1, 1, [$char1, $char2], $map);
 
         // Char1 moves (valid distance)
-        $battle->queueAction(new TurnAction(1, ActionType::MOVE, null, 0, 0, 0, 1));
+        $battle->queueAction(new TurnAction(
+            characterId: 1,
+            type: ActionType::MOVE,
+            targetZone: null,
+            targetId: null,
+            fromX: 0,
+            fromY: 0,
+            toX: 0,
+            toY: 1
+        ));
 
         // Char1 attacks HEAD (remains adjacent at (0,1) and (1,0))
-        $battle->queueAction(new TurnAction(1, ActionType::ATTACK, TargetZone::HEAD));
+        $battle->queueAction(new TurnAction(
+            characterId: 1,
+            type: ActionType::ATTACK,
+            targetZone: TargetZone::HEAD,
+            targetId: 2
+        ));
 
         // Char2 defends HEAD
-        $battle->queueAction(new TurnAction(2, ActionType::DEFEND, TargetZone::HEAD));
+        $battle->queueAction(new TurnAction(
+            characterId: 2,
+            type: ActionType::DEFEND,
+            targetZone: TargetZone::HEAD
+        ));
 
         $battleRepository = $this->createMock(BattleRepositoryInterface::class);
         $combatResolver = $this->createMock(CombatResolver::class);
@@ -96,11 +123,12 @@ class RoundResolverTest extends TestCase
         $this->assertEquals(1, $moveLog->actorId);
 
         $hitLog = $result->logs[1];
-        $this->assertEquals(BattleLogType::HIT, $hitLog->type);
+        $this->assertEquals(BattleLogType::ATTACK, $hitLog->type);
         $this->assertEquals(1, $hitLog->actorId);
         $this->assertEquals(2, $hitLog->targetId);
         $this->assertEquals(TargetZone::HEAD, $hitLog->zone);
         $this->assertEquals(10, $hitLog->damage);
+        $this->assertSame('hit', $hitLog->outcome);
     }
 
     public function test_block_log_actor(): void
@@ -110,8 +138,17 @@ class RoundResolverTest extends TestCase
         $map = new Map(10, 10);
         $battle = new Battle(1, 1, [$char1, $char2], $map);
 
-        $battle->queueAction(new TurnAction(1, ActionType::ATTACK, TargetZone::HEAD));
-        $battle->queueAction(new TurnAction(2, ActionType::DEFEND, TargetZone::HEAD));
+        $battle->queueAction(new TurnAction(
+            characterId: 1,
+            type: ActionType::ATTACK,
+            targetZone: TargetZone::HEAD,
+            targetId: 2
+        ));
+        $battle->queueAction(new TurnAction(
+            characterId: 2,
+            type: ActionType::DEFEND,
+            targetZone: TargetZone::HEAD
+        ));
 
         $battleRepository = $this->createMock(BattleRepositoryInterface::class);
         $combatResolver = $this->createMock(CombatResolver::class);
@@ -127,10 +164,11 @@ class RoundResolverTest extends TestCase
         $result = $resolver->resolve($battle);
 
         $blockLog = $result->logs[0];
-        $this->assertEquals(BattleLogType::BLOCK, $blockLog->type);
-        $this->assertEquals(2, $blockLog->actorId); // Defender is the actor of the block
-        $this->assertEquals(1, $blockLog->targetId); // Attacker
+        $this->assertEquals(BattleLogType::ATTACK, $blockLog->type);
+        $this->assertEquals(1, $blockLog->actorId); // Attacker is the actor of the attack
+        $this->assertEquals(2, $blockLog->targetId); // Defender
         $this->assertEquals(TargetZone::HEAD, $blockLog->zone);
+        $this->assertSame('block', $blockLog->outcome);
     }
 
     public function test_death_log(): void
@@ -142,7 +180,12 @@ class RoundResolverTest extends TestCase
         $map = new Map(10, 10);
         $battle = new Battle(1, 1, [$char1, $char2], $map);
 
-        $battle->queueAction(new TurnAction(1, ActionType::ATTACK, TargetZone::HEAD));
+        $battle->queueAction(new TurnAction(
+            characterId: 1,
+            type: ActionType::ATTACK,
+            targetZone: TargetZone::HEAD,
+            targetId: 2
+        ));
 
         $resolver = $this->makeResolver();
 
@@ -169,6 +212,93 @@ class RoundResolverTest extends TestCase
 
         $this->assertNotNull($deathLog);
         $this->assertEquals(2, $deathLog->actorId); // Victim is the actor of death event
+    }
+
+    public function test_attack_uses_selected_target_even_if_other_enemy_adjacent(): void
+    {
+        $attacker = $this->createCharacter(1, 0, 0);
+        $target = $this->createCharacter(2, 1, 0);
+        $adjacentEnemy = $this->createCharacter(3, 0, 1);
+        $battle = new Battle(1, 1, [$attacker, $target, $adjacentEnemy], new Map(10, 10));
+
+        $battle->queueAction(new TurnAction(
+            characterId: 1,
+            type: ActionType::ATTACK,
+            targetZone: TargetZone::HEAD,
+            targetId: 2
+        ));
+
+        $battleRepository = $this->createMock(BattleRepositoryInterface::class);
+        $combatResolver = $this->createMock(CombatResolver::class);
+        $blockPenetrationService = $this->createMock(BlockPenetrationService::class);
+        $maxDamageService = $this->createMock(MaxDamageService::class);
+        $movementResolver = $this->createMock(MovementResolver::class);
+        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver);
+        $attackResult = new \App\Domain\Battle\AttackResult(5, false, false, false, DamageType::SLASHING);
+        $combatResolver->method('resolveAttack')->willReturn($attackResult);
+
+        $result = $resolver->resolve($battle);
+
+        $attackLog = null;
+        foreach ($result->logs as $log) {
+            if ($log->type === BattleLogType::ATTACK && $log->actorId === 1) {
+                $attackLog = $log;
+                break;
+            }
+        }
+
+        $this->assertNotNull($attackLog);
+        $this->assertSame(2, $attackLog->targetId);
+        $this->assertSame('hit', $attackLog->outcome);
+    }
+
+    public function test_out_of_range_attack_triggers_auto_blocks(): void
+    {
+        $attacker = $this->createCharacter(1, 0, 0, maxActionPoints: 5, currentActionPoints: 5);
+        $target = $this->createCharacter(2, 1, 0);
+        $adjacentEnemy = $this->createCharacter(3, 0, 1);
+        $battle = new Battle(1, 1, [$attacker, $target, $adjacentEnemy], new Map(10, 10));
+
+        $battle->queueAction(new TurnAction(
+            characterId: 1,
+            type: ActionType::ATTACK,
+            targetZone: TargetZone::HEAD,
+            targetId: 2
+        ));
+
+        $battle->queueAction(new TurnAction(
+            characterId: 3,
+            type: ActionType::ATTACK,
+            targetZone: TargetZone::HEAD,
+            targetId: 1
+        ));
+
+        // Target moves out of range before resolution
+        $target->setPosition(3, 0);
+
+        $battleRepository = $this->createMock(BattleRepositoryInterface::class);
+        $combatResolver = $this->createMock(CombatResolver::class);
+        $blockPenetrationService = $this->createMock(BlockPenetrationService::class);
+        $maxDamageService = $this->createMock(MaxDamageService::class);
+        $movementResolver = $this->createMock(MovementResolver::class);
+        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver);
+
+        $attackResult = new \App\Domain\Battle\AttackResult(0, false, false, false, DamageType::SLASHING);
+        $combatResolver->method('resolveAttack')->willReturn($attackResult);
+
+        $result = $resolver->resolve($battle);
+
+        $blockLog = null;
+        foreach ($result->logs as $log) {
+            if ($log->type === BattleLogType::ATTACK && $log->actorId === 3) {
+                $blockLog = $log;
+                break;
+            }
+        }
+
+        $this->assertNotNull($blockLog);
+        $this->assertSame(1, $blockLog->targetId);
+        $this->assertSame('block', $blockLog->outcome);
     }
 }
 

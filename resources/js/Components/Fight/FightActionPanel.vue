@@ -57,6 +57,50 @@ const addActionToQueue = () => {
     });
 };
 
+const randomZone = () => {
+    const index = Math.floor(Math.random() * availableZones.length);
+    return availableZones[index].value;
+};
+
+const fillRandomQueue = (attackCountTarget) => {
+    if (props.apAvailable <= 0) return;
+
+    const maxActions = Math.min(MAX_ACTIONS, props.apAvailable);
+    const attackCount = Math.min(attackCountTarget, MAX_ATTACKS, maxActions);
+    const blockCount = Math.max(0, maxActions - attackCount);
+
+    const nextQueue = [];
+    for (let i = 0; i < attackCount; i++) {
+        nextQueue.push({
+            id: Date.now() + Math.random(),
+            type: 'attack',
+            zone: randomZone()
+        });
+    }
+
+    const availableBlockZones = availableZones.map(zone => zone.value);
+    for (let i = 0; i < blockCount; i++) {
+        if (availableBlockZones.length === 0) break;
+        const index = Math.floor(Math.random() * availableBlockZones.length);
+        const zone = availableBlockZones.splice(index, 1)[0];
+        nextQueue.push({
+            id: Date.now() + Math.random(),
+            type: 'block',
+            zone
+        });
+    }
+
+    queue.value = nextQueue;
+};
+
+const randomAttackPattern = () => {
+    fillRandomQueue(2);
+};
+
+const randomDefensePattern = () => {
+    fillRandomQueue(1);
+};
+
 const removeAction = (index) => {
     queue.value.splice(index, 1);
 };
@@ -124,6 +168,23 @@ defineExpose({
             >
                 Add to Queue
             </button>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                    @click="randomAttackPattern"
+                    :disabled="disabled"
+                    class="w-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-semibold py-2 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Random Attack (2 atk + block)
+                </button>
+                <button
+                    @click="randomDefensePattern"
+                    :disabled="disabled"
+                    class="w-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 font-semibold py-2 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Random Defense (1 atk + block)
+                </button>
+            </div>
         </div>
 
         <!-- Current Queue Display -->

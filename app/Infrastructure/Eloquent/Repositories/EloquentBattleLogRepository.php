@@ -21,6 +21,9 @@ class EloquentBattleLogRepository implements BattleLogRepositoryInterface
                 'target_id' => $entry->targetId,
                 'damage' => $entry->damage,
                 'zone' => $entry->zone?->value,
+                'outcome' => $entry->outcome,
+                'is_crit' => $entry->isCrit,
+                'is_max' => $entry->isMax,
                 'occurred_at' => $entry->timestamp,
             ]);
         }
@@ -49,6 +52,9 @@ class EloquentBattleLogRepository implements BattleLogRepositoryInterface
                 'target_id' => $log->target_id,
                 'damage' => $log->damage,
                 'zone' => $log->zone,
+                'outcome' => $log->outcome,
+                'is_crit' => $log->is_crit,
+                'is_max' => $log->is_max,
                 'occurred_at' => $log->occurred_at->toIso8601String(),
             ];
         }

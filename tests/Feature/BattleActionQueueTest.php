@@ -78,6 +78,26 @@ class BattleActionQueueTest extends TestCase
         $this->assertSame(2, $attacker->getCurrentActionPoints());
     }
 
+    public function test_queue_attack_persists_target_id(): void
+    {
+        DB::shouldReceive('transaction')->andReturnUsing(fn($cb) => $cb());
+
+        $attacker = $this->makeCharacter(1, 0, 0);
+        $defender = $this->makeCharacter(2, 1, 0);
+        $battle = $this->makeBattle($attacker, $defender);
+
+        $repo = Mockery::mock(BattleRepositoryInterface::class);
+        $repo->shouldReceive('findById')->with(1)->andReturn($battle);
+        $repo->shouldReceive('save')->andReturn(1);
+
+        $service = new QueueAttackAction($repo);
+        $service->execute(1, 1, 'head', 2);
+
+        $this->assertCount(1, $battle->getQueuedActions());
+        $queued = $battle->getQueuedActions()[0];
+        $this->assertSame(2, $queued->getTargetId());
+    }
+
     public function test_queue_move_rejects_duplicate_blocks(): void
     {
         DB::shouldReceive('transaction')->andReturnUsing(fn($cb) => $cb());

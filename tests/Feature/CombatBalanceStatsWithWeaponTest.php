@@ -289,46 +289,49 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
                 $aId = $charA->getId();
                 $bId = $charB->getId();
 
-                if ($log->type === BattleLogType::HIT || $log->type === BattleLogType::BLOCK_BREAK) {
-                    if ($log->actorId === $aId)
-                        $hitsA++;
-                    elseif ($log->actorId === $bId)
-                        $hitsB++;
-                }
+                if ($log->type === BattleLogType::ATTACK) {
+                    if (in_array($log->outcome, ['hit', 'block_break'], true)) {
+                        if ($log->actorId === $aId) {
+                            $hitsA++;
+                        } elseif ($log->actorId === $bId) {
+                            $hitsB++;
+                        }
+                    }
 
-                if ($log->type === BattleLogType::CRIT) {
-                    if ($log->actorId === $aId)
-                        $critsA++;
-                    elseif ($log->actorId === $bId)
-                        $critsB++;
-                }
+                    if ($log->isCrit) {
+                        if ($log->actorId === $aId)
+                            $critsA++;
+                        elseif ($log->actorId === $bId)
+                            $critsB++;
+                    }
 
-                if ($log->type === BattleLogType::BLOCK_BREAK) {
-                    if ($log->actorId === $aId)
-                        $blockBreaksA++;
-                    elseif ($log->actorId === $bId)
-                        $blockBreaksB++;
-                }
+                    if ($log->outcome === 'block_break') {
+                        if ($log->actorId === $aId)
+                            $blockBreaksA++;
+                        elseif ($log->actorId === $bId)
+                            $blockBreaksB++;
+                    }
 
-                if ($log->type === BattleLogType::MAX_DAMAGE) {
-                    if ($log->actorId === $aId)
-                        $maxDamagesA++;
-                    elseif ($log->actorId === $bId)
-                        $maxDamagesB++;
-                }
+                    if ($log->isMax) {
+                        if ($log->actorId === $aId)
+                            $maxDamagesA++;
+                        elseif ($log->actorId === $bId)
+                            $maxDamagesB++;
+                    }
 
-                if ($log->type === BattleLogType::DODGE) {
-                    if ($log->actorId === $aId)
-                        $dodgesA++;
-                    elseif ($log->actorId === $bId)
-                        $dodgesB++;
-                }
+                    if ($log->outcome === 'dodge') {
+                        if ($log->targetId === $aId)
+                            $dodgesA++;
+                        elseif ($log->targetId === $bId)
+                            $dodgesB++;
+                    }
 
-                if ($log->type === BattleLogType::BLOCK) {
-                    if ($log->actorId === $aId)
-                        $blocksA++;
-                    elseif ($log->actorId === $bId)
-                        $blocksB++;
+                    if ($log->outcome === 'block') {
+                        if ($log->targetId === $aId)
+                            $blocksA++;
+                        elseif ($log->targetId === $bId)
+                            $blocksB++;
+                    }
                 }
             }
 
@@ -379,13 +382,21 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
 
         for ($i = 0; $i < 2; $i++) {
             $target = $zones[array_rand($zones)];
-            $battle->queueAction(new TurnAction($character->getId(), ActionType::ATTACK, $target));
+            $battle->queueAction(new TurnAction(
+                characterId: $character->getId(),
+                type: ActionType::ATTACK,
+                targetZone: $target
+            ));
             $character->registerAttackUsage();
             $character->spendAP(1);
         }
 
         $defendZone = $zones[array_rand($zones)];
-        $battle->queueAction(new TurnAction($character->getId(), ActionType::DEFEND, $defendZone));
+        $battle->queueAction(new TurnAction(
+            characterId: $character->getId(),
+            type: ActionType::DEFEND,
+            targetZone: $defendZone
+        ));
         $character->spendAP(1);
 
         $character->commit();

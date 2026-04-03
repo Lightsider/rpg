@@ -157,7 +157,16 @@ class BattleTest extends TestCase
         $char = $this->createMockCharacter(1, 100, 0, 0);
         $battle = new Battle(1, 1, [$char, $this->createMockCharacter(2)], new Map(2, 2));
 
-        $action = new TurnAction(1, ActionType::MOVE, null, 0, 0, -1, 0);
+        $action = new TurnAction(
+            characterId: 1,
+            type: ActionType::MOVE,
+            targetZone: null,
+            targetId: null,
+            fromX: 0,
+            fromY: 0,
+            toX: -1,
+            toY: 0
+        );
 
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('Target cell is outside the map.');
@@ -169,7 +178,16 @@ class BattleTest extends TestCase
         $char = $this->createMockCharacter(1, 100, 0, 0);
         $battle = new Battle(1, 1, [$char, $this->createMockCharacter(2)], $this->createDefaultMap());
 
-        $action = new TurnAction(1, ActionType::MOVE, null, 0, 0, 2, 0);
+        $action = new TurnAction(
+            characterId: 1,
+            type: ActionType::MOVE,
+            targetZone: null,
+            targetId: null,
+            fromX: 0,
+            fromY: 0,
+            toX: 2,
+            toY: 0
+        );
 
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('Target cell is not adjacent.');
@@ -182,7 +200,16 @@ class BattleTest extends TestCase
         $char2 = $this->createMockCharacter(2, 100, 1, 0);
         $battle = new Battle(1, 1, [$char1, $char2], $this->createDefaultMap());
 
-        $action = new TurnAction(1, ActionType::MOVE, null, 0, 0, 1, 0);
+        $action = new TurnAction(
+            characterId: 1,
+            type: ActionType::MOVE,
+            targetZone: null,
+            targetId: null,
+            fromX: 0,
+            fromY: 0,
+            toX: 1,
+            toY: 0
+        );
 
         $battle->queueAction($action);
         $this->assertCount(1, $battle->getQueuedActions());
@@ -194,7 +221,12 @@ class BattleTest extends TestCase
         $char2 = $this->createMockCharacter(2, 100, 5, 5);
         $battle = new Battle(1, 1, [$char1, $char2], $this->createDefaultMap());
 
-        $action = new TurnAction(1, ActionType::ATTACK, \App\Domain\Battle\TargetZone::HEAD);
+        $action = new TurnAction(
+            characterId: 1,
+            type: ActionType::ATTACK,
+            targetZone: \App\Domain\Battle\TargetZone::HEAD,
+            targetId: 2
+        );
 
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('Target is not adjacent.');
@@ -207,7 +239,12 @@ class BattleTest extends TestCase
         $char2 = $this->createMockCharacter(2, 0, 1, 0); // Dead but adjacent
         $battle = new Battle(1, 1, [$char1, $char2], $this->createDefaultMap());
 
-        $action = new TurnAction(1, ActionType::ATTACK, \App\Domain\Battle\TargetZone::HEAD);
+        $action = new TurnAction(
+            characterId: 1,
+            type: ActionType::ATTACK,
+            targetZone: \App\Domain\Battle\TargetZone::HEAD,
+            targetId: 2
+        );
 
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('Target is already dead.');

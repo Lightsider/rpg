@@ -60,7 +60,8 @@ class SubmitBattleActions
                 if (!$zone) {
                     throw new DomainException('Attack action is missing target zone.');
                 }
-                $this->queueAttackAction->execute($battleId, $character->getId(), $zone);
+                $targetId = isset($actionData['target_id']) ? (int) $actionData['target_id'] : null;
+                $this->queueAttackAction->execute($battleId, $character->getId(), $zone, $targetId);
             } elseif ($type === 'block') {
                 if (!$zone) {
                     throw new DomainException('Block action is missing target zone.');

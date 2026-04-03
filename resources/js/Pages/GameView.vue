@@ -221,6 +221,12 @@ const initWebSocket = (battleId) => {
         const data = payload?.payload ?? payload;
         if (fightState.value) fightState.value.status = 'finished';
         stopLocalTimer();
+        if (logRef.value && fightState.value?.id) {
+            await logRef.value.refresh();
+        }
+        if (fightState.value?.id) {
+            await fetchFightState(fightState.value.id);
+        }
         clearBattleChannel();
         await fetchGameData();
     };
@@ -313,7 +319,16 @@ const handleQueueSubmit = async (queuedActions) => {
 
     if (queuedActions.length + (moveAction ? moveCost.value : 0) > apAvailable.value) return alert('Not enough AP.');
     
-    const payload = moveAction ? [...queuedActions, moveAction] : [...queuedActions];
+    const attackTargetId = actionMode.value === 'attack' && selectedEnemy.value
+        ? getCharacterAt(selectedEnemy.value)
+        : null;
+    const normalizedActions = queuedActions.map(action => {
+        if (action.type === 'attack' && attackTargetId) {
+            return { ...action, target_id: attackTargetId };
+        }
+        return action;
+    });
+    const payload = moveAction ? [...normalizedActions, moveAction] : [...normalizedActions];
     if (!payload.length) return alert('No actions.');
 
     submitting.value = true;

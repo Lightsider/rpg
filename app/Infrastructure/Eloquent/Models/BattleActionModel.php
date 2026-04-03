@@ -15,6 +15,7 @@ class BattleActionModel extends Model
     protected $fillable = [
         'battle_id',
         'character_id',
+        'target_id',
         'type',
         'target_zone',
         'from_x',
@@ -28,6 +29,7 @@ class BattleActionModel extends Model
     protected $casts = [
         'battle_id' => 'integer',
         'character_id' => 'integer',
+        'target_id' => 'integer',
         'from_x' => 'integer',
         'from_y' => 'integer',
         'to_x' => 'integer',

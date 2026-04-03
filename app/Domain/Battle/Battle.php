@@ -190,8 +190,14 @@ class Battle implements \JsonSerializable
         }
 
         if ($action->getType() === ActionType::ATTACK) {
-            // Find opponent (Assuming 1v1 as per rules)
-            $opponent = $this->getOpponent($action->getCharacterId());
+            $targetId = $action->getTargetId();
+            $opponent = $targetId !== null ? $this->getParticipantById($targetId) : null;
+            if ($targetId !== null && !$opponent) {
+                throw new \App\Domain\DomainException('Target not found in this battle.');
+            }
+            if (!$opponent) {
+                $opponent = $this->getOpponent($action->getCharacterId());
+            }
             if (!$opponent) {
                 if ($this->hasTeammateOnly($action->getCharacterId())) {
                     throw new \App\Domain\DomainException('Cannot attack a teammate.');
@@ -201,6 +207,12 @@ class Battle implements \JsonSerializable
 
             if ($opponent->getCurrentHp() <= 0) {
                 throw new \App\Domain\DomainException('Target is already dead.');
+            }
+
+            $attackerTeam = $this->participantTeams[$action->getCharacterId()] ?? null;
+            $defenderTeam = $this->participantTeams[$opponent->getId()] ?? null;
+            if ($attackerTeam !== null && $defenderTeam !== null && $attackerTeam === $defenderTeam) {
+                throw new \App\Domain\DomainException('Cannot attack a teammate.');
             }
 
             $dx = abs($character->getX() - $opponent->getX());
@@ -219,6 +231,9 @@ class Battle implements \JsonSerializable
         $attackerTeam = $this->participantTeams[$characterId] ?? null;
         foreach ($this->participants as $participant) {
             if ($participant->getId() === $characterId) {
+                continue;
+            }
+            if ($participant->getCurrentHp() <= 0) {
                 continue;
             }
             $defenderTeam = $this->participantTeams[$participant->getId()] ?? null;
@@ -240,6 +255,9 @@ class Battle implements \JsonSerializable
         $hasOther = false;
         foreach ($this->participants as $participant) {
             if ($participant->getId() === $characterId) {
+                continue;
+            }
+            if ($participant->getCurrentHp() <= 0) {
                 continue;
             }
             $hasOther = true;
@@ -294,14 +312,102 @@ class Battle implements \JsonSerializable
      */
     public function checkIfFinished(): void
     {
-        $aliveCount = count(array_filter(
-            $this->participants,
-            fn(Character $c) => $c->getCurrentHp() > 0
-        ));
+        $aliveParticipants = $this->getAliveParticipants();
+        $finished = $this->hasSingleSurvivor($aliveParticipants)
+            || $this->hasSingleTeamStanding($aliveParticipants);
 
-        if ($aliveCount <= 1) {
+        if ($finished) {
             $this->state = BattleState::FINISHED;
         }
+    }
+
+    /**
+     * @return array<int, Character>
+     */
+    public function getVictoryWinners(): array
+    {
+        $aliveParticipants = $this->getAliveParticipants();
+        if ($aliveParticipants === []) {
+            return [];
+        }
+
+        $winnerTeam = $this->getWinningTeam($aliveParticipants);
+        if ($winnerTeam !== null) {
+            return array_values(array_filter(
+                $aliveParticipants,
+                fn(Character $c) => ($this->participantTeams[$c->getId()] ?? null) === $winnerTeam
+            ));
+        }
+
+        if ($this->hasSingleSurvivor($aliveParticipants)) {
+            return array_values($aliveParticipants);
+        }
+
+        return [];
+    }
+
+    public function getWinningTeamName(): ?string
+    {
+        return $this->getWinningTeam($this->getAliveParticipants());
+    }
+
+    /**
+     * @return array<int, Character>
+     */
+    private function getAliveParticipants(): array
+    {
+        return array_filter(
+            $this->participants,
+            fn(Character $c) => $c->getCurrentHp() > 0
+        );
+    }
+
+    /**
+     * @param array<int, Character> $aliveParticipants
+     */
+    private function hasSingleSurvivor(array $aliveParticipants): bool
+    {
+        return count($aliveParticipants) <= 1;
+    }
+
+    /**
+     * @param array<int, Character> $aliveParticipants
+     */
+    private function hasSingleTeamStanding(array $aliveParticipants): bool
+    {
+        return $this->getWinningTeam($aliveParticipants) !== null;
+    }
+
+    /**
+     * @param array<int, Character> $aliveParticipants
+     */
+    private function getWinningTeam(array $aliveParticipants): ?string
+    {
+        if ($aliveParticipants === []) {
+            return null;
+        }
+
+        $teams = [];
+        $hasUnassigned = false;
+        foreach ($aliveParticipants as $participant) {
+            $team = $this->participantTeams[$participant->getId()] ?? null;
+            if ($team === null) {
+                $hasUnassigned = true;
+                continue;
+            }
+            $teams[$team] = true;
+        }
+
+        // If anyone is unassigned, fall back to single-survivor victory.
+        if ($hasUnassigned) {
+            return null;
+        }
+
+        if (count($teams) <= 1) {
+            return array_key_first($teams);
+        }
+
+        return null;
     }
 
     public function getId(): int

@@ -16,6 +16,10 @@ return new class extends Migration
 
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (Schema::hasTable('battle_participants')) {
             DB::statement('ALTER TABLE battle_participants DROP CONSTRAINT IF EXISTS battle_participants_user_id_foreign');
 
@@ -58,6 +62,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (Schema::hasTable('battle_participants')) {
             DB::statement('ALTER TABLE battle_participants DROP CONSTRAINT IF EXISTS battle_participants_character_id_foreign');
 

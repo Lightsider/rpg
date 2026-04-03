@@ -294,34 +294,36 @@ class FullArchetypeBalanceTest extends TestCase
                     $aId = $charA->getId();
                     $bId = $charB->getId();
 
-                    if ($log->type === BattleLogType::HIT || $log->type === BattleLogType::BLOCK_BREAK) {
-                        if ($log->actorId === $aId) $totalHitsA++;
-                        elseif ($log->actorId === $bId) $totalHitsB++;
-                    }
+                    if ($log->type === BattleLogType::ATTACK) {
+                        if (in_array($log->outcome, ['hit', 'block_break'], true)) {
+                            if ($log->actorId === $aId) $totalHitsA++;
+                            elseif ($log->actorId === $bId) $totalHitsB++;
+                        }
 
-                    if ($log->type === BattleLogType::CRIT) {
-                        if ($log->actorId === $aId) $totalCritsA++;
-                        elseif ($log->actorId === $bId) $totalCritsB++;
-                    }
+                        if ($log->isCrit) {
+                            if ($log->actorId === $aId) $totalCritsA++;
+                            elseif ($log->actorId === $bId) $totalCritsB++;
+                        }
 
-                    if ($log->type === BattleLogType::BLOCK_BREAK) {
-                        if ($log->actorId === $aId) $totalBlockBreaksA++;
-                        elseif ($log->actorId === $bId) $totalBlockBreaksB++;
-                    }
+                        if ($log->outcome === 'block_break') {
+                            if ($log->actorId === $aId) $totalBlockBreaksA++;
+                            elseif ($log->actorId === $bId) $totalBlockBreaksB++;
+                        }
 
-                    if ($log->type === BattleLogType::MAX_DAMAGE) {
-                        if ($log->actorId === $aId) $totalMaxDamagesA++;
-                        elseif ($log->actorId === $bId) $totalMaxDamagesB++;
-                    }
+                        if ($log->isMax) {
+                            if ($log->actorId === $aId) $totalMaxDamagesA++;
+                            elseif ($log->actorId === $bId) $totalMaxDamagesB++;
+                        }
 
-                    if ($log->type === BattleLogType::DODGE) {
-                        if ($log->actorId === $aId) $totalDodgesA++;
-                        elseif ($log->actorId === $bId) $totalDodgesB++;
-                    }
+                        if ($log->outcome === 'dodge') {
+                            if ($log->targetId === $aId) $totalDodgesA++;
+                            elseif ($log->targetId === $bId) $totalDodgesB++;
+                        }
 
-                    if ($log->type === BattleLogType::BLOCK) {
-                        if ($log->actorId === $aId) $totalBlocksA++;
-                        elseif ($log->actorId === $bId) $totalBlocksB++;
+                        if ($log->outcome === 'block') {
+                            if ($log->targetId === $aId) $totalBlocksA++;
+                            elseif ($log->targetId === $bId) $totalBlocksB++;
+                        }
                     }
 
                     if ($log->type === BattleLogType::DEATH) {
@@ -368,11 +370,19 @@ class FullArchetypeBalanceTest extends TestCase
         $zones = [TargetZone::HEAD, TargetZone::TORSO, TargetZone::LEGS, TargetZone::LEFT_ARM, TargetZone::RIGHT_ARM];
         // 2 random attacks
         for ($i = 0; $i < 2; $i++) {
-            $battle->queueAction(new TurnAction($char->getId(), ActionType::ATTACK, $zones[array_rand($zones)]));
+            $battle->queueAction(new TurnAction(
+                characterId: $char->getId(),
+                type: ActionType::ATTACK,
+                targetZone: $zones[array_rand($zones)]
+            ));
             $char->registerAttackUsage(); $char->spendAP(1);
         }
         // 1 random defense
-        $battle->queueAction(new TurnAction($char->getId(), ActionType::DEFEND, $zones[array_rand($zones)]));
+        $battle->queueAction(new TurnAction(
+            characterId: $char->getId(),
+            type: ActionType::DEFEND,
+            targetZone: $zones[array_rand($zones)]
+        ));
         $char->spendAP(1);
         $char->commit();
     }

@@ -18,6 +18,9 @@ class BattleLogEntry
         public readonly ?int $targetId = null,
         public readonly ?TargetZone $zone = null,
         public readonly ?int $damage = null,
+        public readonly ?string $outcome = null,
+        public readonly ?bool $isCrit = null,
+        public readonly ?bool $isMax = null,
         public readonly DateTimeImmutable $timestamp = new DateTimeImmutable()
     ) {
     }

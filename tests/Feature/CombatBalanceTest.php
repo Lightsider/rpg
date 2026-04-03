@@ -124,15 +124,27 @@ class CombatBalanceTest extends TestCase
                 $swordTarget2 = $zones[array_rand($zones)];
                 $swordDefend = $zones[array_rand($zones)];
 
-                $battle->queueAction(new TurnAction($swordFighter->getId(), ActionType::ATTACK, $swordTarget1));
+                $battle->queueAction(new TurnAction(
+                    characterId: $swordFighter->getId(),
+                    type: ActionType::ATTACK,
+                    targetZone: $swordTarget1
+                ));
                 $swordFighter->registerAttackUsage();
                 $swordFighter->spendAP(1);
 
-                $battle->queueAction(new TurnAction($swordFighter->getId(), ActionType::ATTACK, $swordTarget2));
+                $battle->queueAction(new TurnAction(
+                    characterId: $swordFighter->getId(),
+                    type: ActionType::ATTACK,
+                    targetZone: $swordTarget2
+                ));
                 $swordFighter->registerAttackUsage();
                 $swordFighter->spendAP(1);
 
-                $battle->queueAction(new TurnAction($swordFighter->getId(), ActionType::DEFEND, $swordDefend));
+                $battle->queueAction(new TurnAction(
+                    characterId: $swordFighter->getId(),
+                    type: ActionType::DEFEND,
+                    targetZone: $swordDefend
+                ));
                 $swordFighter->spendAP(1);
 
                 $swordFighter->commit();
@@ -142,15 +154,27 @@ class CombatBalanceTest extends TestCase
                 $axeTarget2 = $zones[array_rand($zones)];
                 $axeDefend = $zones[array_rand($zones)];
 
-                $battle->queueAction(new TurnAction($axeFighter->getId(), ActionType::ATTACK, $axeTarget1));
+                $battle->queueAction(new TurnAction(
+                    characterId: $axeFighter->getId(),
+                    type: ActionType::ATTACK,
+                    targetZone: $axeTarget1
+                ));
                 $axeFighter->registerAttackUsage();
                 $axeFighter->spendAP(1);
 
-                $battle->queueAction(new TurnAction($axeFighter->getId(), ActionType::ATTACK, $axeTarget2));
+                $battle->queueAction(new TurnAction(
+                    characterId: $axeFighter->getId(),
+                    type: ActionType::ATTACK,
+                    targetZone: $axeTarget2
+                ));
                 $axeFighter->registerAttackUsage();
                 $axeFighter->spendAP(1);
 
-                $battle->queueAction(new TurnAction($axeFighter->getId(), ActionType::DEFEND, $axeDefend));
+                $battle->queueAction(new TurnAction(
+                    characterId: $axeFighter->getId(),
+                    type: ActionType::DEFEND,
+                    targetZone: $axeDefend
+                ));
                 $axeFighter->spendAP(1);
 
                 $axeFighter->commit();
@@ -161,20 +185,21 @@ class CombatBalanceTest extends TestCase
 
                 // Inspect logs for metrics
                 foreach ($result->logs as $log) {
-                    if ($log->type === BattleLogType::HIT && $log->damage !== null) {
-                        if ($log->actorId === 1) {
-                            $swordHits++;
-                            $swordDamage += $log->damage;
-                        } else {
-                            $axeHits++;
-                            $axeDamage += $log->damage;
-                        }
-                    } elseif ($log->type === BattleLogType::BLOCK) {
-                        // Actor is defender on block
-                        if ($log->actorId === 1) {
-                            $swordFullBlocks++;
-                        } else {
-                            $axeFullBlocks++;
+                    if ($log->type === BattleLogType::ATTACK) {
+                        if (in_array($log->outcome, ['hit', 'block_break'], true) && $log->damage !== null) {
+                            if ($log->actorId === 1) {
+                                $swordHits++;
+                                $swordDamage += $log->damage;
+                            } else {
+                                $axeHits++;
+                                $axeDamage += $log->damage;
+                            }
+                        } elseif ($log->outcome === 'block') {
+                            if ($log->targetId === 1) {
+                                $swordFullBlocks++;
+                            } else {
+                                $axeFullBlocks++;
+                            }
                         }
                     }
                 }

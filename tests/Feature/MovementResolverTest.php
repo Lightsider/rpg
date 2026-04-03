@@ -115,8 +115,26 @@ class MovementResolverTest extends TestCase
             map: new Map(5, 3),
             state: BattleState::ACTIVE,
             queuedActions: [
-                new TurnAction($charOne->getId(), ActionType::MOVE, null, 1, 1, 2, 1),
-                new TurnAction($charTwo->getId(), ActionType::MOVE, null, 2, 1, 1, 1),
+                new TurnAction(
+                    characterId: $charOne->getId(),
+                    type: ActionType::MOVE,
+                    targetZone: null,
+                    targetId: null,
+                    fromX: 1,
+                    fromY: 1,
+                    toX: 2,
+                    toY: 1
+                ),
+                new TurnAction(
+                    characterId: $charTwo->getId(),
+                    type: ActionType::MOVE,
+                    targetZone: null,
+                    targetId: null,
+                    fromX: 2,
+                    fromY: 1,
+                    toX: 1,
+                    toY: 1
+                ),
             ]
         );
 
@@ -207,8 +225,26 @@ class MovementResolverTest extends TestCase
             map: new Map(5, 3),
             state: BattleState::ACTIVE,
             queuedActions: [
-                new TurnAction($charOne->getId(), ActionType::MOVE, null, 0, 1, 1, 1),
-                new TurnAction($charTwo->getId(), ActionType::MOVE, null, 2, 1, 1, 1),
+                new TurnAction(
+                    characterId: $charOne->getId(),
+                    type: ActionType::MOVE,
+                    targetZone: null,
+                    targetId: null,
+                    fromX: 0,
+                    fromY: 1,
+                    toX: 1,
+                    toY: 1
+                ),
+                new TurnAction(
+                    characterId: $charTwo->getId(),
+                    type: ActionType::MOVE,
+                    targetZone: null,
+                    targetId: null,
+                    fromX: 2,
+                    fromY: 1,
+                    toX: 1,
+                    toY: 1
+                ),
             ]
         );
 

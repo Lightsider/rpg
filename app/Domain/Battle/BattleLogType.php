@@ -10,6 +10,7 @@ namespace App\Domain\Battle;
 enum BattleLogType: string
 {
     case MOVE = 'move';
+    case ATTACK = 'attack';
     case HIT = 'hit';
     case CRIT = 'crit';
     case BLOCK = 'block';
@@ -17,4 +18,6 @@ enum BattleLogType: string
     case MAX_DAMAGE = 'max_damage';
     case DODGE = 'dodge';
     case DEATH = 'death';
+    case SKIP = 'skip';
+    case VICTORY = 'victory';
 }

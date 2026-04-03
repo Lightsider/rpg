@@ -247,49 +247,41 @@ class CombatBalanceStatsOnlyTest extends TestCase
                 $aId = $charA->getId();
                 $bId = $charB->getId();
 
-                // Damage tracking (actorId = attacker)
-                if ($log->damage !== null && in_array($log->type, [BattleLogType::HIT, BattleLogType::MAX_DAMAGE, BattleLogType::BLOCK_BREAK], true)) {
-                    if ($log->actorId === $aId) {
-                        $damageDealtByA += $log->damage;
-                    } elseif ($log->actorId === $bId) {
-                        $damageDealtByB += $log->damage;
+                if ($log->type === BattleLogType::ATTACK) {
+                    if (in_array($log->outcome, ['hit', 'block_break'], true) && $log->damage !== null) {
+                        if ($log->actorId === $aId) {
+                            $damageDealtByA += $log->damage;
+                            $hitsA++;
+                        } elseif ($log->actorId === $bId) {
+                            $damageDealtByB += $log->damage;
+                            $hitsB++;
+                        }
                     }
-                }
 
-                // Hit count (actorId = attacker, damage-dealing events — one per attack)
-                if ($log->type === BattleLogType::HIT || $log->type === BattleLogType::BLOCK_BREAK) {
-                    if ($log->actorId === $aId) $hitsA++;
-                    elseif ($log->actorId === $bId) $hitsB++;
-                }
+                    if ($log->isCrit) {
+                        if ($log->actorId === $aId) $critsA++;
+                        elseif ($log->actorId === $bId) $critsB++;
+                    }
 
-                // Crit tracking (actorId = attacker)
-                if ($log->type === BattleLogType::CRIT) {
-                    if ($log->actorId === $aId) $critsA++;
-                    elseif ($log->actorId === $bId) $critsB++;
-                }
+                    if ($log->outcome === 'block_break') {
+                        if ($log->actorId === $aId) $blockBreaksA++;
+                        elseif ($log->actorId === $bId) $blockBreaksB++;
+                    }
 
-                // Block break tracking (actorId = attacker who broke through)
-                if ($log->type === BattleLogType::BLOCK_BREAK) {
-                    if ($log->actorId === $aId) $blockBreaksA++;
-                    elseif ($log->actorId === $bId) $blockBreaksB++;
-                }
+                    if ($log->isMax) {
+                        if ($log->actorId === $aId) $maxDamagesA++;
+                        elseif ($log->actorId === $bId) $maxDamagesB++;
+                    }
 
-                // Max damage tracking (actorId = attacker)
-                if ($log->type === BattleLogType::MAX_DAMAGE) {
-                    if ($log->actorId === $aId) $maxDamagesA++;
-                    elseif ($log->actorId === $bId) $maxDamagesB++;
-                }
+                    if ($log->outcome === 'dodge') {
+                        if ($log->targetId === $aId) $dodgesA++;
+                        elseif ($log->targetId === $bId) $dodgesB++;
+                    }
 
-                // Dodge tracking (actorId = defender who dodged)
-                if ($log->type === BattleLogType::DODGE) {
-                    if ($log->actorId === $aId) $dodgesA++;
-                    elseif ($log->actorId === $bId) $dodgesB++;
-                }
-
-                // Block tracking (actorId = defender who blocked)
-                if ($log->type === BattleLogType::BLOCK) {
-                    if ($log->actorId === $aId) $blocksA++;
-                    elseif ($log->actorId === $bId) $blocksB++;
+                    if ($log->outcome === 'block') {
+                        if ($log->targetId === $aId) $blocksA++;
+                        elseif ($log->targetId === $bId) $blocksB++;
+                    }
                 }
             }
 
@@ -341,14 +333,22 @@ class CombatBalanceStatsOnlyTest extends TestCase
         // 2 attacks
         for ($i = 0; $i < 2; $i++) {
             $target = $zones[array_rand($zones)];
-            $battle->queueAction(new TurnAction($character->getId(), ActionType::ATTACK, $target));
+            $battle->queueAction(new TurnAction(
+                characterId: $character->getId(),
+                type: ActionType::ATTACK,
+                targetZone: $target
+            ));
             $character->registerAttackUsage();
             $character->spendAP(1);
         }
 
         // 1 defense
         $defendZone = $zones[array_rand($zones)];
-        $battle->queueAction(new TurnAction($character->getId(), ActionType::DEFEND, $defendZone));
+        $battle->queueAction(new TurnAction(
+            characterId: $character->getId(),
+            type: ActionType::DEFEND,
+            targetZone: $defendZone
+        ));
         $character->spendAP(1);
 
         $character->commit();

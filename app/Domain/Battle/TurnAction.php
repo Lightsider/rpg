@@ -16,6 +16,7 @@ class TurnAction
         private readonly int $characterId,
         private readonly ActionType $type,
         private readonly ?TargetZone $targetZone = null,
+        private readonly ?int $targetId = null,
         private readonly ?int $fromX = null,
         private readonly ?int $fromY = null,
         private readonly ?int $toX = null,
@@ -37,6 +38,11 @@ class TurnAction
     public function getTargetZone(): ?TargetZone
     {
         return $this->targetZone;
+    }
+
+    public function getTargetId(): ?int
+    {
+        return $this->targetId;
     }
 
     public function getFromX(): ?int
