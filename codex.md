@@ -2,6 +2,8 @@
 
 You are working on a deterministic MMORPG prototype.
 
+PHP, Laravel, Docker, PostgreSQL, Vue
+
 ## Core Rules
 
 - DO NOT place logic in controllers or WebSocket handlers
@@ -58,7 +60,7 @@ Item cannot exist in both at the same time
 
 ---
 
-## Chat (in progress)
+## Chat
 
 - location chat
 - battle chat

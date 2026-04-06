@@ -54,13 +54,13 @@ class BlockPenetrationService
 
         // Calculate chance using the formula: base * (1 + fail * up - success * down)
         $modifier = 1.0 + ($failures * $this->config->upBonusFactor) - ($successes * $this->config->downPenaltyFactor);
-        $finalChance = (float) max(0.0, min($this->config->maxFinalChance, $baseChance * $modifier));
+        $finalChance = (float) max($this->config->minFinalChance, min($this->config->maxFinalChance, $baseChance * $modifier));
 
         $roll = $this->getRandom();
         $penetrated = $roll < $finalChance;
 
         $damage = $penetrated
-            ? $this->applyPierceDamage($baseDamage, $attacker->getWeaponForCombat())
+            ? $this->applyPierceDamage($baseDamage, $attacker->getWeaponForCombat(), $defender)
             : 0;
 
         if ($penetrated) {
@@ -99,11 +99,13 @@ class BlockPenetrationService
     }
 
     /**
-     * Reduce base damage by the weapon's pierce multiplier.
+     * Reduce base damage by the weapon's pierce multiplier and the defender's reduction.
      */
-    public function applyPierceDamage(int $baseDamage, Weapon $weapon): int
+    public function applyPierceDamage(int $baseDamage, Weapon $weapon, Character $defender): int
     {
-        return (int) round($baseDamage * $weapon->getPierceMultiplier());
+        $pierceDamage = $baseDamage * $weapon->getPierceMultiplier();
+        $finalDamage = $pierceDamage * (1.0 - $defender->getPierceDamageReduction());
+        return (int) round($finalDamage);
     }
 
     /**

@@ -14,6 +14,7 @@ This is a deterministic MMORPG prototype focused on:
 Backend:
 - PHP (Laravel)
 - PostgreSQL
+- docker
 
 Frontend:
 - Vue.js SPA
@@ -69,8 +70,8 @@ Server is the single source of truth.
 
 - Strength → damage
 - Dexterity → dodge
-- Intelligence → crit
-- Endurance → HP
+- Wit → crit
+- Constitution → HP
 
 ---
 
@@ -92,9 +93,9 @@ Server is the single source of truth.
 ## Combat Archetypes
 
 Attack:
-- Tank (stable)
+- stable)  
 - Crit (burst)
-- Universal
+- Hybrid
 
 Defense:
 - Tank (armor)
@@ -119,96 +120,6 @@ Meta follows rock-paper-scissors.
 
 - chat
 - equipment improvements
-
----
-
-## Next Step
-
-Add multi-unit combat (2v2, N vs M) before progression systems.
-
----
-
-## Key Principle
-
-Deterministic simulation-first design.
-2. CODEX_PROMPT.md
-
-👉 Codex лучше работает с инструкциями и четкими правилами
-
-# MMORPG Prototype — Codex Instruction Context
-
-You are working on a deterministic MMORPG prototype.
-
-## Core Rules
-
-- DO NOT place logic in controllers or WebSocket handlers
-- ALL business logic must be in Domain or Application layers
-- Domain must NOT depend on Laravel, DB, or WebSocket
-- Server is authoritative
-
----
-
-## Architecture
-
-- Domain: pure logic
-- Application: use cases
-- Infrastructure: DB + WebSocket
-- Presentation: Vue
-
----
-
-## Combat
-
-- synchronous turn-based
-- all actions resolved simultaneously
-- deterministic pseudo-random system
-
----
-
-## Equipment
-
-- gear-first system
-- items define base stats
-- stats amplify them
-
-Slots:
-- head, torso, legs
-- left_hand, right_hand
-- 4 seals
-
----
-
-## Inventory vs Equipment
-
-- Inventory = storage
-- Equipment = active state
-
-Item cannot exist in both at the same time
-
----
-
-## Shop
-
-- StoreItem ≠ Item
-- StoreItem = offer
-- Items are added to inventory after purchase
-
----
-
-## Chat (in progress)
-
-- location chat
-- battle chat
-- private chat
-
----
-
-## Current Goal
-
-Implement new features without breaking:
-- determinism
-- simulation capability
-- layered architecture
 
 ---
 

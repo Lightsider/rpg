@@ -1,5 +1,7 @@
 # MMORPG Prototype — Claude Context
 
+PHP, Laravel, Docker, PostgreSQL, Vue
+
 ## Design Philosophy
 
 This system is built as a deterministic combat simulator.

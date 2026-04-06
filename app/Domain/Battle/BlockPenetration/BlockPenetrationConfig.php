@@ -11,6 +11,7 @@ final class BlockPenetrationConfig
 {
     public function __construct(
         public readonly int $k = 120,
+        public readonly float $minFinalChance = 0.05,
         public readonly float $maxFinalChance = 0.95,
         public readonly float $upBonusFactor = 0.1,
         public readonly float $downPenaltyFactor = 0.05,

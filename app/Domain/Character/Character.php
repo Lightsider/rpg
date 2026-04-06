@@ -615,12 +615,31 @@ class Character implements \JsonSerializable
     }
 
     /**
-     * Block resistance rating from equipped shield (0 until shields are implemented).
-     * Armor deliberately does NOT contribute to this value.
+     * Aggregated block resistance rating from all equipped items.
      */
     public function getBlockResistRating(): int
     {
-        return $this->blockResistRating;
+        $total = $this->blockResistRating;
+        foreach ($this->equipment->getAllEquipped() as $item) {
+            $total += $item->getBlockResistRating();
+        }
+        return $total;
+    }
+
+    /**
+     * Aggregated fractional pierce damage reduction from all equipped items.
+     * Uses multiplicative scaling to ensure the total reduction never reaches 100%.
+     */
+    public function getPierceDamageReduction(): float
+    {
+        $multiplier = 1.0;
+        foreach ($this->equipment->getAllEquipped() as $item) {
+            $reduction = $item->getPierceDamageReduction();
+            if ($reduction > 0) {
+                $multiplier *= (1.0 - $reduction);
+            }
+        }
+        return (float) round(1.0 - $multiplier, 4);
     }
 
     public function jsonSerialize(): array

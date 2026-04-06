@@ -19,6 +19,8 @@ class Armor extends Item
         private readonly int $requiredWit = 0,
         private readonly int $requiredDexterity = 0,
         private readonly int $requiredConstitution = 0,
+        private readonly int $blockResistRating = 0,
+        private readonly float $pierceDamageReduction = 0.0,
     ) {
         parent::__construct($id, $name, ItemType::ARMOR);
     }
@@ -56,5 +58,15 @@ class Armor extends Item
     public function getRequiredConstitution(): int
     {
         return $this->requiredConstitution;
+    }
+
+    public function getBlockResistRating(): int
+    {
+        return $this->blockResistRating;
+    }
+
+    public function getPierceDamageReduction(): float
+    {
+        return $this->pierceDamageReduction;
     }
 }

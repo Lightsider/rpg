@@ -30,4 +30,20 @@ abstract class Item
     {
         return $this->itemType;
     }
+
+    /**
+     * Foundation: Base block-resistant rating provided by the item.
+     */
+    public function getBlockResistRating(): int
+    {
+        return 0;
+    }
+
+    /**
+     * Foundation: Fractional pierce damage reduction (e.g., 0.10 for 10% reduction).
+     */
+    public function getPierceDamageReduction(): float
+    {
+        return 0.0;
+    }
 }
