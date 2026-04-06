@@ -28,20 +28,17 @@ class BlockPenetrationComparisonTest extends TestCase
         $config = new BlockPenetrationConfig(
             k: 120,
             maxFinalChance: 0.95,
-            upBonusFactor: 0.20,
-            downPenaltyFactor: 0.10
         );
         $service = new BlockPenetrationService($config);
 
         $sword = new Weapon(1, 'Sword', 9.0, 11.0, DamageType::SLASHING, 0.0, 20, 0.50, 75, WeaponArchetype::STABLE);
         $axe = new Weapon(2, 'Axe', 9.0, 11.0, DamageType::CHOPPING, 0.0, 70, 0.65, 0, WeaponArchetype::STABLE);
         
-        // 2H Axe: 1.5x Axe's break (90), 0.75 pierce multiplier, 75 MaxDmgRating (like Sword), isTwoHanded = true
         $twoHandedAxe = new Weapon(
             id: 5,
             name: 'Great Axe',
-            minDamage: 13.5,
-            maxDamage: 16.5,
+            minDamage: 11.7,
+            maxDamage: 14.3,
             damageType: DamageType::CHOPPING,
             accuracyBonus: 0.0,
             blockBreakRating: 120,

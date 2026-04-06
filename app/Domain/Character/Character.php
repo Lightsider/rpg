@@ -150,6 +150,11 @@ class Character implements \JsonSerializable
     public function resetRoundState(): void
     {
         $this->currentActionPoints = $this->maxActionPoints;
+        foreach ($this->equipment->getAllEquipped() as $item) {
+            if (method_exists($item, 'getDefensiveAPBonus')) {
+                $this->currentActionPoints += $item->getDefensiveAPBonus();
+            }
+        }
         $this->attackPointsUsed = 0;
         $this->isCommitted = false;
     }
@@ -391,7 +396,13 @@ class Character implements \JsonSerializable
 
     public function getMaxHp(): int
     {
-        return $this->maxHp;
+        $multiplier = 0.0;
+        foreach ($this->equipment->getAllEquipped() as $item) {
+            if (method_exists($item, 'getMaxHpMultiplier')) {
+                $multiplier += $item->getMaxHpMultiplier();
+            }
+        }
+        return (int) ceil($this->maxHp * (1.0 + $multiplier));
     }
 
     public function getCurrentHp(): int
@@ -568,7 +579,13 @@ class Character implements \JsonSerializable
 
     public function getMaxActionPoints(): int
     {
-        return $this->maxActionPoints;
+        $total = $this->maxActionPoints;
+        foreach ($this->equipment->getAllEquipped() as $item) {
+            if (method_exists($item, 'getDefensiveAPBonus')) {
+                $total += $item->getDefensiveAPBonus();
+            }
+        }
+        return $total;
     }
 
     public function getCurrentActionPoints(): int

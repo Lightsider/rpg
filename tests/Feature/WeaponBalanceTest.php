@@ -17,12 +17,15 @@ use App\Domain\Battle\BlockPenetration\BlockPenetrationConfig;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageConfig;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
+use App\Domain\Item\Item;
 use App\Services\MovementResolver;
 use App\Domain\Character\Character;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Weapon\DamageType;
 use App\Domain\Weapon\Weapon;
+use App\Domain\Weapon\WeaponArchetype;
+use App\Domain\Shield\Shield;
 use PHPUnit\Framework\TestCase;
 
 class WeaponBalanceTest extends TestCase
@@ -33,8 +36,7 @@ class WeaponBalanceTest extends TestCase
     {
         parent::setUp();
 
-        // Mock configs to avoid Facade exceptions if not run in full Laravel environment
-        $bpsConfig = new BlockPenetrationConfig(120, 0.95, 0.20);
+        $bpsConfig = new BlockPenetrationConfig(120, 0.05, 0.95, 0.20);
         $bps = new BlockPenetrationService($bpsConfig);
 
         $mdsConfig = new MaxDamageConfig(300, 0.80, 0.20);
@@ -47,13 +49,43 @@ class WeaponBalanceTest extends TestCase
         $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds, $movementResolver);
     }
 
-    private function createFighter(string $name, int $id, Weapon $weapon, int $x = 0, int $y = 0): Character
+    private function createFighter(string $name, int $id, Weapon $weapon, ?Item $offHand = null, int $x = 0, int $y = 0): Character
     {
         $equipment = new Equipment();
         $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
+        if ($offHand) {
+            $equipment->setItem(EquipmentSlot::OFF_HAND, $offHand);
+        }
 
         $maxHp = (int) ceil(40 + (8 * 8.5));
 
+        $char = new Character(
+            id: $id,
+            userId: $id,
+            name: $name,
+            strength: 8,
+            agility: 0,
+            constitution: 8,
+            wit: 0,
+            maxHp: $maxHp,
+            currentHp: 0, // Temporary
+            equipment: $equipment,
+            maxActionPoints: 3,
+            currentActionPoints: 3,
+            attackPointsUsed: 0,
+            x: $x,
+            y: $y,
+            blockResistRating: 0
+        );
+
+        // Reflection or setter to set currentHp to the dynamic maxHp if needed,
+        // but easier to just use a temporary then call restoreHp if available.
+        // Actually, let's just use the constructor properly by calculating the boost here
+        // or just fixing the constructor in Character to handle '0' as 'max'.
+        
+        // Let's just calculate the expected final HP for the constructor to keep it simple.
+        $finalMaxHp = $char->getMaxHp();
+        
         return new Character(
             id: $id,
             userId: $id,
@@ -63,7 +95,7 @@ class WeaponBalanceTest extends TestCase
             constitution: 8,
             wit: 0,
             maxHp: $maxHp,
-            currentHp: $maxHp,
+            currentHp: $finalMaxHp,
             equipment: $equipment,
             maxActionPoints: 3,
             currentActionPoints: 3,
@@ -76,185 +108,157 @@ class WeaponBalanceTest extends TestCase
 
     public function test_sword_vs_axe_balance()
     {
-        $totalBattles = 1000;
-
-        $swordWins = 0;
-        $axeWins = 0;
-        $draws = 0;
-
-        $swordDamage = 0;
-        $axeDamage = 0;
-
-        $swordHits = 0;
-        $axeHits = 0;
-
-        $swordFullBlocks = 0;
-        $axeFullBlocks = 0;
-
-        // Sword: Base damage 9-11, 0 acc, 20 block break, +50% pierce dmg, 75 max damage rating
         $swordTemplate = new Weapon(1, 'Sword', 9, 11, DamageType::SLASHING, 0.0, 20, 0.50, 75);
+        $axeTemplate = new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 70, 0.65, 0);
 
-        // Axe: Base damage 9-11, 0 acc, 60 block break, +65% pierce dmg, 0 max damage rating
-        $axeTemplate = new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 60, 0.65, 0);
+        $this->runSimulation('SWORD VS AXE', $swordTemplate, null, $axeTemplate, null);
+    }
 
-        $zones = [
-            TargetZone::HEAD,
-            TargetZone::TORSO,
-            TargetZone::LEGS,
-            TargetZone::LEFT_ARM,
-            TargetZone::RIGHT_ARM
-        ];
+    public function test_two_handed_axe_vs_sword_shield()
+    {
+        $twoHandedAxe = new Weapon(
+            id: 5,
+            name: 'Great Axe',
+            minDamage: 11.7,
+            maxDamage: 14.3,
+            damageType: DamageType::CHOPPING,
+            accuracyBonus: 0.0,
+            blockBreakRating: 120,
+            pierceMultiplier: 0.75,
+            maxDamageRating: 75,
+            archetype: WeaponArchetype::STABLE,
+            isTwoHanded: true
+        );
+
+        $swordTemplate = new Weapon(1, 'Sword', 9, 11, DamageType::SLASHING, 0.0, 20, 0.50, 75);
+        $shield = new Shield(3, 'Buckler', 40, 0.10);
+
+        $this->runSimulation('2H AXE VS SWORD+SHIELD', $twoHandedAxe, null, $swordTemplate, $shield);
+    }
+
+    public function test_two_handed_axe_vs_axe_shield()
+    {
+        $twoHandedAxe = new Weapon(
+            id: 5,
+            name: 'Great Axe',
+            minDamage: 11.7,
+            maxDamage: 14.3,
+            damageType: DamageType::CHOPPING,
+            accuracyBonus: 0.0,
+            blockBreakRating: 120,
+            pierceMultiplier: 0.75,
+            maxDamageRating: 75,
+            archetype: WeaponArchetype::STABLE,
+            isTwoHanded: true
+        );
+
+        $axeTemplate = new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 70, 0.65, 0);
+        $shield = new Shield(3, 'Buckler', 40, 0.10);
+
+        $this->runSimulation('2H AXE VS AXE+SHIELD', $twoHandedAxe, null, $axeTemplate, $shield);
+    }
+
+    private function runSimulation(string $title, Weapon $wA, ?Item $offA, Weapon $wB, ?Item $offB): void
+    {
+        $totalBattles = 1000;
+        $winsA = 0; $winsB = 0; $draws = 0;
+        $damageA = 0; $damageB = 0;
+        $hitsA = 0; $hitsB = 0;
+        $blocksA = 0; $blocksB = 0;
+        $brokenA = 0; $brokenB = 0;
+        
+        $totalAttacksA = 0; $totalAttacksB = 0;
+        $blockAttemptsA = 0; $blockAttemptsB = 0;
+
+        $zones = [TargetZone::HEAD, TargetZone::TORSO, TargetZone::LEGS, TargetZone::LEFT_ARM, TargetZone::RIGHT_ARM];
 
         for ($i = 0; $i < $totalBattles; $i++) {
-            $swordFighter = $this->createFighter('Sword', 1, $swordTemplate, 0, 0);
-            $axeFighter = $this->createFighter('Axe', 2, $axeTemplate, 1, 0); // Start adjacent
+            $charA = $this->createFighter('A', 1, $wA, $offA, 0, 0);
+            $charB = $this->createFighter('B', 2, $wB, $offB, 1, 0);
 
-            $battle = new Battle($i + 1, 1, [$swordFighter, $axeFighter], new Map(10, 10));
+            $battle = new Battle($i + 1, 1, [$charA, $charB], new Map(10, 10));
+            $deadA = false; $deadB = false;
 
-            // Loop until battle finishes
             while (!$battle->isFinished()) {
-                $swordFighter->resetRoundState();
-                $axeFighter->resetRoundState();
+                $charA->resetRoundState(); $charB->resetRoundState();
 
-                // Simple AI: queue 2 random attacks and 1 random defense. 
-                // AP cost: 2 attacks = 2 AP, 1 defense = 1 AP -> 3 AP total.
+                // Queue Actions (Up to 2 Atk, then as many Def as AP allows)
+                foreach ([$charA, $charB] as $char) {
+                    while ($char->canQueueAttack()) {
+                        $battle->queueAction(new TurnAction($char->getId(), ActionType::ATTACK, $zones[array_rand($zones)]));
+                        $char->registerAttackUsage();
+                        $char->spendAP(1);
+                        if ($char->getId() === 1) { $totalAttacksA++; } else { $totalAttacksB++; }
+                    }
+                    while ($char->canQueueDefense()) {
+                        $battle->queueAction(new TurnAction($char->getId(), ActionType::DEFEND, $zones[array_rand($zones)]));
+                        $char->spendAP(1);
+                    }
+                    $char->commit();
+                }
 
-                // Sword actions
-                $swordTarget1 = $zones[array_rand($zones)];
-                $swordTarget2 = $zones[array_rand($zones)];
-                $swordDefend = $zones[array_rand($zones)];
-
-                $battle->queueAction(new TurnAction(
-                    characterId: $swordFighter->getId(),
-                    type: ActionType::ATTACK,
-                    targetZone: $swordTarget1
-                ));
-                $swordFighter->registerAttackUsage();
-                $swordFighter->spendAP(1);
-
-                $battle->queueAction(new TurnAction(
-                    characterId: $swordFighter->getId(),
-                    type: ActionType::ATTACK,
-                    targetZone: $swordTarget2
-                ));
-                $swordFighter->registerAttackUsage();
-                $swordFighter->spendAP(1);
-
-                $battle->queueAction(new TurnAction(
-                    characterId: $swordFighter->getId(),
-                    type: ActionType::DEFEND,
-                    targetZone: $swordDefend
-                ));
-                $swordFighter->spendAP(1);
-
-                $swordFighter->commit();
-
-                // Axe actions
-                $axeTarget1 = $zones[array_rand($zones)];
-                $axeTarget2 = $zones[array_rand($zones)];
-                $axeDefend = $zones[array_rand($zones)];
-
-                $battle->queueAction(new TurnAction(
-                    characterId: $axeFighter->getId(),
-                    type: ActionType::ATTACK,
-                    targetZone: $axeTarget1
-                ));
-                $axeFighter->registerAttackUsage();
-                $axeFighter->spendAP(1);
-
-                $battle->queueAction(new TurnAction(
-                    characterId: $axeFighter->getId(),
-                    type: ActionType::ATTACK,
-                    targetZone: $axeTarget2
-                ));
-                $axeFighter->registerAttackUsage();
-                $axeFighter->spendAP(1);
-
-                $battle->queueAction(new TurnAction(
-                    characterId: $axeFighter->getId(),
-                    type: ActionType::DEFEND,
-                    targetZone: $axeDefend
-                ));
-                $axeFighter->spendAP(1);
-
-                $axeFighter->commit();
-
-                // Resolve Round
-                // This updates HP, kills, etc.
                 $result = $this->resolver->resolve($battle);
-
-                // Inspect logs for metrics
                 foreach ($result->logs as $log) {
                     if ($log->type === BattleLogType::ATTACK) {
+                        // Count if the attack HIT a defended zone (regardless of outcome)
+                        // This logic relies on the fact that 'isBlocked' in RoundResolver determines the 'block'/'block_break' outcomes.
+                        if (in_array($log->outcome, ['block', 'block_break'], true)) {
+                            if ($log->targetId === 1) { $blockAttemptsA++; } else { $blockAttemptsB++; }
+                        }
+
                         if (in_array($log->outcome, ['hit', 'block_break'], true) && $log->damage !== null) {
-                            if ($log->actorId === 1) {
-                                $swordHits++;
-                                $swordDamage += $log->damage;
-                            } else {
-                                $axeHits++;
-                                $axeDamage += $log->damage;
-                            }
-                        } elseif ($log->outcome === 'block') {
-                            if ($log->targetId === 1) {
-                                $swordFullBlocks++;
-                            } else {
-                                $axeFullBlocks++;
-                            }
+                            if ($log->actorId === 1) { $hitsA++; $damageA += $log->damage; }
+                            else { $hitsB++; $damageB += $log->damage; }
+                        }
+                        
+                        if ($log->outcome === 'block') {
+                            if ($log->targetId === 1) { $blocksA++; } else { $blocksB++; }
+                        } elseif ($log->outcome === 'block_break') {
+                            if ($log->actorId === 1) { $brokenA++; } else { $brokenB++; }
                         }
                     }
+                    if ($log->type === BattleLogType::DEATH) {
+                        if ($log->actorId === 1) { $deadA = true; }
+                        elseif ($log->actorId === 2) { $deadB = true; }
+                    }
                 }
-
-                if (!$battle->isFinished()) {
-                    $battle->startNewRound();
-                }
+                if (!$battle->isFinished()) { $battle->startNewRound(); }
             }
 
-            // Check winner
-            $swordDead = $swordFighter->getCurrentHp() <= 0;
-            $axeDead = $axeFighter->getCurrentHp() <= 0;
-
-            if ($swordDead && !$axeDead) {
-                $axeWins++;
-            } elseif ($axeDead && !$swordDead) {
-                $swordWins++;
-            } else {
-                $draws++;
-            }
+            if ($deadA && !$deadB) { $winsB++; }
+            elseif ($deadB && !$deadA) { $winsA++; }
+            else { $draws++; }
         }
 
         $output = sprintf(
             "\n==============================================\n" .
-            "       BATTLE SIMULATION RESULTS (%d)       \n" .
+            "       %s (%d)       \n" .
             "==============================================\n" .
             "WINS\n" .
-            "  Sword: %d\n" .
-            "  Axe:   %d\n" .
+            "  A (%s, Break:%d): %d\n" .
+            "  B (%s, Break:%d): %d\n" .
             "  Draws: %d\n\n" .
             "OFFENSE\n" .
-            "  Sword Hits:   %d\n" .
-            "  Axe Hits:     %d\n" .
-            "  Sword Damage: %d (%d/hit avg)\n" .
-            "  Axe Damage:   %d (%d/hit avg)\n\n" .
+            "  A Attacks: %d | Hits Defended: %d | Breaks: %d (%d%% break rate)\n" .
+            "  B Attacks: %d | Hits Defended: %d | Breaks: %d (%d%% break rate)\n" .
+            "  A Damage:  %d (%d/hit avg)\n" .
+            "  B Damage:  %d (%d/hit avg)\n\n" .
             "DEFENSE (Successful Full Blocks)\n" .
-            "  Sword Blocks: %d\n" .
-            "  Axe Blocks:   %d\n" .
+            "  A Blocks: %d\n" .
+            "  B Blocks: %d\n" .
             "==============================================\n",
-            $totalBattles,
-            $swordWins,
-            $axeWins,
+            $title, $totalBattles,
+            $wA->getName(), $wA->getBlockBreakRating(), $winsA,
+            $wB->getName() . ($offB ? " + Shield" : ""), $wB->getBlockBreakRating(), $winsB,
             $draws,
-            $swordHits,
-            $axeHits,
-            $swordDamage,
-            $swordHits > 0 ? (int) ($swordDamage / $swordHits) : 0,
-            $axeDamage,
-            $axeHits > 0 ? (int) ($axeDamage / $axeHits) : 0,
-            $swordFullBlocks,
-            $axeFullBlocks
+            $totalAttacksA, $blockAttemptsB, $brokenA, $blockAttemptsB > 0 ? (int)($brokenA / $blockAttemptsB * 100) : 0,
+            $totalAttacksB, $blockAttemptsA, $brokenB, $blockAttemptsA > 0 ? (int)($brokenB / $blockAttemptsA * 100) : 0,
+            $damageA, $hitsA > 0 ? (int) ($damageA / $hitsA) : 0,
+            $damageB, $hitsB > 0 ? (int) ($damageB / $hitsB) : 0,
+            $blocksA, $blocksB
         );
 
         fwrite(STDOUT, $output);
-
-        $this->assertTrue(true); // Dummy assertion to fulfill PHPUnit test requirement
+        $this->assertTrue(true);
     }
 }

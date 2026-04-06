@@ -36,4 +36,14 @@ class Shield extends Item
     {
         return $this->requiredStrength;
     }
+
+    public function getDefensiveAPBonus(): int
+    {
+        return 1;
+    }
+
+    public function getMaxHpMultiplier(): float
+    {
+        return 0.10;
+    }
 }
