@@ -25,7 +25,7 @@ use App\Domain\Weapon\DamageType;
 use App\Domain\Weapon\Weapon;
 use PHPUnit\Framework\TestCase;
 
-class CombatBalanceTest extends TestCase
+class WeaponBalanceTest extends TestCase
 {
     private RoundResolver $resolver;
 

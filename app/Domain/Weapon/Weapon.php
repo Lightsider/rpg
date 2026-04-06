@@ -29,6 +29,7 @@ class Weapon extends Item
         private readonly int $requiredWit = 0,
         private readonly float $flatCritBonus = 0,
         private readonly float $critChanceBonus = 0.0,
+        private readonly bool $isTwoHanded = false,
     ) {
         parent::__construct($id, $name, ItemType::WEAPON);
     }
@@ -111,5 +112,10 @@ class Weapon extends Item
     public function getCritChanceBonus(): float
     {
         return $this->critChanceBonus;
+    }
+
+    public function isTwoHanded(): bool
+    {
+        return $this->isTwoHanded;
     }
 }
