@@ -11,6 +11,7 @@ use App\Domain\Battle\Rng\DefaultRandomGenerator;
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
 use App\Domain\Battle\TargetZone;
 use App\Domain\Character\Character;
+use App\Domain\Weapon\Dagger;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -22,6 +23,7 @@ class CombatResolver
 {
     private readonly ?PseudoRandomService $dodgePRNG;
     private readonly ?PseudoRandomService $critPRNG;
+    private readonly ?PseudoRandomService $parryPRNG;
     private RandomGeneratorInterface $rng;
 
     public function __construct(
@@ -29,6 +31,7 @@ class CombatResolver
         private readonly MaxDamageService $maxDamageService,
         ?PseudoRandomService $dodgePRNG = null,
         ?PseudoRandomService $critPRNG = null,
+        ?PseudoRandomService $parryPRNG = null,
         ?RandomGeneratorInterface $rng = null,
     ) {
         $this->rng = $rng ?? new DefaultRandomGenerator();
@@ -45,8 +48,15 @@ class CombatResolver
                 $this->rng
             );
         }
+        if ($parryPRNG === null) {
+            $parryPRNG = new PseudoRandomService(
+                new \App\Domain\Battle\PseudoRandom\PseudoRandomConfig(k: 120, maxFinalChance: 0.85, prngScale: 0.15),
+                $this->rng
+            );
+        }
         $this->dodgePRNG = $dodgePRNG;
         $this->critPRNG = $critPRNG;
+        $this->parryPRNG = $parryPRNG;
     }
 
     public function setRandomGenerator(RandomGeneratorInterface $rng): void
@@ -54,11 +64,17 @@ class CombatResolver
         $this->rng = $rng;
         $this->dodgePRNG->setRandomGenerator($rng);
         $this->critPRNG->setRandomGenerator($rng);
+        $this->parryPRNG->setRandomGenerator($rng);
     }
 
-    public function resolveAttack(Character $attacker, Character $defender, bool $isBlocked, ?TargetZone $targetZone = null): AttackResult
-    {
-        $weapon = $attacker->getWeaponForCombat();
+    public function resolveAttack(
+        Character $attacker,
+        Character $defender,
+        bool $isBlocked,
+        ?TargetZone $targetZone = null,
+        ?\App\Domain\Weapon\Weapon $forcedWeapon = null
+    ): AttackResult {
+        $weapon = $forcedWeapon ?? $attacker->getWeaponForCombat();
         $damageType = $weapon->getDamageType();
 
         // 1. Check dodge
@@ -66,13 +82,25 @@ class CombatResolver
             return new AttackResult(0, false, true, false, $damageType);
         }
 
-        // 2. Base Damage (Weapon + Seals + Strength)
-        $maxDamageProc = $this->maxDamageService->checkMaxDamage($attacker);
-        $weaponDamage = (float)($maxDamageProc->triggered ? $weapon->getMaxDamage() : $weapon->rollBaseDamage($this->rng));
+        // 2. Check parry (Dagger mechanic)
+        if ($this->checkParry($defender, $weapon)) {
+            return new AttackResult(0, false, false, false, $damageType, false, false, true);
+        }
+
+        // 3. Base Damage (Weapon + Seals + Strength)
+        $maxDamageProc = null;
+        if (!method_exists($weapon, 'isMaxDamageEnabled') || $weapon->isMaxDamageEnabled()) {
+            $maxDamageProc = $this->maxDamageService->checkMaxDamage($attacker);
+        }
+        
+        $weaponDamage = (float)(($maxDamageProc && $maxDamageProc->triggered) ? $weapon->getMaxDamage() : $weapon->rollBaseDamage($this->rng));
         
         $currentDamage = $weaponDamage;
         $currentDamage += $attacker->getSealsBaseDamage($this->rng);
-        $currentDamage += $attacker->calculateStrengthBonus();
+        
+        if (!($weapon instanceof Dagger)) {
+            $currentDamage += $attacker->calculateStrengthBonus();
+        }
 
         // 3. Critical Hit
         $isCritical = false;
@@ -102,7 +130,7 @@ class CombatResolver
                     isMiss: false,
                     damageType: $damageType,
                     isPierced: false,
-                    isMaxDamage: $maxDamageProc->triggered
+                    isMaxDamage: ($maxDamageProc && $maxDamageProc->triggered)
                 );
             }
             
@@ -113,7 +141,38 @@ class CombatResolver
         // 6. Armor Reduction (50% to AD, 50% to HP)
         $finalDamageInt = $this->applyArmorReduction($defender, $hitZone, $currentDamage, $attacker);
 
-        return new AttackResult($finalDamageInt, $isCritical, false, false, $damageType, $isPierced, $maxDamageProc->triggered);
+        $isMaxDamage = ($maxDamageProc && $maxDamageProc->triggered);
+
+        return new AttackResult($finalDamageInt, $isCritical, false, false, $damageType, $isPierced, $isMaxDamage, false);
+    }
+
+    private function checkParry(Character $defender, \App\Domain\Weapon\Weapon $attackerWeapon): bool
+    {
+        $rating = $defender->getParryRating();
+        if ($rating <= 0) {
+            return false;
+        }
+
+        $baseChance = $defender->calculateParryChance();
+
+        // 2H weapons are harder to parry (50% penalty)
+        if ($attackerWeapon->isTwoHanded()) {
+            $baseChance *= 0.5;
+        }
+
+        $result = $this->parryPRNG->rollWithPRNG(
+            $baseChance,
+            $defender->getParryFailStreak(),
+            $defender->getParrySuccessStreak()
+        );
+
+        if ($result->success) {
+            $defender->incrementParrySuccessStreak();
+        } else {
+            $defender->incrementParryFailStreak();
+        }
+
+        return $result->success;
     }
 
     protected function selectHitZone(): string

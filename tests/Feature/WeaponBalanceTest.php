@@ -75,7 +75,12 @@ class WeaponBalanceTest extends TestCase
             attackPointsUsed: 0,
             x: $x,
             y: $y,
-            blockResistRating: 0
+            blockResistRating: 0,
+            penetrationFailStreak: 0,
+            penetrationSuccessStreak: 0,
+            parryFailStreak: 0,
+            parrySuccessStreak: 0,
+            offhandAttackPointsUsed: 0
         );
 
         // Reflection or setter to set currentHp to the dynamic maxHp if needed,
@@ -102,7 +107,12 @@ class WeaponBalanceTest extends TestCase
             attackPointsUsed: 0,
             x: $x,
             y: $y,
-            blockResistRating: 0
+            blockResistRating: 0,
+            penetrationFailStreak: 0,
+            penetrationSuccessStreak: 0,
+            parryFailStreak: 0,
+            parrySuccessStreak: 0,
+            offhandAttackPointsUsed: 0
         );
     }
 
@@ -166,9 +176,11 @@ class WeaponBalanceTest extends TestCase
         $hitsA = 0; $hitsB = 0;
         $blocksA = 0; $blocksB = 0;
         $brokenA = 0; $brokenB = 0;
+        $parriesA = 0; $parriesB = 0;
         
         $totalAttacksA = 0; $totalAttacksB = 0;
         $blockAttemptsA = 0; $blockAttemptsB = 0;
+        $allRounds = 0;
 
         $zones = [TargetZone::HEAD, TargetZone::TORSO, TargetZone::LEGS, TargetZone::LEFT_ARM, TargetZone::RIGHT_ARM];
 
@@ -187,6 +199,12 @@ class WeaponBalanceTest extends TestCase
                     while ($char->canQueueAttack()) {
                         $battle->queueAction(new TurnAction($char->getId(), ActionType::ATTACK, $zones[array_rand($zones)]));
                         $char->registerAttackUsage();
+                        $char->spendAP(1);
+                        if ($char->getId() === 1) { $totalAttacksA++; } else { $totalAttacksB++; }
+                    }
+                    while ($char->canQueueOffhandAttack()) {
+                        $battle->queueAction(new TurnAction($char->getId(), ActionType::ATTACK_OFFHAND, $zones[array_rand($zones)]));
+                        $char->registerOffhandAttackUsage();
                         $char->spendAP(1);
                         if ($char->getId() === 1) { $totalAttacksA++; } else { $totalAttacksB++; }
                     }
@@ -215,6 +233,8 @@ class WeaponBalanceTest extends TestCase
                             if ($log->targetId === 1) { $blocksA++; } else { $blocksB++; }
                         } elseif ($log->outcome === 'block_break') {
                             if ($log->actorId === 1) { $brokenA++; } else { $brokenB++; }
+                        } elseif ($log->outcome === 'parry') {
+                            if ($log->targetId === 1) { $parriesA++; } else { $parriesB++; }
                         }
                     }
                     if ($log->type === BattleLogType::DEATH) {
@@ -228,6 +248,8 @@ class WeaponBalanceTest extends TestCase
             if ($deadA && !$deadB) { $winsB++; }
             elseif ($deadB && !$deadA) { $winsA++; }
             else { $draws++; }
+
+            $allRounds += $battle->getRoundNumber();
         }
 
         $output = sprintf(
@@ -237,28 +259,101 @@ class WeaponBalanceTest extends TestCase
             "WINS\n" .
             "  A (%s, Break:%d): %d\n" .
             "  B (%s, Break:%d): %d\n" .
-            "  Draws: %d\n\n" .
+            "  Draws: %d\n" .
+            "  Avg Rounds: %.2f\n\n" .
             "OFFENSE\n" .
             "  A Attacks: %d | Hits Defended: %d | Breaks: %d (%d%% break rate)\n" .
             "  B Attacks: %d | Hits Defended: %d | Breaks: %d (%d%% break rate)\n" .
             "  A Damage:  %d (%d/hit avg)\n" .
             "  B Damage:  %d (%d/hit avg)\n\n" .
             "DEFENSE (Successful Full Blocks)\n" .
-            "  A Blocks: %d\n" .
-            "  B Blocks: %d\n" .
+            "  A Blocks: %d | A Parries: %d (%d%% parry rate)\n" .
+            "  B Blocks: %d | B Parries: %d (%d%% parry rate)\n" .
             "==============================================\n",
             $title, $totalBattles,
             $wA->getName(), $wA->getBlockBreakRating(), $winsA,
-            $wB->getName() . ($offB ? " + Shield" : ""), $wB->getBlockBreakRating(), $winsB,
-            $draws,
+            $wB->getName() . ($offB ? " + " . $offB->getName() : ""), $wB->getBlockBreakRating(), $winsB,
+            $draws, $allRounds / $totalBattles,
             $totalAttacksA, $blockAttemptsB, $brokenA, $blockAttemptsB > 0 ? (int)($brokenA / $blockAttemptsB * 100) : 0,
             $totalAttacksB, $blockAttemptsA, $brokenB, $blockAttemptsA > 0 ? (int)($brokenB / $blockAttemptsA * 100) : 0,
             $damageA, $hitsA > 0 ? (int) ($damageA / $hitsA) : 0,
             $damageB, $hitsB > 0 ? (int) ($damageB / $hitsB) : 0,
-            $blocksA, $blocksB
+            $blocksA, $parriesA, $totalAttacksB > 0 ? (int)($parriesA / $totalAttacksB * 100) : 0,
+            $blocksB, $parriesB, $totalAttacksA > 0 ? (int)($parriesB / $totalAttacksA * 100) : 0
         );
 
         fwrite(STDOUT, $output);
         $this->assertTrue(true);
+    }
+
+    public function test_sword_dagger_vs_sword_shield()
+    {
+        $swordTemplate = new Weapon(1, 'Sword', 9, 11, DamageType::SLASHING, 0.0, 20, 0.50, 75);
+        $daggerTemplate = new \App\Domain\Weapon\Dagger(4, 'Sharp Dagger', 4.5, 5.5);
+        $shield = new Shield(3, 'Buckler', 40, 0.10);
+
+        $this->runSimulation('SWORD+DAGGER VS SWORD+SHIELD', $swordTemplate, $daggerTemplate, $swordTemplate, $shield);
+    }
+
+    public function test_axe_dagger_vs_great_axe()
+    {
+        $axeTemplate = new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 70, 0.65, 0);
+        $daggerTemplate = new \App\Domain\Weapon\Dagger(4, 'Sharp Dagger', 4.5, 5.5);
+        
+        $twoHandedAxe = new Weapon(
+            id: 5,
+            name: 'Great Axe',
+            minDamage: 11.7,
+            maxDamage: 14.3,
+            damageType: DamageType::CHOPPING,
+            accuracyBonus: 0.0,
+            blockBreakRating: 120,
+            pierceMultiplier: 0.15,
+            maxDamageRating: 75,
+            archetype: WeaponArchetype::STABLE,
+            isTwoHanded: true
+        );
+
+        $this->runSimulation('AXE+DAGGER VS 2H AXE', $axeTemplate, $daggerTemplate, $twoHandedAxe, null);
+    }
+
+    public function test_axe_dagger_vs_axe_shield()
+    {
+        $axeTemplate = new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 70, 0.65, 0);
+        $daggerTemplate = new \App\Domain\Weapon\Dagger(4, 'Sharp Dagger', 4.5, 5.5);
+        $shield = new Shield(3, 'Buckler', 40, 0.10);
+
+        $this->runSimulation('AXE+DAGGER VS AXE+SHIELD', $axeTemplate, $daggerTemplate, $axeTemplate, $shield);
+    }
+
+    public function test_sword_dagger_vs_great_axe()
+    {
+        $swordTemplate = new Weapon(1, 'Sword', 9, 11, DamageType::SLASHING, 0.0, 20, 0.50, 75);
+        $daggerTemplate = new \App\Domain\Weapon\Dagger(4, 'Sharp Dagger', 3.5, 4.5);
+        
+        $twoHandedAxe = new Weapon(
+            id: 5,
+            name: 'Great Axe',
+            minDamage: 11.7,
+            maxDamage: 14.3,
+            damageType: DamageType::CHOPPING,
+            accuracyBonus: 0.0,
+            blockBreakRating: 120,
+            pierceMultiplier: 0.15,
+            maxDamageRating: 75,
+            archetype: WeaponArchetype::STABLE,
+            isTwoHanded: true
+        );
+
+        $this->runSimulation('SWORD+DAGGER VS 2H AXE', $swordTemplate, $daggerTemplate, $twoHandedAxe, null);
+    }
+
+    public function test_sword_dagger_vs_axe_dagger()
+    {
+        $swordTemplate = new Weapon(1, 'Sword', 9, 11, DamageType::SLASHING, 0.0, 20, 0.50, 75);
+        $axeTemplate = new Weapon(2, 'Axe', 9, 11, DamageType::CHOPPING, 0.0, 70, 0.65, 0);
+        $daggerTemplate = new \App\Domain\Weapon\Dagger(4, 'Sharp Dagger', 3.5, 4.5);
+
+        $this->runSimulation('SWORD+DAGGER VS AXE+DAGGER', $swordTemplate, $daggerTemplate, $axeTemplate, $daggerTemplate);
     }
 }

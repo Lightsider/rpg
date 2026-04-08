@@ -10,6 +10,7 @@ namespace App\Domain\Battle;
 enum ActionType: string
 {
     case ATTACK = 'attack';
+    case ATTACK_OFFHAND = 'attack_offhand';
     case DEFEND = 'defend';
     case MOVE = 'move';
 }

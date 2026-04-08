@@ -58,6 +58,9 @@ class Character implements \JsonSerializable
         private int $maxDamageSuccessStreak = 0,
         private int $penetrationFailStreak = 0,
         private int $penetrationSuccessStreak = 0,
+        private int $parryFailStreak = 0,
+        private int $parrySuccessStreak = 0,
+        private int $offhandAttackPointsUsed = 0,
     ) {
         $this->adArmorHead = $this->normalizeAdArmorValue($this->adArmorHead);
         $this->adArmorChest = $this->normalizeAdArmorValue($this->adArmorChest);
@@ -102,6 +105,21 @@ class Character implements \JsonSerializable
         return !$this->isCommitted && $this->currentActionPoints > 0;
     }
 
+    public function canQueueOffhandAttack(): bool
+    {
+        if ($this->isCommitted || $this->currentActionPoints <= 0) {
+            return false;
+        }
+
+        // Only allow if we have a dagger in offhand
+        $offhand = $this->equipment->getItem(\App\Domain\Equipment\EquipmentSlot::OFF_HAND);
+        if (!$offhand || !method_exists($offhand, 'getOffHandAPBonus')) {
+            return false;
+        }
+
+        return $this->offhandAttackPointsUsed < 1;
+    }
+
     public function canSpendAP(int $cost): bool
     {
         return !$this->isCommitted && $this->currentActionPoints >= $cost;
@@ -137,6 +155,19 @@ class Character implements \JsonSerializable
         $this->attackPointsUsed++;
     }
 
+    public function registerOffhandAttackUsage(): void
+    {
+        if ($this->isCommitted) {
+            throw new \App\Domain\DomainException('Cannot register offhand attack after commitment.');
+        }
+
+        if ($this->offhandAttackPointsUsed >= 1) {
+            throw new \App\Domain\DomainException('Maximum offhand attacks per round reached.');
+        }
+
+        $this->offhandAttackPointsUsed++;
+    }
+
     public function commit(): void
     {
         $this->isCommitted = true;
@@ -149,14 +180,21 @@ class Character implements \JsonSerializable
 
     public function resetRoundState(): void
     {
-        $this->currentActionPoints = $this->maxActionPoints;
+        $this->isCommitted = false;
+        $this->attackPointsUsed = 0;
+        $this->offhandAttackPointsUsed = 0;
+
+        $totalBonusAP = 0;
         foreach ($this->equipment->getAllEquipped() as $item) {
             if (method_exists($item, 'getDefensiveAPBonus')) {
-                $this->currentActionPoints += $item->getDefensiveAPBonus();
+                $totalBonusAP += $item->getDefensiveAPBonus();
+            }
+            if (method_exists($item, 'getOffHandAPBonus')) {
+                $totalBonusAP += $item->getOffHandAPBonus();
             }
         }
-        $this->attackPointsUsed = 0;
-        $this->isCommitted = false;
+
+        $this->currentActionPoints = self::DEFAULT_MAX_AP + $totalBonusAP;
     }
 
     public function getDodgeFailStreak(): int
@@ -235,6 +273,45 @@ class Character implements \JsonSerializable
         return $this->penetrationSuccessStreak;
     }
 
+    public function getParryRating(): int
+    {
+        $rating = 0;
+        foreach ($this->equipment->getAllEquipped() as $item) {
+            if (method_exists($item, 'getParryRating')) {
+                $rating += $item->getParryRating();
+            }
+        }
+        return $rating;
+    }
+
+    public function getParryFailStreak(): int
+    {
+        return $this->parryFailStreak;
+    }
+
+    public function getParrySuccessStreak(): int
+    {
+        return $this->parrySuccessStreak;
+    }
+
+    public function incrementParryFailStreak(): void
+    {
+        $this->parryFailStreak++;
+        $this->parrySuccessStreak = 0;
+    }
+
+    public function incrementParrySuccessStreak(): void
+    {
+        $this->parrySuccessStreak++;
+        $this->parryFailStreak = 0;
+    }
+
+    public function resetParryStreaks(): void
+    {
+        $this->parryFailStreak = 0;
+        $this->parrySuccessStreak = 0;
+    }
+
     public function recordPenetrationSuccess(): void
     {
         $this->penetrationSuccessStreak++;
@@ -266,6 +343,18 @@ class Character implements \JsonSerializable
     {
         $baseDodge = CombatFormulas::dodgeChance($this->agility);
         return $baseDodge + $this->getArmorDodgeBonus();
+    }
+
+    public function calculateParryChance(): float
+    {
+        $rating = $this->getParryRating();
+        if ($rating <= 0) {
+            return 0.0;
+        }
+
+        // Standard rating-to-chance formula (rating / (rating + K))
+        // 22 rating with K=120 gives ~15.4%
+        return (float) round($rating / ($rating + 120), 4);
     }
 
     public function getArmorDodgeBonus(): float

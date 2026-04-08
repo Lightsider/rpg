@@ -19,6 +19,7 @@ class AttackResult
         public readonly DamageType $damageType,
         public readonly bool $isPierced = false,
         public readonly bool $isMaxDamage = false,
+        public readonly bool $isParried = false,
     ) {
     }
 }

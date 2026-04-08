@@ -146,7 +146,7 @@ class RoundResolver implements RoundResolverInterface
         $attackResults = [];
         $attackContexts = [];
         foreach ($queuedActions as $action) {
-            if ($action->getType() !== ActionType::ATTACK) {
+            if ($action->getType() !== ActionType::ATTACK && $action->getType() !== ActionType::ATTACK_OFFHAND) {
                 continue;
             }
 
@@ -228,13 +228,36 @@ class RoundResolver implements RoundResolverInterface
             $isBlocked = isset($defenses[$defender->getId()])
                 && in_array($action->getTargetZone()->value, $defenses[$defender->getId()], true);
 
-            $result = $this->combatResolver->resolveAttack($attacker, $defender, $isBlocked, $action->getTargetZone());
+            $forcedWeapon = null;
+            if ($action->getType() === ActionType::ATTACK_OFFHAND) {
+                $offhand = $attacker->getEquipment()->getItem(\App\Domain\Equipment\EquipmentSlot::OFF_HAND);
+                if (!$offhand instanceof \App\Domain\Weapon\Weapon) {
+                    // This attack shouldn't have been queued if no dagger is equipped, 
+                    // but we verify here for safety.
+                    $logs[] = new BattleLogEntry(
+                        roundNumber: $battle->getRoundNumber(),
+                        type: BattleLogType::ATTACK,
+                        actorId: $attackerId,
+                        targetId: $defender->getId(),
+                        zone: $action->getTargetZone(),
+                        damage: 0,
+                        outcome: 'dodge' // Use dodge/miss to represent failure to land
+                    );
+                    continue;
+                }
+                $forcedWeapon = $offhand;
+            }
+
+            $result = $this->combatResolver->resolveAttack($attacker, $defender, $isBlocked, $action->getTargetZone(), $forcedWeapon);
             $attackResults[] = ['defender' => $defender, 'result' => $result, 'attacker' => $attacker, 'zone' => $action->getTargetZone()->value];
 
             $outcome = 'hit';
             $damage = $result->damage;
             if ($result->isDodged || $result->isMiss) {
                 $outcome = 'dodge';
+                $damage = 0;
+            } elseif ($result->isParried) {
+                $outcome = 'parry';
                 $damage = 0;
             } elseif ($result->damage === 0 && $isBlocked) {
                 $outcome = 'block';
