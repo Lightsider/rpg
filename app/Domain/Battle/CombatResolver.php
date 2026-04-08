@@ -12,6 +12,7 @@ use App\Domain\Battle\Rng\RandomGeneratorInterface;
 use App\Domain\Battle\TargetZone;
 use App\Domain\Character\Character;
 use App\Domain\Weapon\Dagger;
+use App\Domain\Weapon\DamageType;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -76,6 +77,13 @@ class CombatResolver
     ): AttackResult {
         $weapon = $forcedWeapon ?? $attacker->getWeaponForCombat();
         $damageType = $weapon->getDamageType();
+
+        // 2H Axe Special: 50% chance to be Slashing instead of Chopping
+        if ($weapon->isTwoHanded() && $damageType === DamageType::CHOPPING) {
+            if ($this->rng->nextFloat() < 0.5) {
+                $damageType = DamageType::SLASHING;
+            }
+        }
 
         // 0. Hit Zone Selection (Moved up to support zone-based dodge)
         $selectedZone = $targetZone ?? TargetZone::from($this->selectHitZone());

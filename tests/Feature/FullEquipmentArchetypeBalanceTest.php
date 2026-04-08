@@ -19,8 +19,6 @@ use App\Domain\Battle\BlockPenetration\BlockPenetrationConfig;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageConfig;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
-use App\Domain\Battle\PseudoRandom\PseudoRandomConfig;
-use App\Domain\Battle\PseudoRandom\PseudoRandomService;
 use App\Services\MovementResolver;
 use App\Domain\Character\Character;
 use App\Domain\Equipment\Equipment;
@@ -80,25 +78,27 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
     {
         $stats = $this->getStats($archetype);
 
-        // 1. Create Weapon
-        $weapon = $this->buildWeapon($archetype, $weaponBase);
-        
-        // 2. Create Off-hand
-        $offhand = $this->buildOffhand($archetype, $offhandBase);
+        // 1. Get Weapon & Seals (Attacker profile)
+        $attackGear = match($archetype) {
+            'STABLE', 'TANK', 'DODGE', 'UNI' => $this->createStableGear($weaponBase),
+            'CRIT' => $this->createCritGear($weaponBase),
+            'HYBRID' => $this->createHybridGear($weaponBase),
+        };
 
-        // 3. Create Seals
-        $seals = $this->buildSeals($archetype, $weaponBase);
-
-        // 4. Create Armor
-        $armor = $this->buildArmor($archetype);
+        // 2. Get Armor & Offhand (Defender profile)
+        $defenseGear = match($archetype) {
+            'TANK', 'STABLE' => $this->createTankDefense($offhandBase),
+            'DODGE', 'CRIT' => $this->createDodgeDefense($offhandBase),
+            'UNI', 'HYBRID' => $this->createUniDefense($offhandBase),
+        };
 
         $equipment = new Equipment();
-        $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
-        if ($offhand) {
-            $equipment->setItem($offhand instanceof Shield ? EquipmentSlot::OFF_HAND : EquipmentSlot::OFF_HAND, $offhand);
+        $equipment->setItem(EquipmentSlot::MAIN_HAND, $attackGear['weapon']);
+        if ($defenseGear['offhand']) {
+            $equipment->setItem(EquipmentSlot::OFF_HAND, $defenseGear['offhand']);
         }
 
-        foreach ($seals as $idx => $seal) {
+        foreach ($attackGear['seals'] as $idx => $seal) {
             $slot = match($idx) {
                 0 => EquipmentSlot::SEAL_1,
                 1 => EquipmentSlot::SEAL_2,
@@ -108,7 +108,7 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
             $equipment->setItem($slot, $seal);
         }
 
-        foreach ($armor as $idx => $piece) {
+        foreach ($defenseGear['armor'] as $idx => $piece) {
             $slot = match($idx) {
                 0 => EquipmentSlot::HELMET,
                 1 => EquipmentSlot::CHEST,
@@ -133,134 +133,174 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
         return $char;
     }
 
-    private function buildWeapon(string $archetype, string $base): Weapon
+    private function createStableGear(string $base): array
     {
-        $isSword = str_contains($base, 'SWORD');
-        $is2H = $base === '2H_AXE';
+        $isSword = str_contains($base, 'SWORD'); 
+        $is2H = $base === '2H_AXE'; 
         $isDagger = $base === 'DAGGER';
-        $damageType = $isSword ? DamageType::SLASHING : DamageType::CHOPPING;
-        
-        $breakBase = $isSword ? 20 : 60;
-        if ($is2H) $breakBase = 120;
-
-        // Concrete values for each base
-        $minDmg = 9.0; $maxDmg = 11.0; 
-        if ($isDagger) { $minDmg = 4.5; $maxDmg = 5.5; }
-        elseif ($is2H) { $minDmg = 11.7; $maxDmg = 14.3; }
-
-        $flatCrit = 0.0;
-        $critChance = 0.0;
-        $maxDmgRating = 0;
-
-        if (str_contains($archetype, 'CRIT')) {
-            if ($isDagger) {
-                $minDmg = 3.5; $maxDmg = 4.5; $flatCrit = 5.0;
-            } elseif ($is2H) {
-                $minDmg = 9.1; $maxDmg = 11.7; $flatCrit = 13.0;
-            } else {
-                $minDmg = 7.0; $maxDmg = 9.0; $flatCrit = 10.0;
-            }
-            $critChance = 5.0;
-        } elseif (str_contains($archetype, 'HYBRID')) {
-            if ($isDagger) {
-                $minDmg = 4.25; $maxDmg = 5.25; $flatCrit = 2.0;
-            } elseif ($is2H) {
-                $minDmg = 11.05; $maxDmg = 13.65; $flatCrit = 5.2;
-            } else {
-                $minDmg = 8.5; $maxDmg = 10.5; $flatCrit = 4.0;
-            }
-            $critChance = 3.0;
-        } elseif (str_contains($archetype, 'STABLE') || $archetype === 'TANK') {
-            $maxDmgRating = 75;
+        $min = 9.0; $max = 11.0;
+        if ($isDagger) { 
+            $min = 4.5;
+            $max = 5.5; 
+        } elseif ($is2H) { 
+            $min = 11.7; 
+            $max = 14.3; 
         }
 
-        return new Weapon(
-            id: rand(1000, 9000),
-            name: "Weapon $base $archetype",
-            minDamage: $minDmg,
-            maxDamage: $maxDmg,
-            damageType: $damageType,
-            accuracyBonus: 0.0,
-            blockBreakRating: $breakBase,
+        $weapon = new Weapon(
+            id: rand(1000, 9000), 
+            name: "Stable $base", 
+            minDamage: $min, 
+            maxDamage: $max, 
+            damageType: $isSword ? DamageType::SLASHING : DamageType::CHOPPING,
+            blockBreakRating: $is2H ? 120 : ($isSword ? 20 : 60),
             pierceMultiplier: $isSword ? 0.5 : 0.65,
-            maxDamageRating: $maxDmgRating,
-            flatCritBonus: $flatCrit,
-            critChanceBonus: $critChance,
+            maxDamageRating: 75,
             archetype: WeaponArchetype::STABLE,
             isTwoHanded: $is2H
         );
-    }
-
-    private function buildOffhand(string $archetype, string $base): ?\App\Domain\Item\Item
-    {
-        if ($base === 'NONE') return null;
-        if ($base === 'DAGGER') {
-            return new Dagger(rand(1000, 9000), 'Dagger', 4.5, 5.5);
-        }
         
-        // Shield logic
-        $block = 40;
-        $adArmor = 0.0;
-        $dodge = 0.0;
-
-        if ($archetype === 'TANK') {
-            $adArmor = 15.0; // 15% armor across all zones
-        } elseif ($archetype === 'DODGE') {
-            $dodge = 15.0; // 15% dodge chance
-        } elseif ($archetype === 'UNI') {
-            $adArmor = 7.5;
-            $dodge = 7.5;
-        }
-
-        return new Shield(rand(1000, 9000), 'Shield', (int) $block, 0.10, 0, $adArmor, $dodge);
-    }
-
-    private function buildSeals(string $archetype, string $base): array
-    {
-        $isDagger = $base === 'DAGGER';
-        $is2H = $base === '2H_AXE';
         $seals = [];
-
         for ($i = 0; $i < 4; $i++) {
-            $minOff = 0.7; $maxOff = 0.8; 
-            if ($isDagger) { $minOff = 0.35; $maxOff = 0.4; }
-            elseif ($is2H) { $minOff = 0.91; $maxOff = 1.04; }
-
-            $flatCrit = 0.0;
-            $critChance = 0.0;
-
-            if (str_contains($archetype, 'CRIT')) {
-                if ($isDagger) {
-                    $minOff = 0.25; $maxOff = 0.325; $flatCrit = 0.4;
-                } elseif ($is2H) {
-                    $minOff = 0.65; $maxOff = 0.845; $flatCrit = 1.04;
-                } else {
-                    $minOff = 0.5; $maxOff = 0.65; $flatCrit = 0.8;
-                }
-                $critChance = 0.7;
-            }
-
+            $sMin = 0.7; $sMax = 0.8;
+            if ($isDagger) { $sMin = 0.35; $sMax = 0.4; } elseif ($is2H) { $sMin = 0.91; $sMax = 1.04; }
             $seals[] = new Seal(
-                rand(10000, 90000), "Seal $archetype",
-                $minOff, $maxOff, $flatCrit, $critChance,
-                WeaponArchetype::STABLE, 4, 0
+                id: rand(10000, 90000), 
+                name: "Stable Seal", 
+                minDamage: $sMin, 
+                maxDamage: $sMax, 
+                archetype: WeaponArchetype::STABLE, 
+                requiredStrength: 4
             );
         }
-        return $seals;
+        return ['weapon' => $weapon, 'seals' => $seals];
     }
 
-    private function buildArmor(string $archetype): array
+    private function createCritGear(string $base): array
     {
-        $prot = 4.0; $dodge = 1.0;
-        if ($archetype === 'TANK') { $prot = 6.0; $dodge = 0.0; }
-        if ($archetype === 'DODGE') { $prot = 0.0; $dodge = 3.0; }
+        $isSword = str_contains($base, 'SWORD'); $is2H = $base === '2H_AXE'; $isDagger = $base === 'DAGGER';
+        $min = 7.0; $max = 9.0; $flat = 10.0;
+        if ($isDagger) { $min = 3.5; $max = 4.5; $flat = 5.0; } elseif ($is2H) { $min = 9.1; $max = 11.7; $flat = 13.0; }
 
-        return [
-            new Armor(rand(100, 900), 'Head', $prot, $dodge, ArmorSubtype::HELMET, 0, 0, 0, 4),
-            new Armor(rand(100, 900), 'Body', $prot, $dodge, ArmorSubtype::BODY, 0, 0, 0, 4),
-            new Armor(rand(100, 900), 'Legs', $prot, $dodge, ArmorSubtype::BOOTS, 0, 0, 0, 4),
-            new Armor(rand(100, 900), 'Arms', $prot, $dodge, ArmorSubtype::GLOVES, 0, 0, 0, 4),
+        $weapon = new Weapon(
+            id: rand(1000, 9000), 
+            name: "Crit $base", 
+            minDamage: $min, 
+            maxDamage: $max, 
+            damageType: $isSword ? DamageType::SLASHING : DamageType::CHOPPING,
+            blockBreakRating: $is2H ? 120 : ($isSword ? 20 : 60),
+            pierceMultiplier: $isSword ? 0.5 : 0.65,
+            archetype: WeaponArchetype::CRIT,
+            flatCritBonus: $flat,
+            critChanceBonus: 5.0,
+            isTwoHanded: $is2H
+        );
+        
+        $seals = [];
+        for ($i = 0; $i < 4; $i++) {
+            $sMin = 0.5; $sMax = 0.65;
+            if ($isDagger) { $sMin = 0.25; $sMax = 0.325; } elseif ($is2H) { $sMin = 0.65; $sMax = 0.845; }
+            $seals[] = new Seal(
+                id: rand(10000, 90000), 
+                name: "Crit Seal", 
+                minDamage: $sMin, 
+                maxDamage: $sMax, 
+                flatCritBonus: $isDagger ? 0.4 : ($is2H ? 1.04 : 0.8), 
+                critChanceBonus: 0.7, 
+                archetype: WeaponArchetype::CRIT, 
+                requiredStrength: 4
+            );
+        }
+        return ['weapon' => $weapon, 'seals' => $seals];
+    }
+
+    private function createHybridGear(string $base): array
+    {
+        $isSword = str_contains($base, 'SWORD'); 
+        $is2H = $base === '2H_AXE'; 
+        $isDagger = $base === 'DAGGER';
+        $min = 8.5; 
+        $max = 10.5; 
+        $flat = 4.0;
+        if ($isDagger) { $min = 4.25; $max = 5.25; $flat = 2.0; } elseif ($is2H) { $min = 11.05; $max = 13.65; $flat = 5.2; }
+
+        $weapon = new Weapon(
+            id: rand(1000, 9000), 
+            name: "Hybrid $base", 
+            minDamage: $min, 
+            maxDamage: $max, 
+            damageType: $isSword ? DamageType::SLASHING : DamageType::CHOPPING,
+            blockBreakRating: $is2H ? 120 : ($isSword ? 20 : 60),
+            pierceMultiplier: $isSword ? 0.5 : 0.65,
+            archetype: WeaponArchetype::HYBRID,
+            flatCritBonus: $flat,
+            critChanceBonus: 3.0,
+            isTwoHanded: $is2H
+        );
+        
+        $seals = [];
+        for ($i = 0; $i < 4; $i++) {
+            $sMin = 0.7; $sMax = 0.8;
+            if ($isDagger) { 
+                $sMin = 0.35; $sMax = 0.4; 
+            } elseif ($is2H) { 
+                $sMin = 0.91; $sMax = 1.04; 
+            }
+            $seals[] = new Seal(
+                id: rand(10000, 90000), 
+                name: "Hybrid Seal", 
+                minDamage: $sMin, 
+                maxDamage: $sMax, 
+                archetype: WeaponArchetype::HYBRID, 
+                requiredStrength: 6
+            );
+        }
+        return ['weapon' => $weapon, 'seals' => $seals];
+    }
+
+    private function createTankDefense(string $offhandBase): array
+    {
+        $armor = [
+            new Armor(rand(100, 900), 'Tank Helm', 6.0, 0.0, ArmorSubtype::HELMET, 0, 0, 0, 4),
+            new Armor(rand(100, 900), 'Tank Chest', 6.0, 0.0, ArmorSubtype::BODY, 0, 0, 0, 4),
+            new Armor(rand(100, 900), 'Tank Legs', 6.0, 0.0, ArmorSubtype::BOOTS, 0, 0, 0, 4),
+            new Armor(rand(100, 900), 'Tank Arms', 6.0, 0.0, ArmorSubtype::GLOVES, 0, 0, 0, 4),
         ];
+        $offhand = null;
+        if ($offhandBase === 'DAGGER') $offhand = new Dagger(rand(1000, 9000), 'Dagger', 4.5, 5.5);
+        elseif ($offhandBase === 'SHIELD') $offhand = new Shield(rand(1000, 9000), 'Tank Shield', 40, 0.10, 0, 2.0, 0.0);
+        
+        return ['armor' => $armor, 'offhand' => $offhand];
+    }
+
+    private function createDodgeDefense(string $offhandBase): array
+    {
+        $armor = [
+            new Armor(rand(100, 900), 'Dodge Helm', 0.0, 3.0, ArmorSubtype::HELMET, 0, 0, 0, 4),
+            new Armor(rand(100, 900), 'Dodge Chest', 0.0, 3.0, ArmorSubtype::BODY, 0, 0, 0, 4),
+            new Armor(rand(100, 900), 'Dodge Legs', 0.0, 3.0, ArmorSubtype::BOOTS, 0, 0, 0, 4),
+            new Armor(rand(100, 900), 'Dodge Arms', 0.0, 3.0, ArmorSubtype::GLOVES, 0, 0, 0, 4),
+        ];
+        $offhand = null;
+        if ($offhandBase === 'DAGGER') $offhand = new Dagger(rand(1000, 9000), 'Dagger', 4.5, 5.5);
+        elseif ($offhandBase === 'SHIELD') $offhand = new Shield(rand(1000, 9000), 'Dodge Shield', 40, 0.10, 0, 0.0, 15.0);
+
+        return ['armor' => $armor, 'offhand' => $offhand];
+    }
+
+    private function createUniDefense(string $offhandBase): array
+    {
+        $armor = [
+            new Armor(rand(100, 900), 'Uni Helm', 4.0, 1.0, ArmorSubtype::HELMET, 0, 0, 0, 4),
+            new Armor(rand(100, 900), 'Uni Chest', 4.0, 1.0, ArmorSubtype::BODY, 0, 0, 0, 4),
+            new Armor(rand(100, 900), 'Uni Legs', 4.0, 1.0, ArmorSubtype::BOOTS, 0, 0, 0, 4),
+            new Armor(rand(100, 900), 'Uni Arms', 4.0, 1.0, ArmorSubtype::GLOVES, 0, 0, 0, 4),
+        ];
+        $offhand = null;
+        if ($offhandBase === 'DAGGER') $offhand = new Dagger(rand(1000, 9000), 'Dagger', 4.5, 5.5);
+        elseif ($offhandBase === 'SHIELD') $offhand = new Shield(rand(1000, 9000), 'Uni Shield', 40, 0.10, 0, 1, 7.5);
+
+        return ['armor' => $armor, 'offhand' => $offhand];
     }
 
     // =========================================================================
