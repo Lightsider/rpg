@@ -280,8 +280,6 @@ class FullArchetypeBalanceTest extends TestCase
             $battle = new Battle($i, 1, [$charA, $charB], new Map(10, 10));
 
             $deadA = false; $deadB = false;
-            $initialHpA = $charA->getCurrentHp();
-            $initialHpB = $charB->getCurrentHp();
 
             while (!$battle->isFinished()) {
                 $totalRounds++;
@@ -295,6 +293,12 @@ class FullArchetypeBalanceTest extends TestCase
                     $bId = $charB->getId();
 
                     if ($log->type === BattleLogType::ATTACK) {
+                        // Track damage from logs (HP is restored after battle ends)
+                        if ($log->damage !== null && $log->damage > 0) {
+                            if ($log->actorId === $aId) $totalDamageA += $log->damage;
+                            elseif ($log->actorId === $bId) $totalDamageB += $log->damage;
+                        }
+
                         if (in_array($log->outcome, ['hit', 'block_break'], true)) {
                             if ($log->actorId === $aId) $totalHitsA++;
                             elseif ($log->actorId === $bId) $totalHitsB++;
@@ -334,9 +338,6 @@ class FullArchetypeBalanceTest extends TestCase
 
                 if (!$battle->isFinished()) $battle->startNewRound();
             }
-
-            $totalDamageA += max(0, $initialHpB - $charB->getCurrentHp());
-            $totalDamageB += max(0, $initialHpA - $charA->getCurrentHp());
 
             if ($deadB && !$deadA) $winsA++;
             elseif ($deadA && !$deadB) $winsB++;

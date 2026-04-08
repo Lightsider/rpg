@@ -74,17 +74,6 @@ Armor:
 
 ---
 
-## Next Evolution
-
-Introduce multi-unit combat:
-- team-based fights
-- target selection
-- positioning impact
-
-This will redefine balance.
-
----
-
 ## Critical Constraint
 
 All systems must remain:

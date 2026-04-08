@@ -33,8 +33,18 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Full Equipment Archetype Balance Test
- * 
- * Compares Shield, Dagger, and 2H Axe builds in a 18-test matrix across archetypes.
+ *
+ * Tests combat balance across all offhand + weapon combinations.
+ *
+ * DEFENSE tests (Stable attack fixed): Tank vs Dodge, Dodge vs Uni, Tank vs Uni
+ * ATTACK tests  (Tank defense fixed):  Stable vs Crit, Stable vs Hybrid, Crit vs Hybrid
+ *
+ * Each matchup runs 8 equipment combos:
+ *   Shield vs Dagger (Sword×Sword, Sword×Axe, Axe×Sword, Axe×Axe)
+ *   Dagger vs 2H Axe (Sword, Axe)
+ *   Shield vs 2H Axe (Sword, Axe)
+ *
+ * Total: 6 matchups × 8 combos = 48 simulations
  */
 class FullEquipmentArchetypeBalanceTest extends TestCase
 {
@@ -60,7 +70,7 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
     }
 
     // =========================================================================
-    // Archetype Factory
+    // Stats Builders
     // =========================================================================
 
     private function getStats(string $archetype): array
@@ -74,73 +84,9 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
         };
     }
 
-    private function createFighter(string $name, int $id, string $archetype, string $weaponBase, string $offhandBase): Character
-    {
-        $stats = $this->getStats($archetype);
-
-        // 1. Get Weapon & Seals (Attacker profile)
-        $attackGear = match ($archetype) {
-            'STABLE', 'TANK', 'DODGE', 'UNI' => $this->createStableGear($weaponBase),
-            'CRIT' => $this->createCritGear($weaponBase),
-            'HYBRID' => $this->createHybridGear($weaponBase),
-        };
-
-        // 2. Get Armor & Offhand (Defender profile)
-        $defenseGear = match ($archetype) {
-            'TANK', 'STABLE','CRIT', 'HYBRID' => $this->createTankDefense($offhandBase),
-            'DODGE'  => $this->createDodgeDefense($offhandBase),
-            'UNI'  => $this->createUniDefense($offhandBase),
-        };
-
-        $equipment = new Equipment();
-        $equipment->setItem(EquipmentSlot::MAIN_HAND, $attackGear['weapon']);
-        if ($defenseGear['offhand']) {
-            $equipment->setItem(EquipmentSlot::OFF_HAND, $defenseGear['offhand']);
-        }
-
-        foreach ($attackGear['seals'] as $idx => $seal) {
-            $slot = match ($idx) {
-                0 => EquipmentSlot::SEAL_1,
-                1 => EquipmentSlot::SEAL_2,
-                2 => EquipmentSlot::SEAL_3,
-                3 => EquipmentSlot::SEAL_4,
-            };
-            $equipment->setItem($slot, $seal);
-        }
-
-        foreach ($defenseGear['armor'] as $idx => $piece) {
-            $slot = match ($idx) {
-                0 => EquipmentSlot::HELMET,
-                1 => EquipmentSlot::CHEST,
-                2 => EquipmentSlot::LEGS,
-                3 => EquipmentSlot::GLOVES,
-            };
-            $equipment->setItem($slot, $piece);
-        }
-
-        $maxHp = (int) ceil(40 + ($stats['con'] * 8.5));
-
-        $char = new Character(
-            id: $id,
-            userId: $id,
-            name: $name,
-            strength: $stats['str'],
-            agility: $stats['agi'],
-            constitution: $stats['con'],
-            wit: $stats['wit'],
-            maxHp: $maxHp,
-            currentHp: $maxHp,
-            equipment: $equipment,
-            maxActionPoints: 3,
-            currentActionPoints: 3,
-            attackPointsUsed: 0,
-            x: $id === 1 ? 0 : 1,
-            y: 0
-        );
-
-        $char->initializeAdArmor();
-        return $char;
-    }
+    // =========================================================================
+    // Gear Builders
+    // =========================================================================
 
     private function createStableGear(string $base): array
     {
@@ -172,13 +118,11 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $sMin = 0.7;
-            $sMax = 0.8;
             $seals[] = new Seal(
                 id: rand(10000, 90000),
                 name: "Stable Seal",
-                minDamage: $sMin,
-                maxDamage: $sMax,
+                minDamage: 0.7,
+                maxDamage: 0.8,
                 archetype: WeaponArchetype::STABLE,
                 requiredStrength: 4
             );
@@ -221,13 +165,11 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $sMin = 0.5;
-            $sMax = 0.65;
             $seals[] = new Seal(
                 id: rand(10000, 90000),
                 name: "Crit Seal",
-                minDamage: $sMin,
-                maxDamage: $sMax,
+                minDamage: 0.5,
+                maxDamage: 0.65,
                 flatCritBonus: 0.8,
                 critChanceBonus: 0.7,
                 archetype: WeaponArchetype::CRIT,
@@ -272,13 +214,11 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
 
         $seals = [];
         for ($i = 0; $i < 4; $i++) {
-            $sMin = 0.6;
-            $sMax = 0.75;
             $seals[] = new Seal(
                 id: rand(10000, 90000),
                 name: "Hybrid Seal",
-                minDamage: $sMin,
-                maxDamage: $sMax,
+                minDamage: 0.6,
+                maxDamage: 0.75,
                 flatCritBonus: 0.3,
                 critChanceBonus: 0.5,
                 archetype: WeaponArchetype::HYBRID,
@@ -340,21 +280,148 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
     }
 
     // =========================================================================
-    // Simulation Runner
+    // Fighter Builder
     // =========================================================================
 
-    private function runSimulation(string $title, string $archA, string $wA, string $offA, string $archB, string $wB, string $offB): void
+    private function createFighter(string $name, int $id, string $archetype, string $weaponBase, string $offhandBase): Character
+    {
+        $stats = $this->getStats($archetype);
+
+        $attackGear = match ($archetype) {
+            'STABLE', 'TANK', 'DODGE', 'UNI' => $this->createStableGear($weaponBase),
+            'CRIT' => $this->createCritGear($weaponBase),
+            'HYBRID' => $this->createHybridGear($weaponBase),
+        };
+
+        $defenseGear = match ($archetype) {
+            'TANK', 'STABLE', 'CRIT', 'HYBRID' => $this->createTankDefense($offhandBase),
+            'DODGE' => $this->createDodgeDefense($offhandBase),
+            'UNI' => $this->createUniDefense($offhandBase),
+        };
+
+        $equipment = new Equipment();
+        $equipment->setItem(EquipmentSlot::MAIN_HAND, $attackGear['weapon']);
+        if ($defenseGear['offhand']) {
+            $equipment->setItem(EquipmentSlot::OFF_HAND, $defenseGear['offhand']);
+        }
+
+        foreach ($attackGear['seals'] as $idx => $seal) {
+            $slot = match ($idx) {
+                0 => EquipmentSlot::SEAL_1,
+                1 => EquipmentSlot::SEAL_2,
+                2 => EquipmentSlot::SEAL_3,
+                3 => EquipmentSlot::SEAL_4,
+            };
+            $equipment->setItem($slot, $seal);
+        }
+
+        foreach ($defenseGear['armor'] as $idx => $piece) {
+            $slot = match ($idx) {
+                0 => EquipmentSlot::HELMET,
+                1 => EquipmentSlot::CHEST,
+                2 => EquipmentSlot::LEGS,
+                3 => EquipmentSlot::GLOVES,
+            };
+            $equipment->setItem($slot, $piece);
+        }
+
+        $maxHp = (int) ceil(40 + ($stats['con'] * 8.5));
+
+        $char = new Character(
+            id: $id,
+            userId: $id,
+            name: $name,
+            strength: $stats['str'],
+            agility: $stats['agi'],
+            constitution: $stats['con'],
+            wit: $stats['wit'],
+            maxHp: $maxHp,
+            currentHp: $maxHp,
+            equipment: $equipment,
+            maxActionPoints: 3,
+            currentActionPoints: 3,
+            attackPointsUsed: 0,
+            x: $id === 1 ? 0 : 1,
+            y: 0
+        );
+
+        // Apply equipment HP bonuses (e.g. Shield +10% max HP)
+        $char->setCurrentHp($char->getMaxHp());
+        $char->initializeAdArmor();
+        return $char;
+    }
+
+    // =========================================================================
+    // Core Helpers (matching FullArchetypeBalanceTest)
+    // =========================================================================
+
+    private function queueActions(Battle $battle, Character $char): void
+    {
+        $zones = [TargetZone::HEAD, TargetZone::TORSO, TargetZone::LEGS, TargetZone::LEFT_ARM, TargetZone::RIGHT_ARM];
+
+        // Main-hand attacks
+        while ($char->canQueueAttack()) {
+            $battle->queueAction(new TurnAction(
+                characterId: $char->getId(),
+                type: ActionType::ATTACK,
+                targetZone: $zones[array_rand($zones)]
+            ));
+            $char->registerAttackUsage();
+            $char->spendAP(1);
+        }
+
+        // Off-hand attacks (dagger)
+        while ($char->canQueueOffhandAttack()) {
+            $battle->queueAction(new TurnAction(
+                characterId: $char->getId(),
+                type: ActionType::ATTACK_OFFHAND,
+                targetZone: $zones[array_rand($zones)]
+            ));
+            $char->registerOffhandAttackUsage();
+            $char->spendAP(1);
+        }
+
+        // Defense — all characters block with remaining AP
+        // Base: 1 block (from 3 AP - 2 attacks)
+        // Shield: 2 blocks (from 4 AP - 2 attacks, shield gives +1 defensive AP)
+        while ($char->canQueueDefense()) {
+            $battle->queueAction(new TurnAction(
+                characterId: $char->getId(),
+                type: ActionType::DEFEND,
+                targetZone: $zones[array_rand($zones)]
+            ));
+            $char->spendAP(1);
+        }
+
+        $char->commit();
+    }
+
+    // =========================================================================
+    // Simulation Runner (matching FullArchetypeBalanceTest)
+    // =========================================================================
+
+    private function runSimulation(string $archA, string $wA, string $offA, string $archB, string $wB, string $offB): array
     {
         $winsA = 0;
         $winsB = 0;
         $draws = 0;
         $totalRounds = 0;
-        $totalAttacksA = 0;
-        $totalAttacksB = 0;
-        $parriesA = 0;
-        $parriesB = 0;
-        $blocksA = 0;
-        $blocksB = 0;
+        $totalDamageA = 0;
+        $totalDamageB = 0;
+        $totalCritsA = 0;
+        $totalCritsB = 0;
+        $totalBlockBreaksA = 0;
+        $totalBlockBreaksB = 0;
+        $totalMaxDamagesA = 0;
+        $totalMaxDamagesB = 0;
+        $totalDodgesA = 0;
+        $totalDodgesB = 0;
+        $totalBlocksA = 0;
+        $totalBlocksB = 0;
+        $totalHitsA = 0;
+        $totalHitsB = 0;
+        $totalParriesA = 0;
+        $totalParriesB = 0;
 
         for ($i = 0; $i < self::BATTLES_PER_TEST; $i++) {
             $charA = $this->createFighter('A', 1, $archA, $wA, $offA);
@@ -365,131 +432,230 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
             $deadB = false;
 
             while (!$battle->isFinished()) {
+                $totalRounds++;
                 $charA->resetRoundState();
                 $charB->resetRoundState();
-                foreach ([$charA, $charB] as $char) {
-                    while ($char->canQueueAttack()) {
-                        $battle->queueAction(new TurnAction($char->getId(), ActionType::ATTACK, TargetZone::TORSO));
-                        $char->registerAttackUsage();
-                        $char->spendAP(1);
-                        if ($char->getId() === 1)
-                            $totalAttacksA++;
-                        else
-                            $totalAttacksB++;
-                    }
-                    while ($char->canQueueOffhandAttack()) {
-                        $battle->queueAction(new TurnAction($char->getId(), ActionType::ATTACK_OFFHAND, TargetZone::TORSO));
-                        $char->registerOffhandAttackUsage();
-                        $char->spendAP(1);
-                        if ($char->getId() === 1)
-                            $totalAttacksA++;
-                        else
-                            $totalAttacksB++;
-                    }
-                    while ($char->canQueueDefense()) {
-                        $offhand = $char->getEquipment()->getItem(\App\Domain\Equipment\EquipmentSlot::OFF_HAND);
-                        if ($offhand instanceof Shield) {
-                            $battle->queueAction(new TurnAction($char->getId(), ActionType::DEFEND, TargetZone::TORSO));
-                        }
-                        $char->spendAP(1);
-                    }
-                    $char->commit();
-                }
+                $this->queueActions($battle, $charA);
+                $this->queueActions($battle, $charB);
+
                 $result = $this->resolver->resolve($battle);
                 foreach ($result->logs as $log) {
+                    $aId = $charA->getId();
+                    $bId = $charB->getId();
+
                     if ($log->type === BattleLogType::ATTACK) {
+                        // Track damage from logs (HP is restored after battle ends)
+                        if ($log->damage !== null && $log->damage > 0) {
+                            if ($log->actorId === $aId) $totalDamageA += $log->damage;
+                            elseif ($log->actorId === $bId) $totalDamageB += $log->damage;
+                        }
+
+                        if (in_array($log->outcome, ['hit', 'block_break'], true)) {
+                            if ($log->actorId === $aId) $totalHitsA++;
+                            elseif ($log->actorId === $bId) $totalHitsB++;
+                        }
+
+                        if ($log->isCrit) {
+                            if ($log->actorId === $aId) $totalCritsA++;
+                            elseif ($log->actorId === $bId) $totalCritsB++;
+                        }
+
+                        if ($log->outcome === 'block_break') {
+                            if ($log->actorId === $aId) $totalBlockBreaksA++;
+                            elseif ($log->actorId === $bId) $totalBlockBreaksB++;
+                        }
+
+                        if ($log->isMax) {
+                            if ($log->actorId === $aId) $totalMaxDamagesA++;
+                            elseif ($log->actorId === $bId) $totalMaxDamagesB++;
+                        }
+
+                        if ($log->outcome === 'dodge') {
+                            if ($log->targetId === $aId) $totalDodgesA++;
+                            elseif ($log->targetId === $bId) $totalDodgesB++;
+                        }
+
+                        if ($log->outcome === 'block') {
+                            if ($log->targetId === $aId) $totalBlocksA++;
+                            elseif ($log->targetId === $bId) $totalBlocksB++;
+                        }
+
                         if ($log->outcome === 'parry') {
-                            if ($log->targetId === 1)
-                                $parriesA++;
-                            else
-                                $parriesB++;
-                        } elseif ($log->outcome === 'block') {
-                            if ($log->targetId === 1)
-                                $blocksA++;
-                            else
-                                $blocksB++;
+                            if ($log->targetId === $aId) $totalParriesA++;
+                            elseif ($log->targetId === $bId) $totalParriesB++;
                         }
                     }
+
                     if ($log->type === BattleLogType::DEATH) {
-                        if ($log->actorId === 1)
-                            $deadA = true;
-                        else
-                            $deadB = true;
+                        if ($log->actorId === 1) $deadA = true;
+                        if ($log->actorId === 2) $deadB = true;
                     }
                 }
-                if (!$battle->isFinished())
-                    $battle->startNewRound();
+
+                if (!$battle->isFinished()) $battle->startNewRound();
             }
-            if ($deadA && !$deadB)
-                $winsB++;
-            elseif ($deadB && !$deadA)
-                $winsA++;
-            else
-                $draws++;
-            $totalRounds += $battle->getRoundNumber();
+
+            if ($deadB && !$deadA) $winsA++;
+            elseif ($deadA && !$deadB) $winsB++;
+            else $draws++;
         }
 
+        return [
+            'winRateA' => ($winsA / self::BATTLES_PER_TEST),
+            'winRateB' => ($winsB / self::BATTLES_PER_TEST),
+            'drawRate' => ($draws / self::BATTLES_PER_TEST),
+            'avgRounds' => $totalRounds / self::BATTLES_PER_TEST,
+            'avgDamageA' => $totalDamageA / self::BATTLES_PER_TEST,
+            'avgDamageB' => $totalDamageB / self::BATTLES_PER_TEST,
+            'avgCritsA' => $totalCritsA / self::BATTLES_PER_TEST,
+            'avgCritsB' => $totalCritsB / self::BATTLES_PER_TEST,
+            'avgBlockBreaksA' => $totalBlockBreaksA / self::BATTLES_PER_TEST,
+            'avgBlockBreaksB' => $totalBlockBreaksB / self::BATTLES_PER_TEST,
+            'avgMaxDamagesA' => $totalMaxDamagesA / self::BATTLES_PER_TEST,
+            'avgMaxDamagesB' => $totalMaxDamagesB / self::BATTLES_PER_TEST,
+            'avgDodgesA' => $totalDodgesA / self::BATTLES_PER_TEST,
+            'avgDodgesB' => $totalDodgesB / self::BATTLES_PER_TEST,
+            'avgBlocksA' => $totalBlocksA / self::BATTLES_PER_TEST,
+            'avgBlocksB' => $totalBlocksB / self::BATTLES_PER_TEST,
+            'avgHitsA' => $totalHitsA / self::BATTLES_PER_TEST,
+            'avgHitsB' => $totalHitsB / self::BATTLES_PER_TEST,
+            'avgParriesA' => $totalParriesA / self::BATTLES_PER_TEST,
+            'avgParriesB' => $totalParriesB / self::BATTLES_PER_TEST,
+        ];
+    }
+
+    private function printResults(string $title, string $matchup, array $results): void
+    {
+        $avgIncomingA = 2 * $results['avgRounds'];
+        $avgIncomingB = 2 * $results['avgRounds'];
+        $avgDodgeRateA = $avgIncomingA > 0 ? ($results['avgDodgesA'] / $avgIncomingA) * 100 : 0.0;
+        $avgDodgeRateB = $avgIncomingB > 0 ? ($results['avgDodgesB'] / $avgIncomingB) * 100 : 0.0;
+
         $output = sprintf(
-            "\n[%s] %s (%s+%s) vs %s (%s+%s)\n" .
-            "WINS: A:%d, B:%d, Draws:%d | AvgRounds:%.2f\n" .
-            "DEF: A(B:%d, P:%d) | B(B:%d, P:%d)\n",
+            "\n========================================\n" .
+            "  %s [%s]\n" .
+            "========================================\n" .
+            "A win: %d%%  B win: %d%%  Draw: %d%%\n" .
+            "Avg rounds: %.1f\n" .
+            "Avg damage   — A: %.1f  B: %.1f\n" .
+            "Hits landed  — A: %.1f  B: %.1f\n" .
+            "Crits        — A: %.1f  B: %.1f\n" .
+            "Block breaks — A: %.1f  B: %.1f\n" .
+            "Max dmg procs— A: %.1f  B: %.1f\n" .
+            "Dodges (def) — A: %.1f  B: %.1f\n" .
+            "Dodge rate   — A: %.1f%% B: %.1f%% (2 attacks/round)\n" .
+            "Blocks (def) — A: %.1f  B: %.1f\n" .
+            "Parries(def) — A: %.1f  B: %.1f\n" .
+            "========================================\n",
             $title,
-            $archA,
-            $wA,
-            $offA,
-            $archB,
-            $wB,
-            $offB,
-            $winsA,
-            $winsB,
-            $draws,
-            $totalRounds / self::BATTLES_PER_TEST,
-            $blocksA,
-            $parriesA,
-            $blocksB,
-            $parriesB
+            $matchup,
+            (int) round($results['winRateA'] * 100),
+            (int) round($results['winRateB'] * 100),
+            (int) round($results['drawRate'] * 100),
+            $results['avgRounds'],
+            $results['avgDamageA'],
+            $results['avgDamageB'],
+            $results['avgHitsA'],
+            $results['avgHitsB'],
+            $results['avgCritsA'],
+            $results['avgCritsB'],
+            $results['avgBlockBreaksA'],
+            $results['avgBlockBreaksB'],
+            $results['avgMaxDamagesA'],
+            $results['avgMaxDamagesB'],
+            $results['avgDodgesA'],
+            $results['avgDodgesB'],
+            $avgDodgeRateA,
+            $avgDodgeRateB,
+            $results['avgBlocksA'],
+            $results['avgBlocksB'],
+            $results['avgParriesA'],
+            $results['avgParriesB'],
         );
+
         fwrite(STDOUT, $output);
+    }
+
+    // =========================================================================
+    // Equipment Combos
+    // =========================================================================
+
+    /**
+     * Returns all 8 equipment combos to test for each archetype matchup.
+     *
+     * @return array<array{string, string, string, string}> [weaponA, offhandA, weaponB, offhandB]
+     */
+    private function getEquipmentCombos(): array
+    {
+        return [
+            // Shield vs Dagger (4 weapon permutations)
+            ['1H_SWORD', 'SHIELD', '1H_SWORD', 'DAGGER'],
+            ['1H_SWORD', 'SHIELD', '1H_AXE',   'DAGGER'],
+            ['1H_AXE',   'SHIELD', '1H_SWORD', 'DAGGER'],
+            ['1H_AXE',   'SHIELD', '1H_AXE',   'DAGGER'],
+
+            // Dagger vs 2H Axe (2 weapon options)
+            ['1H_SWORD', 'DAGGER', '2H_AXE', 'NONE'],
+            ['1H_AXE',   'DAGGER', '2H_AXE', 'NONE'],
+
+            // Shield vs 2H Axe (2 weapon options)
+            ['1H_SWORD', 'SHIELD', '2H_AXE', 'NONE'],
+            ['1H_AXE',   'SHIELD', '2H_AXE', 'NONE'],
+        ];
+    }
+
+    /**
+     * Runs all 8 equipment combos for a given archetype matchup.
+     */
+    private function runFullMatchup(string $section, string $archA, string $archB): void
+    {
+        foreach ($this->getEquipmentCombos() as [$wA, $offA, $wB, $offB]) {
+            $res = $this->runSimulation($archA, $wA, $offA, $archB, $wB, $offB);
+            $this->printResults(
+                "$section | $archA($wA+$offA) vs $archB($wB+$offB)",
+                "$archA vs $archB",
+                $res
+            );
+        }
+
         $this->assertTrue(true);
     }
 
     // =========================================================================
-    // Matrix Generator
+    // DEFENSE BALANCE TESTS (Fixed Stable Attack)
     // =========================================================================
 
-    private function runMatchupMatrix(string $wA, string $offA, string $wB, string $offB): void
+    public function test_defense_balance_tank_vs_dodge(): void
     {
-        $this->runSimulation('STABLE-TANK', 'STABLE', $wA, $offA, 'TANK', $wB, $offB);
-        $this->runSimulation('CRIT-DODGE', 'CRIT', $wA, $offA, 'DODGE', $wB, $offB);
-        $this->runSimulation('HYBRID-UNI', 'HYBRID', $wA, $offA, 'UNI', $wB, $offB);
+        $this->runFullMatchup('DEF', 'TANK', 'DODGE');
+    }
+
+    public function test_defense_balance_dodge_vs_uni(): void
+    {
+        $this->runFullMatchup('DEF', 'DODGE', 'UNI');
+    }
+
+    public function test_defense_balance_tank_vs_uni(): void
+    {
+        $this->runFullMatchup('DEF', 'TANK', 'UNI');
     }
 
     // =========================================================================
-    // Test Methods
+    // ATTACK BALANCE TESTS (Fixed Tank Defense)
     // =========================================================================
 
-    public function test_Matrix_2hAxe_vs_SwordShield()
+    public function test_attack_balance_stable_vs_crit(): void
     {
-        $this->runMatchupMatrix('2H_AXE', 'NONE', '1H_SWORD', 'SHIELD');
+        $this->runFullMatchup('ATK', 'STABLE', 'CRIT');
     }
-    public function test_Matrix_2hAxe_vs_AxeShield()
+
+    public function test_attack_balance_stable_vs_hybrid(): void
     {
-        $this->runMatchupMatrix('2H_AXE', 'NONE', '1H_AXE', 'SHIELD');
+        $this->runFullMatchup('ATK', 'STABLE', 'HYBRID');
     }
-    public function test_Matrix_2hAxe_vs_SwordDagger()
+
+    public function test_attack_balance_crit_vs_hybrid(): void
     {
-        $this->runMatchupMatrix('2H_AXE', 'NONE', '1H_SWORD', 'DAGGER');
-    }
-    public function test_Matrix_2hAxe_vs_AxeDagger()
-    {
-        $this->runMatchupMatrix('2H_AXE', 'NONE', '1H_AXE', 'DAGGER');
-    }
-    public function test_Matrix_AxeDagger_vs_AxeShield()
-    {
-        $this->runMatchupMatrix('1H_AXE', 'DAGGER', '1H_AXE', 'SHIELD');
-    }
-    public function test_Matrix_SwordDagger_vs_SwordShield()
-    {
-        $this->runMatchupMatrix('1H_SWORD', 'DAGGER', '1H_SWORD', 'SHIELD');
+        $this->runFullMatchup('ATK', 'CRIT', 'HYBRID');
     }
 }
