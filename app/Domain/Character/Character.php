@@ -9,6 +9,10 @@ use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Seal\Seal;
 use App\Domain\Weapon\Weapon;
 use App\Domain\Weapon\DamageType;
+use App\Domain\Battle\TargetZone;
+use App\Domain\Armor\ArmorSubtype;
+use App\Domain\Armor\Shield;
+use App\Domain\Armor\Armor;
 
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
 
@@ -339,10 +343,10 @@ class Character implements \JsonSerializable
         $this->penetrationSuccessStreak = 0;
     }
 
-    public function calculateDodgeChance(): float
+    public function calculateDodgeChance(?TargetZone $zone = null): float
     {
         $baseDodge = CombatFormulas::dodgeChance($this->agility);
-        return $baseDodge + $this->getArmorDodgeBonus();
+        return $baseDodge + $this->getArmorDodgeBonus($zone);
     }
 
     public function calculateParryChance(): float
@@ -357,7 +361,7 @@ class Character implements \JsonSerializable
         return (float) round($rating / ($rating + 120), 4);
     }
 
-    public function getArmorDodgeBonus(): float
+    public function getArmorDodgeBonus(?TargetZone $zone = null): float
     {
         $bonus = 0.0;
         $armorSlots = [
@@ -365,16 +369,56 @@ class Character implements \JsonSerializable
             EquipmentSlot::CHEST,
             EquipmentSlot::LEGS,
             EquipmentSlot::GLOVES,
+            EquipmentSlot::OFF_HAND,
         ];
 
         foreach ($armorSlots as $slot) {
             $item = $this->equipment->getItem($slot);
-            if ($item instanceof \App\Domain\Armor\Armor) {
-                $bonus += $item->getDodgeBonus();
+            if (!($item instanceof Armor)) {
+                continue;
+            }
+
+            $itemDodge = $item->getDodgeBonus();
+            if ($itemDodge <= 0) continue;
+
+            // Shields are global
+            if ($item instanceof Shield) {
+                $bonus += $itemDodge;
+                continue;
+            }
+
+            // Other armor is zone-specific
+            if ($zone !== null) {
+                $multiplier = $this->getDodgeMultiplierForArmor($item, $zone);
+                $bonus += ($itemDodge * $multiplier);
+            } else {
+                // Return total potential dodge if no zone specified (for UI/base calcs)
+                $bonus += $itemDodge;
             }
         }
 
         return (float) round($bonus / 100, 4);
+    }
+
+    private function getDodgeMultiplierForArmor(Armor $armor, TargetZone $zone): float
+    {
+        $subtype = $armor->getSubtype();
+        
+        return match ($zone) {
+            TargetZone::HEAD => ($subtype === ArmorSubtype::HELMET) ? 1.0 : 0.0,
+            
+            TargetZone::TORSO => ($subtype === ArmorSubtype::BODY) ? 1.0 : 0.0,
+            
+            TargetZone::LEFT_ARM, TargetZone::RIGHT_ARM => match ($subtype) {
+                ArmorSubtype::BODY => 0.5,
+                ArmorSubtype::GLOVES => 0.5,
+                default => 0.0
+            },
+            
+            TargetZone::LEGS => ($subtype === ArmorSubtype::BOOTS) ? 1.0 : 0.0,
+            
+            default => 0.0
+        };
     }
 
     public function calculateCritChance(): float
@@ -589,13 +633,18 @@ class Character implements \JsonSerializable
 
     public function initializeAdArmor(): void
     {
-        $this->adArmorHead = $this->normalizeAdArmorValue($this->getMaxAdArmorForSlot(EquipmentSlot::HELMET));
-        $this->adArmorChest = $this->normalizeAdArmorValue($this->getMaxAdArmorForSlot(EquipmentSlot::CHEST));
-        $this->adArmorLegs = $this->normalizeAdArmorValue($this->getMaxAdArmorForSlot(EquipmentSlot::LEGS));
-        $chestArmor = $this->adArmorChest;
+        $shieldArmor = $this->getMaxAdArmorForSlot(EquipmentSlot::OFF_HAND);
+
+        $this->adArmorHead = $this->normalizeAdArmorValue($this->getMaxAdArmorForSlot(EquipmentSlot::HELMET) + $shieldArmor);
+        $this->adArmorChest = $this->normalizeAdArmorValue($this->getMaxAdArmorForSlot(EquipmentSlot::CHEST) + $shieldArmor);
+        $this->adArmorLegs = $this->normalizeAdArmorValue($this->getMaxAdArmorForSlot(EquipmentSlot::LEGS) + $shieldArmor);
+        
+        $chestArmorBase = $this->getMaxAdArmorForSlot(EquipmentSlot::CHEST);
         $glovesArmor = $this->getMaxAdArmorForSlot(EquipmentSlot::GLOVES);
-        $armArmor = ($chestArmor * 0.5) + ($glovesArmor * 0.5);
+        
+        $armArmor = ($chestArmorBase * 0.5) + ($glovesArmor * 0.5) + $shieldArmor;
         $armArmor = $this->normalizeAdArmorValue($armArmor);
+        
         $this->adArmorLeftArm = $armArmor;
         $this->adArmorRightArm = $armArmor;
     }

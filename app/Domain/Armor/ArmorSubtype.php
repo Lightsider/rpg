@@ -10,4 +10,6 @@ enum ArmorSubtype: string
     case BODY = 'body';
     case BOOTS = 'boots';
     case GLOVES = 'gloves';
+
+    case OFF_HAND = 'off_hand';
 }

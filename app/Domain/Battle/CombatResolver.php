@@ -77,8 +77,12 @@ class CombatResolver
         $weapon = $forcedWeapon ?? $attacker->getWeaponForCombat();
         $damageType = $weapon->getDamageType();
 
-        // 1. Check dodge
-        if ($this->checkDodge($defender)) {
+        // 0. Hit Zone Selection (Moved up to support zone-based dodge)
+        $selectedZone = $targetZone ?? TargetZone::from($this->selectHitZone());
+        $hitZoneValue = $selectedZone->value;
+
+        // 1. Check dodge (Now zone-specific)
+        if ($this->checkDodge($defender, $selectedZone)) {
             return new AttackResult(0, false, true, false, $damageType);
         }
 
@@ -114,9 +118,6 @@ class CombatResolver
         // Round to 4 decimal places for precision management
         $currentDamage = round($currentDamage, 4);
 
-        // 4. Hit Zone Selection
-        $hitZone = $targetZone ? $targetZone->value : $this->selectHitZone();
-
         // 5. Block handling
         $isPierced = false;
         if ($isBlocked) {
@@ -139,7 +140,7 @@ class CombatResolver
         }
 
         // 6. Armor Reduction (50% to AD, 50% to HP)
-        $finalDamageInt = $this->applyArmorReduction($defender, $hitZone, $currentDamage, $attacker);
+        $finalDamageInt = $this->applyArmorReduction($defender, $hitZoneValue, $currentDamage, $attacker);
 
         $isMaxDamage = ($maxDamageProc && $maxDamageProc->triggered);
 
@@ -220,10 +221,10 @@ class CombatResolver
         return $finalDamageInt;
     }
 
-    private function checkDodge(Character $defender): bool
+    private function checkDodge(Character $defender, TargetZone $zone): bool
     {
         $result = $this->dodgePRNG->rollWithPRNG(
-            $defender->calculateDodgeChance(),
+            $defender->calculateDodgeChance($zone),
             $defender->getDodgeFailStreak(),
             $defender->getDodgeSuccessStreak()
         );
