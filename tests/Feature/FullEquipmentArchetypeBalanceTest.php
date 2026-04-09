@@ -186,15 +186,15 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
         $isDagger = $base === 'DAGGER';
         $min = 8.5;
         $max = 10.5;
-        $flat = 4.0;
+        $flat = 4.5;
         if ($isDagger) {
             $min = 4.25;
             $max = 5.25;
-            $flat = 2.0;
+            $flat = 2.25;
         } elseif ($is2H) {
             $min = 11.05;
             $max = 13.65;
-            $flat = 5.2;
+            $flat = 5.5;
         }
 
         $weapon = new Weapon(
@@ -217,10 +217,10 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
             $seals[] = new Seal(
                 id: rand(10000, 90000),
                 name: "Hybrid Seal",
-                minDamage: 0.6,
-                maxDamage: 0.75,
-                flatCritBonus: 0.3,
-                critChanceBonus: 0.5,
+                minDamage: 0.65,
+                maxDamage: 0.7,
+                flatCritBonus: 0.4,
+                critChanceBonus: 0.6,
                 archetype: WeaponArchetype::HYBRID,
                 requiredStrength: 6
             );
@@ -238,7 +238,7 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
         ];
         $offhand = null;
         if ($offhandBase === 'DAGGER')
-            $offhand = new Dagger(rand(1000, 9000), 'Dagger', 4.5, 5.5);
+            $offhand = new Dagger(rand(1000, 9000), 'Dagger', 3.5, 4.5, parryRating: 5);
         elseif ($offhandBase === 'SHIELD')
             $offhand = new Shield(rand(1000, 9000), 'Tank Shield', 40, 0.10, 0, 2.0, 0.0);
 
@@ -248,16 +248,16 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
     private function createDodgeDefense(string $offhandBase): array
     {
         $armor = [
-            new Armor(rand(100, 900), 'Dodge Helm', 0.0, 3.0, ArmorSubtype::HELMET, 0, 0, 4, 4),
-            new Armor(rand(100, 900), 'Dodge Chest', 0.0, 3.0, ArmorSubtype::BODY, 0, 0, 4, 4),
-            new Armor(rand(100, 900), 'Dodge Legs', 0.0, 3.0, ArmorSubtype::BOOTS, 0, 0, 4, 4),
-            new Armor(rand(100, 900), 'Dodge Arms', 0.0, 3.0, ArmorSubtype::GLOVES, 0, 0, 4, 4),
+            new Armor(rand(100, 900), 'Dodge Helm', 0.0, 12.0, ArmorSubtype::HELMET, 0, 0, 4, 4),
+            new Armor(rand(100, 900), 'Dodge Chest', 0.0, 12.0, ArmorSubtype::BODY, 0, 0, 4, 4),
+            new Armor(rand(100, 900), 'Dodge Legs', 0.0, 12.0, ArmorSubtype::BOOTS, 0, 0, 4, 4),
+            new Armor(rand(100, 900), 'Dodge Arms', 0.0, 12.0, ArmorSubtype::GLOVES, 0, 0, 4, 4),
         ];
         $offhand = null;
         if ($offhandBase === 'DAGGER')
-            $offhand = new Dagger(rand(1000, 9000), 'Dagger', 4.5, 5.5);
+            $offhand = new Dagger(rand(1000, 9000), 'Dagger', 3.5, 4.5, parryRating: 5);
         elseif ($offhandBase === 'SHIELD')
-            $offhand = new Shield(rand(1000, 9000), 'Dodge Shield', 40, 0.10, 0, 0.0, 1.5);
+            $offhand = new Shield(rand(1000, 9000), 'Dodge Shield', 40, 0.10, 0, 0.0, 5.0);
 
         return ['armor' => $armor, 'offhand' => $offhand];
     }
@@ -265,16 +265,16 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
     private function createUniDefense(string $offhandBase): array
     {
         $armor = [
-            new Armor(rand(100, 900), 'Uni Helm', 4.0, 1.0, ArmorSubtype::HELMET, 0, 0, 6, 2),
-            new Armor(rand(100, 900), 'Uni Chest', 4.0, 1.0, ArmorSubtype::BODY, 0, 0, 6, 2),
-            new Armor(rand(100, 900), 'Uni Legs', 4.0, 1.0, ArmorSubtype::BOOTS, 0, 0, 6, 2),
-            new Armor(rand(100, 900), 'Uni Arms', 4.0, 1.0, ArmorSubtype::GLOVES, 0, 0, 6, 2),
+            new Armor(rand(100, 900), 'Uni Helm', 4.0, 2.5, ArmorSubtype::HELMET, 0, 0, 6, 2),
+            new Armor(rand(100, 900), 'Uni Chest', 4.0, 2.5, ArmorSubtype::BODY, 0, 0, 6, 2),
+            new Armor(rand(100, 900), 'Uni Legs', 4.0, 2.5, ArmorSubtype::BOOTS, 0, 0, 6, 2),
+            new Armor(rand(100, 900), 'Uni Arms', 4.0, 2.5, ArmorSubtype::GLOVES, 0, 0, 6, 2),
         ];
         $offhand = null;
         if ($offhandBase === 'DAGGER')
-            $offhand = new Dagger(rand(1000, 9000), 'Dagger', 4.5, 5.5);
+            $offhand = new Dagger(rand(1000, 9000), 'Dagger', 3.5, 4.5, parryRating: 5);
         elseif ($offhandBase === 'SHIELD')
-            $offhand = new Shield(rand(1000, 9000), 'Uni Shield', 40, 0.10, 0, 1, 0.5);
+            $offhand = new Shield(rand(1000, 9000), 'Uni Shield', 40, 0.10, 0, 1, 1.5);
 
         return ['armor' => $armor, 'offhand' => $offhand];
     }
@@ -325,7 +325,7 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
             $equipment->setItem($slot, $piece);
         }
 
-        $maxHp = (int) ceil(40 + ($stats['con'] * 8.5));
+        $maxHp = (int) ceil(55 + ($stats['con'] * 8.5));
 
         $char = new Character(
             id: $id,
@@ -526,8 +526,9 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
 
     private function printResults(string $title, string $matchup, array $results): void
     {
-        $avgIncomingA = 2 * $results['avgRounds'];
-        $avgIncomingB = 2 * $results['avgRounds'];
+        $avgIncomingA = $results['avgHitsB'] + $results['avgDodgesA'] + $results['avgBlocksA'] + $results['avgParriesA'] + $results['avgBlockBreaksB'] ?? 0;
+        $avgIncomingB = $results['avgHitsA'] + $results['avgDodgesB'] + $results['avgBlocksB'] + $results['avgParriesB'] + $results['avgBlockBreaksA'] ?? 0;
+
         $avgDodgeRateA = $avgIncomingA > 0 ? ($results['avgDodgesA'] / $avgIncomingA) * 100 : 0.0;
         $avgDodgeRateB = $avgIncomingB > 0 ? ($results['avgDodgesB'] / $avgIncomingB) * 100 : 0.0;
 

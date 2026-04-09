@@ -151,14 +151,14 @@ class FullArchetypeBalanceTest extends TestCase
         $weapon = new Weapon(
             id: $isSword ? 5 : 6,
             name: $isSword ? 'Versatile Sword' : 'Versatile Axe',
-            minDamage: 8.5,
-            maxDamage: 10.5,
+            minDamage: 9.0,
+            maxDamage: 11.0,
             damageType: $isSword ? DamageType::SLASHING : DamageType::CHOPPING,
             accuracyBonus: 0.0,
             blockBreakRating: $isSword ? 20 : 60,
             pierceMultiplier: $isSword ? 0.5 : 0.65,
             maxDamageRating: $isSword ? 75 : 0,
-            flatCritBonus: 4.0,
+            flatCritBonus: 4.5,
             critChanceBonus: 3.0,
             archetype: WeaponArchetype::HYBRID,
             requiredStrength: 6,
@@ -170,10 +170,10 @@ class FullArchetypeBalanceTest extends TestCase
             $seals[] = new Seal(
                 9,
                 'Versatile Seal',
+                0.7,
+                0.85,
+                0.4,
                 0.6,
-                0.75,
-                0.3,
-                0.5,
                 WeaponArchetype::HYBRID,
                 6,
                 2
@@ -196,20 +196,20 @@ class FullArchetypeBalanceTest extends TestCase
     private function createDodgeArmor(): array
     {
         return [
-            new Armor(14, 'Shadow Helmet', 0.0, 3.0, ArmorSubtype::HELMET, 0, 0, 4, 4),
-            new Armor(15, 'Shadow Chestplate', 0.0, 3.0, ArmorSubtype::BODY, 0, 0, 4, 4),
-            new Armor(16, 'Shadow Boots', 0.0, 3.0, ArmorSubtype::BOOTS, 0, 0, 4, 4),
-            new Armor(17, 'Shadow Gauntlets', 0.0, 3.0, ArmorSubtype::GLOVES, 0, 0, 4, 4),
+            new Armor(14, 'Shadow Helmet', 0.0, 12.0, ArmorSubtype::HELMET, 0, 0, 4, 4),
+            new Armor(15, 'Shadow Chestplate', 0.0, 12.0, ArmorSubtype::BODY, 0, 0, 4, 4),
+            new Armor(16, 'Shadow Boots', 0.0, 12.0, ArmorSubtype::BOOTS, 0, 0, 4, 4),
+            new Armor(17, 'Shadow Gauntlets', 0.0, 12.0, ArmorSubtype::GLOVES, 0, 0, 4, 4),
         ];
     }
 
     private function createUniArmor(): array
     {
         return [
-            new Armor(18, 'Balanced Helmet', 4.0, 1.2, ArmorSubtype::HELMET, 0, 0, 2, 6),
-            new Armor(19, 'Balanced Chestplate', 4.0, 1.2, ArmorSubtype::BODY, 0, 0, 2, 6),
-            new Armor(20, 'Balanced Boots', 4.0, 1.2, ArmorSubtype::BOOTS, 0, 0, 2, 6),
-            new Armor(21, 'Balanced Gauntlets', 4.0, 1.2, ArmorSubtype::GLOVES, 0, 0, 2, 6),
+            new Armor(18, 'Balanced Helmet', 4.0, 2.5, ArmorSubtype::HELMET, 0, 0, 2, 6),
+            new Armor(19, 'Balanced Chestplate', 4.0, 2.5, ArmorSubtype::BODY, 0, 0, 2, 6),
+            new Armor(20, 'Balanced Boots', 4.0, 2.5, ArmorSubtype::BOOTS, 0, 0, 2, 6),
+            new Armor(21, 'Balanced Gauntlets', 4.0, 2.5, ArmorSubtype::GLOVES, 0, 0, 2, 6),
         ];
     }
 
@@ -231,7 +231,7 @@ class FullArchetypeBalanceTest extends TestCase
         $equipment->setItem(EquipmentSlot::LEGS, $armorPieces[2]);
         $equipment->setItem(EquipmentSlot::GLOVES, $armorPieces[3]);
 
-        $maxHp = (int) ceil(40 + ($stats['con'] * 8.5));
+        $maxHp = (int) ceil(55 + ($stats['con'] * 8.5));
 
         $char = new Character(
             id: $id,
@@ -390,8 +390,8 @@ class FullArchetypeBalanceTest extends TestCase
 
     private function printResults(string $title, string $matchup, array $results): void
     {
-        $avgIncomingA = 2 * $results['avgRounds'];
-        $avgIncomingB = 2 * $results['avgRounds'];
+        $avgIncomingA = $results['avgHitsB'] + $results['avgDodgesA'] + $results['avgBlocksA'] + $results['avgBlockBreaksB'] ?? 0;
+        $avgIncomingB = $results['avgHitsA'] + $results['avgDodgesB'] + $results['avgBlocksB'] + $results['avgBlockBreaksA'] ?? 0;
         $avgDodgeRateA = $avgIncomingA > 0 ? ($results['avgDodgesA'] / $avgIncomingA) * 100 : 0.0;
         $avgDodgeRateB = $avgIncomingB > 0 ? ($results['avgDodgesB'] / $avgIncomingB) * 100 : 0.0;
 

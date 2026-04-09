@@ -19,7 +19,7 @@ class Dagger extends Weapon
         float $maxDamage,
         DamageType $damageType = DamageType::SLASHING,
         int $blockBreakRating = 20,
-        private readonly int $parryRating = 11,
+        private readonly int $parryRating = 5,
     ) {
         parent::__construct(
             id: $id,
