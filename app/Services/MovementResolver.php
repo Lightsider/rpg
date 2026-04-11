@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Domain\Battle\Battle;
+use App\Domain\Battle\MovementResolverInterface;
 use App\Domain\Battle\TargetZone;
 use App\Domain\DomainException;
 use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 use Illuminate\Support\Facades\DB;
 
-class MovementResolver
+class MovementResolver implements MovementResolverInterface
 {
     /**
      * @param array<int, array<string, mixed>> $moveActions

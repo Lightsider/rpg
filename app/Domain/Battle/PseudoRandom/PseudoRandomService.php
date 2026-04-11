@@ -6,7 +6,7 @@ namespace App\Domain\Battle\PseudoRandom;
 
 use App\Domain\Battle\Rng\DefaultRandomGenerator;
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
-use Illuminate\Support\Facades\Log;
+use App\Domain\Contracts\LoggerInterface;
 
 /**
  * Reusable service for Pseudo-Random Number Generation (PRNG) with pity and anti-pity protection.
@@ -24,7 +24,8 @@ class PseudoRandomService
 
     public function __construct(
         private readonly PseudoRandomConfig $config,
-        ?RandomGeneratorInterface $rng = null
+        ?RandomGeneratorInterface $rng = null,
+        private readonly ?LoggerInterface $logger = null
     ) {
         $this->rng = $rng ?? new DefaultRandomGenerator();
     }
@@ -44,8 +45,8 @@ class PseudoRandomService
         $roll = $this->getRandom();
         $success = $roll < $finalChance;
 
-        if ($this->config->debug) {
-            Log::debug('PRNGRoll', [
+        if ($this->config->debug && $this->logger) {
+            $this->logger->debug('PRNGRoll', [
                 'base_chance' => $baseChance,
                 'failures' => $failureCount,
                 'successes' => $successCount,

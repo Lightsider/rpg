@@ -20,7 +20,8 @@ class SubmitBattleActions
         private readonly QueueAttackAction $queueAttackAction,
         private readonly QueueDefenseAction $queueDefenseAction,
         private readonly QueueMoveAction $queueMoveAction,
-        private readonly CommitRoundAction $commitRoundAction
+        private readonly CommitRoundAction $commitRoundAction,
+        private readonly RoundExpirationHandler $roundExpirationHandler
     ) {
     }
 
@@ -30,6 +31,8 @@ class SubmitBattleActions
      */
     public function execute(int $battleId, int $userId, array $actions): array
     {
+        $this->roundExpirationHandler->handleExpiredRounds();
+
         $battle = $this->battleRepository->findById($battleId);
         if (!$battle) {
             throw new DomainException('Fight not found.');

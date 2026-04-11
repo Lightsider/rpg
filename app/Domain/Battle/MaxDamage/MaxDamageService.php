@@ -8,7 +8,7 @@ use App\Domain\Battle\BlockPenetration\RatingConverter;
 use App\Domain\Battle\Rng\DefaultRandomGenerator;
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
 use App\Domain\Character\Character;
-use Illuminate\Support\Facades\Log;
+use App\Domain\Contracts\LoggerInterface;
 
 /**
  * Domain service that resolves "Max Damage" proc attempts.
@@ -22,6 +22,7 @@ class MaxDamageService
     public function __construct(
         private readonly MaxDamageConfig $config,
         ?RandomGeneratorInterface $rng = null,
+        private readonly ?LoggerInterface $logger = null,
     ) {
         $this->rng = $rng ?? new DefaultRandomGenerator();
     }
@@ -55,8 +56,8 @@ class MaxDamageService
             $attacker->recordMaxDamageFailure();
         }
 
-        if ($this->config->debug) {
-            Log::debug('MaxDamageCheck', [
+        if ($this->config->debug && $this->logger) {
+            $this->logger->debug('MaxDamageCheck', [
                 'attacker_id' => $attacker->getId(),
                 'rating' => $rating,
                 'base_chance' => $baseChance,

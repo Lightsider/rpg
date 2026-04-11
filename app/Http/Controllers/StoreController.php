@@ -3,28 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Application\Store\GetStoreItems;
-use App\Application\Store\BuyStoreItem;
-use App\Infrastructure\WebSockets\Events\StoreStateEvent;
+use App\Application\Store\PurchaseStoreItem;
 use App\Infrastructure\WebSockets\Events\InventoryUpdateEvent;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class StoreController extends Controller
 {
-    private GetStoreItems $getStoreItems;
-    private BuyStoreItem $buyStoreItem;
-
-    public function __construct(GetStoreItems $getStoreItems, BuyStoreItem $buyStoreItem)
-    {
-        $this->getStoreItems = $getStoreItems;
-        $this->buyStoreItem = $buyStoreItem;
+    public function __construct(
+        private readonly GetStoreItems $getStoreItems,
+        private readonly PurchaseStoreItem $purchaseStoreItem
+    ) {
     }
 
     public function open(int $id, Request $request): JsonResponse
     {
         try {
             $items = $this->getStoreItems->execute($id);
-            $characterId = $request->user()->character?->id;
 
             return response()->json([
                 'status' => 'success',
@@ -42,13 +37,8 @@ class StoreController extends Controller
             $request->validate([
                 'store_item_id' => 'required|integer',
             ]);
-
-            $characterId = $request->user()->character?->id;
-            if (!$characterId) {
-                return response()->json(['error' => 'Character not found'], 400);
-            }
-            
-            $this->buyStoreItem->execute($characterId, $request->input('store_item_id'));
+            $userId = $request->user()->id;
+            $characterId = $this->purchaseStoreItem->execute($userId, (int) $request->input('store_item_id'));
             
             // Broadcast inventory update so the client app refreshes
             broadcast(new InventoryUpdateEvent($characterId));

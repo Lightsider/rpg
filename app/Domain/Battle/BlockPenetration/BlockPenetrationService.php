@@ -7,8 +7,8 @@ namespace App\Domain\Battle\BlockPenetration;
 use App\Domain\Battle\Rng\DefaultRandomGenerator;
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
 use App\Domain\Character\Character;
+use App\Domain\Contracts\LoggerInterface;
 use App\Domain\Weapon\Weapon;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Domain service that resolves block penetration attempts.
@@ -23,6 +23,7 @@ class BlockPenetrationService
     public function __construct(
         private readonly BlockPenetrationConfig $config,
         ?RandomGeneratorInterface $rng = null,
+        private readonly ?LoggerInterface $logger = null,
     ) {
         $this->rng = $rng ?? new DefaultRandomGenerator();
     }
@@ -69,8 +70,8 @@ class BlockPenetrationService
             $attacker->recordPenetrationFailure();
         }
 
-        if ($this->config->debug) {
-            Log::debug('BlockPenetration', [
+        if ($this->config->debug && $this->logger) {
+            $this->logger->debug('BlockPenetration', [
                 'attacker_id' => $attacker->getId(),
                 'defender_id' => $defender->getId(),
                 'attack_rating' => $attackRating,

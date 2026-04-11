@@ -10,7 +10,7 @@ use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\Rng\DeterministicRandomGenerator;
 use App\Domain\DomainException;
-use App\Services\MovementResolver;
+use App\Domain\Battle\MovementResolverInterface;
 use Exception;
 
 /**
@@ -23,7 +23,7 @@ class RoundResolver implements RoundResolverInterface
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly BlockPenetrationService $blockPenetrationService,
         private readonly MaxDamageService $maxDamageService,
-        private readonly MovementResolver $movementResolver,
+        private readonly MovementResolverInterface $movementResolver,
     ) {
     }
 

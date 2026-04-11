@@ -13,7 +13,6 @@ use App\Domain\Battle\TargetZone;
 use App\Domain\Character\Character;
 use App\Domain\Weapon\Dagger;
 use App\Domain\Weapon\DamageType;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Stateless service to resolve combat attacks.

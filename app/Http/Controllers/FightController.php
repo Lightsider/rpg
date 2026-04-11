@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Domain\Battle\Repositories\BattleLogRepositoryInterface;
-use App\Application\Battle\RoundExpirationHandler;
+use App\Application\Battle\CancelBattle;
+use App\Application\Battle\CreateBattle;
+use App\Application\Battle\GetBattleLog;
+use App\Application\Battle\JoinBattle;
+use App\Application\Battle\ListBattles;
+use App\Application\Battle\ShowBattle;
 use App\Application\Battle\SubmitBattleActions;
-use App\Application\Battle\BattleLobbyService;
-use App\Application\Battle\BattleViewFactory;
-use App\Domain\Character\Repositories\CharacterRepositoryInterface;
-use App\Domain\Battle\Repositories\BattleRepositoryInterface;
-use App\Domain\Battle\Battle;
-use App\Domain\Character\Character;
 use App\Domain\DomainException;
 use App\Http\Requests\SubmitActionsRequest;
 use Illuminate\Http\JsonResponse;
@@ -22,52 +20,30 @@ use Illuminate\Support\Facades\Auth;
 class FightController extends Controller
 {
     public function __construct(
-        private readonly BattleRepositoryInterface $battleRepository,
-        private readonly CharacterRepositoryInterface $characterRepository,
-        private readonly BattleLogRepositoryInterface $battleLogRepository,
-        private readonly RoundExpirationHandler $roundExpirationHandler,
-        private readonly SubmitBattleActions $submitBattleActions,
-        private readonly BattleLobbyService $battleLobbyService,
-        private readonly BattleViewFactory $battleViewFactory
+        private readonly ListBattles $listBattles,
+        private readonly CreateBattle $createBattle,
+        private readonly JoinBattle $joinBattle,
+        private readonly CancelBattle $cancelBattle,
+        private readonly ShowBattle $showBattle,
+        private readonly GetBattleLog $getBattleLog,
+        private readonly SubmitBattleActions $submitBattleActions
     ) {
     }
 
     public function index(): JsonResponse
     {
-        $this->roundExpirationHandler->handleExpiredRounds();
         $user = Auth::user();
-        $character = $this->characterRepository->findByUserId($user->id);
-
-        if (!$character) {
-            return response()->json(['error' => 'Character not found.'], 404);
+        try {
+            $payload = $this->listBattles->execute($user->id);
+            return response()->json($payload);
+        } catch (DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 404);
         }
-
-        $fights = $this->battleRepository->findJoinableByLocation($character->getLocationId());
-
-        $fightsPayload = array_map(function ($fight) {
-            $timeout = $fight->getStartTimeoutSeconds();
-            $expiresAt = $timeout !== null
-                ? $fight->getRoundStartedAt()->modify("+{$timeout} seconds")
-                : null;
-            $timerRemaining = $expiresAt ? max(0, $expiresAt->getTimestamp() - (new \DateTimeImmutable())->getTimestamp()) : null;
-
-            return array_merge($fight->jsonSerialize(), [
-                'timer_remaining' => $timerRemaining,
-            ]);
-        }, $fights);
-
-        return response()->json($fightsPayload);
     }
 
     public function create(Request $request): JsonResponse
     {
-        $this->roundExpirationHandler->handleExpiredRounds();
         $user = Auth::user();
-        $character = $this->characterRepository->findByUserId($user->id);
-
-        if (!$character) {
-            return response()->json(['error' => 'Character not found.'], 404);
-        }
 
         $data = $request->validate([
             'max_participants' => ['nullable', 'integer', 'min:2'],
@@ -75,8 +51,8 @@ class FightController extends Controller
         ]);
 
         try {
-            $fightId = $this->battleLobbyService->createBattle(
-                $character,
+            $fightId = $this->createBattle->execute(
+                $user->id,
                 $data['max_participants'] ?? null,
                 $data['start_timeout_seconds'] ?? null
             );
@@ -88,22 +64,10 @@ class FightController extends Controller
 
     public function join(int $id): JsonResponse
     {
-        $this->roundExpirationHandler->handleExpiredRounds();
-        $battle = $this->battleRepository->findById($id);
-
-        if (!$battle) {
-            return response()->json(['error' => 'Fight not found.'], 404);
-        }
-
         $user = Auth::user();
-        $character = $this->characterRepository->findByUserId($user->id);
-
-        if (!$character) {
-            return response()->json(['error' => 'Character not found.'], 404);
-        }
 
         try {
-            $result = $this->battleLobbyService->joinBattle($battle, $character);
+            $result = $this->joinBattle->execute($user->id, $id);
             return response()->json($result['battle']);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
@@ -113,14 +77,9 @@ class FightController extends Controller
     public function cancel(int $id): JsonResponse
     {
         $user = Auth::user();
-        $character = $this->characterRepository->findByUserId($user->id);
-
-        if (!$character) {
-            return response()->json(['error' => 'Character not found.'], 404);
-        }
 
         try {
-            $this->battleLobbyService->cancelBattle($id, $character);
+            $this->cancelBattle->execute($user->id, $id);
             return response()->json(['success' => true]);
         } catch (DomainException $e) {
             return response()->json(['error' => $e->getMessage()], 400);
@@ -131,51 +90,28 @@ class FightController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $this->roundExpirationHandler->handleExpiredRounds();
-        $battle = $this->battleRepository->findById($id);
-
-        if (!$battle) {
-            return response()->json(['error' => 'Fight not found.'], 404);
-        }
-
         $user = Auth::user();
-        $character = $this->characterRepository->findByUserId($user->id);
-
-        if (!$character || !$battle->getParticipantById($character->getId())) {
-            return response()->json(['error' => 'You are not a participant in this fight.'], 403);
+        try {
+            $view = $this->showBattle->execute($user->id, $id);
+            return response()->json($view);
+        } catch (DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getMessage() === 'Fight not found.' ? 404 : 403);
         }
-
-        $timerRemaining = $this->calculateTimerRemaining($battle);
-        $view = $this->battleViewFactory->build($battle);
-        $view['timer_remaining'] = $timerRemaining;
-
-        return response()->json($view);
     }
 
     public function log(int $id): JsonResponse
     {
-        $battle = $this->battleRepository->findById($id);
-
-        if (!$battle) {
-            return response()->json(['error' => 'Fight not found.'], 404);
-        }
-
         $user = Auth::user();
-        $character = $this->characterRepository->findByUserId($user->id);
-
-        if (!$character || !$battle->getParticipantById($character->getId())) {
-            return response()->json(['error' => 'You are not a participant in this fight.'], 403);
+        try {
+            $logs = $this->getBattleLog->execute($user->id, $id);
+            return response()->json($logs);
+        } catch (DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getMessage() === 'Fight not found.' ? 404 : 403);
         }
-
-        $logs = $this->battleLogRepository->findByBattleId($id);
-
-        return response()->json($logs);
     }
 
     public function submitActions(int $id, SubmitActionsRequest $request): JsonResponse
     {
-        $this->roundExpirationHandler->handleExpiredRounds();
-
         $validated = $request->validated();
 
         try {
@@ -198,12 +134,6 @@ class FightController extends Controller
         }
     }
 
-    private function calculateTimerRemaining(Battle $battle): int
-    {
-        $now = new \DateTimeImmutable();
-        $expiryTime = $battle->getRoundStartedAt()->modify("+{$battle->getRoundDurationSeconds()} seconds");
-        return max(0, $expiryTime->getTimestamp() - $now->getTimestamp());
-    }
 }
 
 

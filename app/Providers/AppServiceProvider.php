@@ -8,6 +8,8 @@ use App\Domain\Battle\BlockPenetration\BlockPenetrationConfig;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageConfig;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
+use App\Domain\Battle\MovementResolverInterface;
+use App\Services\MovementResolver;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -31,6 +33,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             \App\Domain\Battle\RoundResolverInterface::class,
             \App\Domain\Battle\RoundResolver::class
+        );
+
+        $this->app->bind(
+            MovementResolverInterface::class,
+            MovementResolver::class
         );
 
         $this->app->bind(
