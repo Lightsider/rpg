@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Application\Chat\GetChatState;
+use App\Application\Chat\GetChatStateForUser;
 use App\Application\Chat\GetParticipants;
-use App\Application\Chat\GetPrivateChats;
-use App\Application\Chat\SendMessage;
+use App\Application\Chat\GetPrivateChatsForUser;
+use App\Application\Chat\SendChatMessageForUser;
 use App\Domain\Chat\ChatType;
-use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,11 +17,10 @@ use Illuminate\Support\Facades\Auth;
 class ChatController extends Controller
 {
     public function __construct(
-        private readonly SendMessage $sendMessage,
-        private readonly GetChatState $getChatState,
+        private readonly SendChatMessageForUser $sendChatMessageForUser,
+        private readonly GetChatStateForUser $getChatStateForUser,
         private readonly GetParticipants $getParticipants,
-        private readonly GetPrivateChats $getPrivateChats,
-        private readonly CharacterRepositoryInterface $characterRepository
+        private readonly GetPrivateChatsForUser $getPrivateChatsForUser
     ) {
     }
 
@@ -35,14 +33,10 @@ class ChatController extends Controller
         ]);
 
         $user = Auth::user();
-        $character = $this->characterRepository->findByUserId($user->id);
-        if (!$character) {
-            return response()->json(['error' => 'Character not found.'], 404);
-        }
 
         try {
-            $result = $this->sendMessage->execute(
-                $character->getId(),
+            $result = $this->sendChatMessageForUser->execute(
+                $user->id,
                 ChatType::from($data['chatType']),
                 (int) $data['contextId'],
                 (string) $data['message']
@@ -61,14 +55,10 @@ class ChatController extends Controller
         ]);
 
         $user = Auth::user();
-        $character = $this->characterRepository->findByUserId($user->id);
-        if (!$character) {
-            return response()->json(['error' => 'Character not found.'], 404);
-        }
 
         try {
-            $state = $this->getChatState->execute(
-                $character->getId(),
+            $state = $this->getChatStateForUser->execute(
+                $user->id,
                 ChatType::from($data['chatType']),
                 (int) $data['contextId']
             );
@@ -81,13 +71,9 @@ class ChatController extends Controller
     public function privateChats(): JsonResponse
     {
         $user = Auth::user();
-        $character = $this->characterRepository->findByUserId($user->id);
-        if (!$character) {
-            return response()->json(['error' => 'Character not found.'], 404);
-        }
 
         try {
-            $chats = $this->getPrivateChats->execute($character->getId());
+            $chats = $this->getPrivateChatsForUser->execute($user->id);
             return response()->json($chats);
         } catch (DomainException $e) {
             return response()->json(['error' => $e->getMessage()], 400);
