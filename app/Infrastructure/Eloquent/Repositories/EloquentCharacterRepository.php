@@ -25,7 +25,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
     public function findById(int $id): ?Character
     {
         $model = CharacterModel::with([
-            'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
+            'weaponItem', 'offHand', 'seal1', 'seal2', 'seal3', 'seal4',
             'helmet', 'chest', 'legs', 'gloves'
         ])
             ->where('id', $id)
@@ -40,7 +40,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
     public function findByUserId(int $userId): ?Character
     {
         $model = CharacterModel::with([
-            'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
+            'weaponItem', 'offHand', 'seal1', 'seal2', 'seal3', 'seal4',
             'helmet', 'chest', 'legs', 'gloves'
         ])
             ->where('user_id', $userId)
@@ -88,7 +88,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
     public function findByLocationId(int $locationId): array
     {
         $models = CharacterModel::with([
-            'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
+            'weaponItem', 'offHand', 'seal1', 'seal2', 'seal3', 'seal4',
             'helmet', 'chest', 'legs', 'gloves'
         ])
             ->where('location_id', $locationId)
@@ -104,7 +104,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
         }
 
         $models = CharacterModel::with([
-            'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
+            'weaponItem', 'offHand', 'seal1', 'seal2', 'seal3', 'seal4',
             'helmet', 'chest', 'legs', 'gloves'
         ])
             ->whereIn('id', $ids)
@@ -125,6 +125,16 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
         $equipment = new Equipment();
         if ($weapon) {
             $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
+        }
+
+        if ($model->offHand) {
+            if (in_array($model->offHand->type, ['shield', 'armor'], true)) {
+                $offhand = $this->armorHydrator->fromItem($model->offHand);
+                $equipment->setItem(EquipmentSlot::OFF_HAND, $offhand);
+            } elseif (in_array($model->offHand->type, ['offhand_weapon', 'weapon'], true)) {
+                $offhand = $this->weaponHydrator->fromItem($model->offHand);
+                $equipment->setItem(EquipmentSlot::OFF_HAND, $offhand);
+            }
         }
 
         foreach ([1, 2, 3, 4] as $i) {

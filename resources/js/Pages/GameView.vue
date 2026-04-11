@@ -32,7 +32,7 @@ const fights = ref([]);
 const locations = ref([]);
 const loadout = ref({
     stats: { strength: 4, dexterity: 4, constitution: 4, wit: 4 },
-    equipment: { main_hand: null, seal_1: null, seal_2: null, seal_3: null, seal_4: null, helmet: null, chest: null, legs: null, gloves: null },
+    equipment: { main_hand: null, off_hand: null, seal_1: null, seal_2: null, seal_3: null, seal_4: null, helmet: null, chest: null, legs: null, gloves: null },
     backpack: [],
     can_edit: true,
     blocked_reason: null,
@@ -520,7 +520,7 @@ const fetchLoadoutData = async () => {
         loadout.value = {
             ...loadout.value,
             ...loadoutData,
-            equipment: loadoutData.equipment ?? { main_hand: null, seal_1: null, seal_2: null, seal_3: null, seal_4: null, helmet: null, chest: null, legs: null, gloves: null },
+            equipment: loadoutData.equipment ?? { main_hand: null, off_hand: null, seal_1: null, seal_2: null, seal_3: null, seal_4: null, helmet: null, chest: null, legs: null, gloves: null },
             backpack: loadoutData.backpack ?? [],
         };
         Object.assign(loadoutForm.value, {
@@ -586,6 +586,9 @@ const resolveEquipSlot = (item) => {
             gloves: 'gloves',
         };
         return slotBySubtype[subtype] || 'chest';
+    }
+    if (item?.type === 'offhand_weapon' || item?.type === 'shield') {
+        return 'off_hand';
     }
     return 'main_hand';
 };
@@ -773,20 +776,42 @@ onUnmounted(() => {
 
                                 <div class="mt-5 border-t pt-4">
                                     <h4 class="text-xs font-semibold uppercase text-gray-500 mb-2">Equipment</h4>
-                                    <div class="bg-gray-50 p-3 rounded flex items-center justify-between">
-                                        <div>
-                                            <div class="text-[10px] uppercase text-gray-400">Main Hand</div>
-                                            <div class="font-medium text-gray-800">
-                                                {{ loadout.equipment.main_hand ? loadout.equipment.main_hand.name : 'Empty' }}
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="bg-gray-50 p-3 rounded flex items-center justify-between">
+                                            <div>
+                                                <div class="text-[10px] uppercase text-gray-400">Main Hand</div>
+                                                <div class="font-medium text-gray-800">
+                                                    {{ loadout.equipment.main_hand ? loadout.equipment.main_hand.name : 'Empty' }}
+                                                </div>
+                                                <div v-if="loadout.equipment.main_hand" class="text-[10px] text-gray-500 mt-1">
+                                                    DMG {{ loadout.equipment.main_hand.min_damage }}-{{ loadout.equipment.main_hand.max_damage }}
+                                                    <span v-if="loadout.equipment.main_hand.damage_type">� {{ loadout.equipment.main_hand.damage_type }}</span>
+                                                </div>
                                             </div>
-                                            <div v-if="loadout.equipment.main_hand" class="text-[10px] text-gray-500 mt-1">
-                                                DMG {{ loadout.equipment.main_hand.min_damage }}-{{ loadout.equipment.main_hand.max_damage }}
-                                                <span v-if="loadout.equipment.main_hand.damage_type">� {{ loadout.equipment.main_hand.damage_type }}</span>
-                                            </div>
+                                            <button v-if="loadout.equipment.main_hand" @click="handleUnequipItem('main_hand')" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded disabled:opacity-60" :disabled="!loadout.can_edit || savingEquipment">
+                                                {{ savingEquipment ? 'Working...' : 'Unequip' }}
+                                            </button>
                                         </div>
-                                        <button v-if="loadout.equipment.main_hand" @click="handleUnequipItem('main_hand')" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded disabled:opacity-60" :disabled="!loadout.can_edit || savingEquipment">
-                                            {{ savingEquipment ? 'Working...' : 'Unequip' }}
-                                        </button>
+                                        <div class="bg-gray-50 p-3 rounded flex items-center justify-between">
+                                            <div>
+                                                <div class="text-[10px] uppercase text-gray-400">Off Hand</div>
+                                                <div class="font-medium text-gray-800">
+                                                    {{ loadout.equipment.off_hand ? loadout.equipment.off_hand.name : 'Empty' }}
+                                                </div>
+                                                <div v-if="loadout.equipment.off_hand" class="text-[10px] text-gray-500 mt-1">
+                                                    <span v-if="loadout.equipment.off_hand.min_damage !== null && loadout.equipment.off_hand.max_damage !== null">
+                                                        DMG {{ loadout.equipment.off_hand.min_damage }}-{{ loadout.equipment.off_hand.max_damage }}
+                                                        <span v-if="loadout.equipment.off_hand.damage_type">� {{ loadout.equipment.off_hand.damage_type }}</span>
+                                                    </span>
+                                                    <span v-else-if="loadout.equipment.off_hand.ad_armor">
+                                                        Armor {{ loadout.equipment.off_hand.ad_armor }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <button v-if="loadout.equipment.off_hand" @click="handleUnequipItem('off_hand')" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded disabled:opacity-60" :disabled="!loadout.can_edit || savingEquipment">
+                                                {{ savingEquipment ? 'Working...' : 'Unequip' }}
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="mt-3 grid grid-cols-2 gap-2">
                                         <div v-for="slot in sealSlots" :key="slot" class="bg-gray-50 p-3 rounded flex items-center justify-between">
@@ -1116,8 +1141,6 @@ onUnmounted(() => {
         </div>
     </AuthenticatedLayout>
 </template>
-
-
 
 
 

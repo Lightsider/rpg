@@ -21,8 +21,9 @@ class Armor extends Item
         private readonly int $requiredConstitution = 0,
         private readonly int $blockResistRating = 0,
         private readonly float $pierceDamageReduction = 0.0,
+        private readonly ItemType $itemType = ItemType::ARMOR,
     ) {
-        parent::__construct($id, $name, ItemType::ARMOR);
+        parent::__construct($id, $name, $this->itemType);
     }
 
     public function getAdArmor(): float

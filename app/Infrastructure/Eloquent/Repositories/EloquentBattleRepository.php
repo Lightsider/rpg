@@ -38,7 +38,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $model = BattleModel::with([
             'participants' => function ($query) {
                 $query->with([
-                    'weaponItem', 'seal1', 'seal2', 'seal3', 'seal4',
+                    'weaponItem', 'offHand', 'seal1', 'seal2', 'seal3', 'seal4',
                     'helmet', 'chest', 'legs', 'gloves'
                 ]);
             },
@@ -256,6 +256,16 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $equipment = new Equipment();
         if ($weapon) {
             $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
+        }
+
+        if ($characterModel?->offHand) {
+            if (in_array($characterModel->offHand->type, ['shield', 'armor'], true)) {
+                $offhand = $this->armorHydrator->fromItem($characterModel->offHand);
+                $equipment->setItem(EquipmentSlot::OFF_HAND, $offhand);
+            } elseif (in_array($characterModel->offHand->type, ['offhand_weapon', 'weapon'], true)) {
+                $offhand = $this->weaponHydrator->fromItem($characterModel->offHand);
+                $equipment->setItem(EquipmentSlot::OFF_HAND, $offhand);
+            }
         }
 
         foreach ([1, 2, 3, 4] as $i) {

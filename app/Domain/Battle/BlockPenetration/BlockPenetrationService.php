@@ -101,10 +101,11 @@ class BlockPenetrationService
     /**
      * Reduce base damage by the weapon's pierce multiplier and the defender's reduction.
      */
-    public function applyPierceDamage(int $baseDamage, Weapon $weapon, Character $defender): int
+    public function applyPierceDamage(int $baseDamage, Weapon $weapon, ?Character $defender = null): int
     {
         $pierceDamage = $baseDamage * $weapon->getPierceMultiplier();
-        $finalDamage = $pierceDamage * (1.0 - $defender->getPierceDamageReduction());
+        $reduction = $defender?->getPierceDamageReduction() ?? 0.0;
+        $finalDamage = $pierceDamage * (1.0 - $reduction);
         return (int) round($finalDamage);
     }
 

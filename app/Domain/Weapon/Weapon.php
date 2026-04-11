@@ -30,8 +30,9 @@ class Weapon extends Item
         private readonly float $flatCritBonus = 0,
         private readonly float $critChanceBonus = 0.0,
         private readonly bool $isTwoHanded = false,
+        private readonly ItemType $itemType = ItemType::WEAPON,
     ) {
-        parent::__construct($id, $name, ItemType::WEAPON);
+        parent::__construct($id, $name, $this->itemType);
     }
 
     /**

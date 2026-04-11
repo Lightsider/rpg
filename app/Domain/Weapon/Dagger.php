@@ -30,7 +30,8 @@ class Dagger extends Weapon
             accuracyBonus: 0.0,
             blockBreakRating: $blockBreakRating,
             pierceMultiplier: 0.0,
-            maxDamageRating: 0 // No max damage bonus
+            maxDamageRating: 0, // No max damage bonus
+            itemType: ItemType::OFFHAND_WEAPON
         );
     }
 

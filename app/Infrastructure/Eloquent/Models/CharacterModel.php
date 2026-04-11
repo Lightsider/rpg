@@ -20,6 +20,7 @@ class CharacterModel extends Model
         'constitution',
         'wit',
         'weapon_id',
+        'off_hand_id',
         'weapon',
         'backpack_seeded',
         'hp',
@@ -62,6 +63,11 @@ class CharacterModel extends Model
     public function weaponItem(): BelongsTo
     {
         return $this->belongsTo(ItemModel::class, 'weapon_id');
+    }
+
+    public function offHand(): BelongsTo
+    {
+        return $this->belongsTo(ItemModel::class, 'off_hand_id');
     }
 
     public function seal1(): BelongsTo { return $this->belongsTo(ItemModel::class, 'seal_1_id'); }

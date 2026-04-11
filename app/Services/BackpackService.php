@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Domain\DomainException;
 use App\Domain\Equipment\EquipmentService;
 use App\Domain\Equipment\EquipmentSlot;
+use App\Domain\Item\Item;
 use App\Infrastructure\Eloquent\Models\CharacterItemModel;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Infrastructure\Eloquent\Models\ItemModel;
@@ -22,7 +23,8 @@ class BackpackService
         private readonly WeaponHydrator $weaponHydrator,
         private readonly ArmorHydrator $armorHydrator,
         private readonly SealHydrator $sealHydrator,
-        private readonly EquipmentService $equipmentService
+        private readonly EquipmentService $equipmentService,
+        private readonly CharacterStatService $statService
     ) {
     }
 
@@ -68,6 +70,7 @@ class BackpackService
     {
         return [
             EquipmentSlot::MAIN_HAND->value => $this->itemPayloadById($character->weapon_id),
+            EquipmentSlot::OFF_HAND->value => $this->itemPayloadById($character->off_hand_id),
             EquipmentSlot::SEAL_1->value => $this->itemPayloadById($character->seal_1_id),
             EquipmentSlot::SEAL_2->value => $this->itemPayloadById($character->seal_2_id),
             EquipmentSlot::SEAL_3->value => $this->itemPayloadById($character->seal_3_id),
@@ -100,6 +103,7 @@ class BackpackService
         }
 
         if ($slotEnum === EquipmentSlot::MAIN_HAND) {
+            $oldMultiplier = $this->getMaxHpMultiplier($character);
             if ($item->type !== 'weapon') {
                 throw new DomainException('Item cannot be equipped in that slot.');
             }
@@ -115,7 +119,7 @@ class BackpackService
                 throw new DomainException('You do not meet the requirements for this weapon.');
             }
 
-            DB::transaction(function () use ($character, $itemId) {
+            DB::transaction(function () use ($character, $itemId, $oldMultiplier) {
                 if ($character->weapon_id && (int) $character->weapon_id !== $itemId) {
                     $this->addToBackpack($character, (int) $character->weapon_id, 1);
                 }
@@ -124,6 +128,73 @@ class BackpackService
 
                 $character->weapon_id = $itemId;
                 $character->weapon = $this->resolveLegacyWeaponName($itemId);
+                $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+                $character->save();
+            });
+
+            return;
+        }
+
+        if ($slotEnum === EquipmentSlot::OFF_HAND) {
+            $oldMultiplier = $this->getMaxHpMultiplier($character);
+            if (!in_array($item->type, ['shield', 'offhand_weapon'], true)) {
+                throw new DomainException('Item cannot be equipped in that slot.');
+            }
+
+            if ($item->type === 'offhand_weapon') {
+                $weapon = $this->weaponHydrator->fromItem($item);
+                if (!$this->equipmentService->isItemAllowedInSlot($weapon, $slotEnum)) {
+                    throw new DomainException('Item cannot be equipped in that slot.');
+                }
+
+                $strength = (int) ($character->strength ?? 0);
+                $wit = (int) ($character->wit ?? 0);
+                if ($strength < $weapon->getRequiredStrength() || $wit < $weapon->getRequiredWit()) {
+                    throw new DomainException('You do not meet the requirements for this weapon.');
+                }
+
+                DB::transaction(function () use ($character, $itemId, $oldMultiplier) {
+                    if ($character->off_hand_id && (int) $character->off_hand_id !== $itemId) {
+                        $this->addToBackpack($character, (int) $character->off_hand_id, 1);
+                    }
+
+                    $this->removeFromBackpack($character, $itemId, 1);
+
+                    $character->off_hand_id = $itemId;
+                    $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+                    $character->save();
+                });
+
+                return;
+            }
+
+            $shield = $this->armorHydrator->fromItem($item);
+            if (!$this->equipmentService->isItemAllowedInSlot($shield, $slotEnum)) {
+                throw new DomainException('Item cannot be equipped in that slot.');
+            }
+
+            $strength = (int) ($character->strength ?? 0);
+            $wit = (int) ($character->wit ?? 0);
+            $dexterity = (int) ($character->dexterity ?? 0);
+            $constitution = (int) ($character->constitution ?? 0);
+
+            if ($strength < $shield->getRequiredStrength() ||
+                $wit < $shield->getRequiredWit() ||
+                $dexterity < $shield->getRequiredDexterity() ||
+                $constitution < $shield->getRequiredConstitution()
+            ) {
+                throw new DomainException('You do not meet the requirements for this armor.');
+            }
+
+            DB::transaction(function () use ($character, $itemId, $oldMultiplier) {
+                if ($character->off_hand_id && (int) $character->off_hand_id !== $itemId) {
+                    $this->addToBackpack($character, (int) $character->off_hand_id, 1);
+                }
+
+                $this->removeFromBackpack($character, $itemId, 1);
+
+                $character->off_hand_id = $itemId;
+                $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
                 $character->save();
             });
 
@@ -131,6 +202,7 @@ class BackpackService
         }
 
         if (in_array($slotEnum, [EquipmentSlot::SEAL_1, EquipmentSlot::SEAL_2, EquipmentSlot::SEAL_3, EquipmentSlot::SEAL_4], true)) {
+            $oldMultiplier = $this->getMaxHpMultiplier($character);
             if ($item->type !== 'seal') {
                 throw new DomainException('Item cannot be equipped in that slot.');
             }
@@ -146,7 +218,7 @@ class BackpackService
                 throw new DomainException('You do not meet the requirements for this seal.');
             }
 
-            DB::transaction(function () use ($character, $itemId, $slotEnum) {
+            DB::transaction(function () use ($character, $itemId, $slotEnum, $oldMultiplier) {
                 $currentSealId = $this->getSealSlotId($character, $slotEnum);
                 if ($currentSealId && $currentSealId !== $itemId) {
                     $this->addToBackpack($character, $currentSealId, 1);
@@ -155,6 +227,7 @@ class BackpackService
                 $this->removeFromBackpack($character, $itemId, 1);
 
                 $this->setSealSlotId($character, $slotEnum, $itemId);
+                $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
                 $character->save();
             });
 
@@ -162,6 +235,7 @@ class BackpackService
         }
 
         if (in_array($slotEnum, [EquipmentSlot::HELMET, EquipmentSlot::CHEST, EquipmentSlot::LEGS, EquipmentSlot::GLOVES], true)) {
+            $oldMultiplier = $this->getMaxHpMultiplier($character);
             if ($item->type !== 'armor') {
                 throw new DomainException('Item cannot be equipped in that slot.');
             }
@@ -188,7 +262,7 @@ class BackpackService
                 throw new DomainException('You do not meet the requirements for this armor.');
             }
 
-            DB::transaction(function () use ($character, $itemId, $slotEnum, $armor) {
+            DB::transaction(function () use ($character, $itemId, $slotEnum, $armor, $oldMultiplier) {
                 $currentArmorId = $this->getArmorSlotId($character, $slotEnum);
                 if ($currentArmorId && $currentArmorId !== $itemId) {
                     $this->addToBackpack($character, $currentArmorId, 1);
@@ -201,6 +275,7 @@ class BackpackService
                 if (in_array($slotEnum, [EquipmentSlot::CHEST, EquipmentSlot::GLOVES], true)) {
                     $this->recalculateArmArmor($character);
                 }
+                $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
                 $character->save();
             });
 
@@ -218,15 +293,34 @@ class BackpackService
         }
 
         if ($slotEnum === EquipmentSlot::MAIN_HAND) {
+            $oldMultiplier = $this->getMaxHpMultiplier($character);
             if (!$character->weapon_id) {
                 throw new DomainException('No item equipped in that slot.');
             }
 
-            DB::transaction(function () use ($character) {
+            DB::transaction(function () use ($character, $oldMultiplier) {
                 $this->addToBackpack($character, (int) $character->weapon_id, 1);
 
                 $character->weapon_id = null;
                 $character->weapon = null;
+                $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+                $character->save();
+            });
+
+            return;
+        }
+
+        if ($slotEnum === EquipmentSlot::OFF_HAND) {
+            $oldMultiplier = $this->getMaxHpMultiplier($character);
+            if (!$character->off_hand_id) {
+                throw new DomainException('No item equipped in that slot.');
+            }
+
+            DB::transaction(function () use ($character, $oldMultiplier) {
+                $this->addToBackpack($character, (int) $character->off_hand_id, 1);
+
+                $character->off_hand_id = null;
+                $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
                 $character->save();
             });
 
@@ -234,14 +328,16 @@ class BackpackService
         }
 
         if (in_array($slotEnum, [EquipmentSlot::SEAL_1, EquipmentSlot::SEAL_2, EquipmentSlot::SEAL_3, EquipmentSlot::SEAL_4], true)) {
+            $oldMultiplier = $this->getMaxHpMultiplier($character);
             $currentSealId = $this->getSealSlotId($character, $slotEnum);
             if (!$currentSealId) {
                 throw new DomainException('No item equipped in that slot.');
             }
 
-            DB::transaction(function () use ($character, $slotEnum, $currentSealId) {
+            DB::transaction(function () use ($character, $slotEnum, $currentSealId, $oldMultiplier) {
                 $this->addToBackpack($character, $currentSealId, 1);
                 $this->setSealSlotId($character, $slotEnum, null);
+                $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
                 $character->save();
             });
 
@@ -249,18 +345,20 @@ class BackpackService
         }
 
         if (in_array($slotEnum, [EquipmentSlot::HELMET, EquipmentSlot::CHEST, EquipmentSlot::LEGS, EquipmentSlot::GLOVES], true)) {
+            $oldMultiplier = $this->getMaxHpMultiplier($character);
             $currentArmorId = $this->getArmorSlotId($character, $slotEnum);
             if (!$currentArmorId) {
                 throw new DomainException('No item equipped in that slot.');
             }
 
-            DB::transaction(function () use ($character, $slotEnum, $currentArmorId) {
+            DB::transaction(function () use ($character, $slotEnum, $currentArmorId, $oldMultiplier) {
                 $this->addToBackpack($character, $currentArmorId, 1);
                 $this->setArmorSlotId($character, $slotEnum, null);
                 $this->setArmorValueForSlot($character, $slotEnum, 0.0);
                 if (in_array($slotEnum, [EquipmentSlot::CHEST, EquipmentSlot::GLOVES], true)) {
                     $this->recalculateArmArmor($character);
                 }
+                $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
                 $character->save();
             });
 
@@ -451,6 +549,77 @@ class BackpackService
         return match ($name) {
             'sword' => 'sword',
             'axe' => 'axe',
+            default => null,
+        };
+    }
+
+    private function recalculateHpOnEquipmentChange(CharacterModel $character, float $oldMultiplier): void
+    {
+        $baseHp = $this->statService->calculateHp((int) ($character->constitution ?? 0));
+        $newMultiplier = $this->getMaxHpMultiplier($character);
+
+        $oldMax = (int) ceil($baseHp * (1.0 + $oldMultiplier));
+        $newMax = (int) ceil($baseHp * (1.0 + $newMultiplier));
+
+        $current = (int) ($character->hp ?? $baseHp);
+        $newCurrent = $oldMax > 0
+            ? (int) round(($current / $oldMax) * $newMax)
+            : $newMax;
+
+        $character->max_hp = $baseHp;
+        $character->hp = (int) max(0, min($newMax, $newCurrent));
+    }
+
+    private function getMaxHpMultiplier(CharacterModel $character): float
+    {
+        $multiplier = 0.0;
+        foreach ($this->getEquippedItemsForHp($character) as $item) {
+            if (method_exists($item, 'getMaxHpMultiplier')) {
+                $multiplier += $item->getMaxHpMultiplier();
+            }
+        }
+        return $multiplier;
+    }
+
+    /**
+     * @return array<int, Item>
+     */
+    private function getEquippedItemsForHp(CharacterModel $character): array
+    {
+        $ids = array_filter([
+            $character->weapon_id,
+            $character->off_hand_id,
+            $character->seal_1_id,
+            $character->seal_2_id,
+            $character->seal_3_id,
+            $character->seal_4_id,
+            $character->helmet_id,
+            $character->chest_id,
+            $character->legs_id,
+            $character->gloves_id,
+        ], static fn ($id) => $id !== null);
+
+        $items = [];
+        foreach (array_unique($ids) as $id) {
+            $model = ItemModel::find($id);
+            if (!$model) {
+                continue;
+            }
+            $item = $this->hydrateItemForHp($model);
+            if ($item) {
+                $items[] = $item;
+            }
+        }
+
+        return $items;
+    }
+
+    private function hydrateItemForHp(ItemModel $item): ?Item
+    {
+        return match ($item->type) {
+            'weapon', 'offhand_weapon' => $this->weaponHydrator->fromItem($item),
+            'armor', 'helmet', 'chest', 'legs', 'gloves', 'shield' => $this->armorHydrator->fromItem($item),
+            'seal' => $this->sealHydrator->fromItem($item),
             default => null,
         };
     }

@@ -29,7 +29,8 @@ class Shield extends Armor
             subtype: ArmorSubtype::OFF_HAND, // Placeholder subtype for shields
             requiredStrength: $requiredStrength,
             blockResistRating: $blockResistRating,
-            pierceDamageReduction: $pierceDamageReduction
+            pierceDamageReduction: $pierceDamageReduction,
+            itemType: ItemType::SHIELD
         );
     }
 
