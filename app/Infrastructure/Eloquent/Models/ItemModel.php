@@ -28,6 +28,11 @@ class ItemModel extends Model
         'ad_armor',
         'dodge_bonus',
         'armor_subtype',
+        'is_two_handed',
+        'parry_rating',
+        'defensive_ap_bonus',
+        'hp_multiplier',
+        'block_rating',
     ];
 
     protected $casts = [
@@ -37,6 +42,8 @@ class ItemModel extends Model
         'crit_chance_bonus' => 'float',
         'ad_armor' => 'float',
         'dodge_bonus' => 'float',
+        'hp_multiplier' => 'float',
+        'is_two_handed' => 'boolean',
     ];
 }
 

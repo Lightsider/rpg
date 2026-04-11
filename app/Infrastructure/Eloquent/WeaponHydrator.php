@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Eloquent;
 
+use App\Domain\Weapon\Dagger;
 use App\Domain\Weapon\DamageType;
 use App\Domain\Weapon\Weapon;
 use App\Domain\Weapon\WeaponArchetype;
@@ -13,6 +14,18 @@ class WeaponHydrator
 {
     public function fromItem(ItemModel $item): Weapon
     {
+        if ($item->type === 'offhand_weapon') {
+            return new Dagger(
+                id: $item->id,
+                name: $item->name,
+                minDamage: $item->min_damage,
+                maxDamage: $item->max_damage,
+                damageType: DamageType::from(strtolower($item->damage_type ?? 'slashing')),
+                blockBreakRating: $item->block_break_rating,
+                parryRating: $item->parry_rating ?? 0
+            );
+        }
+
         return new Weapon(
             id: $item->id,
             name: $item->name,
@@ -28,6 +41,7 @@ class WeaponHydrator
             requiredWit: $item->required_wit ?? 0,
             flatCritBonus: $item->flat_crit_bonus ?? 0,
             critChanceBonus: (float) ($item->crit_chance_bonus ?? 0),
+            isTwoHanded: (bool) ($item->is_two_handed ?? false)
         );
     }
 

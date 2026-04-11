@@ -26,10 +26,10 @@ class EloquentItemRepository implements ItemRepositoryInterface
         }
 
         return match ($model->type) {
-            'weapon' => $this->weaponHydrator->fromItem($model),
-            'armor', 'helmet', 'chest', 'legs', 'gloves' => $this->armorHydrator->fromItem($model),
+            'weapon', 'offhand_weapon' => $this->weaponHydrator->fromItem($model),
+            'armor', 'helmet', 'chest', 'legs', 'gloves', 'shield' => $this->armorHydrator->fromItem($model),
             'seal' => $this->sealHydrator->fromItem($model),
-            default => null, // Should not happen in this DB schema
+            default => null,
         };
     }
 }

@@ -26,15 +26,10 @@ class StoreController extends Controller
             $items = $this->getStoreItems->execute($id);
             $characterId = $request->user()->character?->id;
 
-            if ($characterId) {
-                // Broadcast store state to the user's specific channel
-                broadcast(new StoreStateEvent($characterId, $items));
-            }
-
             return response()->json([
                 'status' => 'success',
                 'items' => $items,
-                'message' => 'Store opened and state broadcasted'
+                'message' => 'Store opened'
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);

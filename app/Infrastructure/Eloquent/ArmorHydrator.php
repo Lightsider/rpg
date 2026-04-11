@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Eloquent;
 
+use App\Domain\Armor\Shield;
 use App\Domain\Armor\Armor;
 use App\Domain\Armor\ArmorSubtype;
 use App\Infrastructure\Eloquent\Models\ItemModel;
@@ -12,6 +13,17 @@ class ArmorHydrator
 {
     public function fromItem(ItemModel $item): Armor
     {
+        if ($item->type === 'shield') {
+            return new Shield(
+                id: $item->id,
+                name: $item->name,
+                blockResistRating: $item->block_rating ?? 40,
+                requiredStrength: $item->required_strength ?? 0,
+                adArmor: (float) $item->ad_armor,
+                dodgeBonus: (float) $item->dodge_bonus
+            );
+        }
+
         return new Armor(
             id: $item->id,
             name: $item->name,
