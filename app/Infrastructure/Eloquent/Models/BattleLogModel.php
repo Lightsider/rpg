@@ -22,10 +22,17 @@ class BattleLogModel extends Model
         'outcome',
         'is_crit',
         'is_max',
+        'weapon_name',
+        'damage_type',
         'occurred_at',
     ];
 
     protected $casts = [
+        'battle_id' => 'integer',
+        'round_number' => 'integer',
+        'actor_id' => 'integer',
+        'target_id' => 'integer',
+        'damage' => 'integer',
         'occurred_at' => 'immutable_datetime',
         'is_crit' => 'boolean',
         'is_max' => 'boolean',

@@ -85,3 +85,8 @@ export const buyStoreItem = async (storeItemId) => {
     const response = await api.post('/store/buy', { store_item_id: storeItemId });
     return response.data;
 };
+
+export const getRecentFights = async () => {
+    const response = await api.get('/battles/recent');
+    return response.data;
+};

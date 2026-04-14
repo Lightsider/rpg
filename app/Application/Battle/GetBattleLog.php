@@ -29,8 +29,10 @@ class GetBattleLog
         }
 
         $character = $this->characterRepository->findByUserId($userId);
-        if (!$character || !$battle->getParticipantById($character->getId())) {
-            throw new DomainException('You are not a participant in this fight.');
+        $isParticipant = $character && $battle->getParticipantById($character->getId());
+
+        if (!$isParticipant && !$battle->isFinished()) {
+            throw new DomainException('You are not a participant in this ongoing fight.');
         }
 
         return $this->battleLogRepository->findByBattleId($battleId);

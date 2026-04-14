@@ -51,6 +51,8 @@ const dedupeEvents = (events) => {
             event.outcome,
             event.is_crit ? 1 : 0,
             event.is_max ? 1 : 0,
+            event.weapon_name,
+            event.damage_type,
             event.occurred_at,
         ].join('|');
         if (seen.has(key)) return false;
@@ -134,7 +136,7 @@ const getActionIcon = (type) => {
 
 const getNameById = (id) => {
     if (!id) return 'Unknown';
-    const found = props.participants.find(p => p.character_id === id);
+    const found = props.participants.find(p => p.character_id == id);
     return found?.name || `Player ${id}`;
 };
 
@@ -168,7 +170,7 @@ const getAttackOutcome = (event) => {
                 <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Round {{ roundGroup.round }}</div>
                 
                 <ul class="space-y-1">
-                    <li v-for="event in roundGroup.events" :key="event.occurred_at + '-' + event.actor_id" 
+                    <li v-for="event in roundGroup.events" :key="event.occurred_at + '-' + event.actor_id + '-' + event.type" 
                         class="text-sm p-2 bg-white rounded shadow-sm border flex items-start gap-2"
                         :class="{
                             'border-orange-300 bg-orange-50': event.type === 'attack' && getAttackOutcome(event) === 'block_break',
@@ -188,16 +190,25 @@ const getAttackOutcome = (event) => {
                                     <span class="text-blue-600 font-bold uppercase">missed</span> <span class="font-bold">{{ getNameById(event.target_id) }}</span>.
                                 </span>
                                 <span v-else-if="getAttackOutcome(event) === 'block'">
-                                    hit <span class="font-bold">{{ getNameById(event.target_id) }}</span> in the {{ getZoneDisplay(event.zone) }} but the attack was <span class="text-green-700 font-bold">blocked</span>.
+                                    hit <span class="font-bold">{{ getNameById(event.target_id) }}</span>
+                                    <span v-if="event.weapon_name"> with <span class="italic text-gray-700">{{ event.weapon_name }}</span></span>
+                                    <span v-if="event.damage_type" class="text-xs text-gray-500"> ({{ event.damage_type }})</span>
+                                    in the {{ getZoneDisplay(event.zone) }} but the attack was <span class="text-green-700 font-bold">blocked</span>.
                                 </span>
                                 <span v-else-if="getAttackOutcome(event) === 'block_break'">
-                                    <span class="text-orange-600 font-bold">BROKE BLOCK</span> of <span class="font-bold">{{ getNameById(event.target_id) }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
+                                    <span class="text-orange-600 font-bold">BROKE BLOCK</span> of <span class="font-bold">{{ getNameById(event.target_id) }}</span> 
+                                    <span v-if="event.weapon_name"> with <span class="italic text-gray-700">{{ event.weapon_name }}</span></span>
+                                    <span v-if="event.damage_type" class="text-xs text-gray-500"> ({{ event.damage_type }})</span>
+                                    in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
                                 </span>
                                 <span v-else>
-                                    hit <span class="font-bold">{{ getNameById(event.target_id) }}</span> in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
+                                    hit <span class="font-bold">{{ getNameById(event.target_id) }}</span> 
+                                    <span v-if="event.weapon_name"> with <span class="italic text-gray-700">{{ event.weapon_name }}</span></span>
+                                    <span v-if="event.damage_type" class="text-xs text-gray-500"> ({{ event.damage_type }})</span>
+                                    in the {{ getZoneDisplay(event.zone) }} for <span class="text-red-600 font-bold">{{ event.damage }}</span> damage.
                                 </span>
-                                <span v-if="event.is_max" class="ml-1 text-yellow-700 font-bold">MAX</span>
-                                <span v-if="event.is_crit" class="ml-1 text-pink-600 font-bold">CRIT</span>
+                                <span v-if="event.is_max && getAttackOutcome(event) !== 'block' && getAttackOutcome(event) !== 'dodge' && getAttackOutcome(event) !== 'parry'" class="ml-1 text-yellow-700 font-bold">MAX</span>
+                                <span v-if="event.is_crit && getAttackOutcome(event) !== 'block' && getAttackOutcome(event) !== 'dodge' && getAttackOutcome(event) !== 'parry'" class="ml-1 text-pink-600 font-bold">CRIT</span>
                             </span>
                             <span v-else-if="event.type === 'move'">
                                 <span class="font-bold">{{ getNameById(event.actor_id) }}</span> moved.

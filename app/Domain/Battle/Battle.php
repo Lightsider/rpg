@@ -513,6 +513,7 @@ class Battle implements \JsonSerializable
             'max_participants' => $this->getMaxParticipants(),
             'start_timeout_seconds' => $this->getStartTimeoutSeconds(),
             'participant_teams' => $this->getParticipantTeams(),
+            'round_started_at' => $this->getRoundStartedAt()->format(\DateTime::ATOM),
         ];
     }
 }

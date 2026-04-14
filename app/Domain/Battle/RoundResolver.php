@@ -265,6 +265,7 @@ class RoundResolver implements RoundResolverInterface
                 $outcome = 'block_break';
             }
 
+            $weaponUsed = $forcedWeapon ?? $attacker->getWeaponForCombat();
             $logs[] = new BattleLogEntry(
                 roundNumber: $battle->getRoundNumber(),
                 type: BattleLogType::ATTACK,
@@ -274,7 +275,9 @@ class RoundResolver implements RoundResolverInterface
                 damage: $damage,
                 outcome: $outcome,
                 isCrit: $result->isCritical,
-                isMax: $result->isMaxDamage
+                isMax: $result->isMaxDamage,
+                weaponName: $weaponUsed->getName(),
+                damageType: $result->damageType->value
             );
         }
 

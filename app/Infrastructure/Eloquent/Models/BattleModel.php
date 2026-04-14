@@ -38,6 +38,7 @@ class BattleModel extends Model
         'map_height' => 'integer',
     ];
 
+
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(CharacterModel::class, 'battle_participants', 'battle_id', 'character_id')
@@ -57,5 +58,10 @@ class BattleModel extends Model
     public function fighterPositions(): HasMany
     {
         return $this->hasMany(FighterPositionModel::class, 'fight_id');
+    }
+
+    public function location(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(LocationModel::class, 'location_id');
     }
 }

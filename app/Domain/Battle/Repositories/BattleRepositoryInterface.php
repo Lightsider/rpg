@@ -20,6 +20,10 @@ interface BattleRepositoryInterface
      * @return array<int, Battle>
      */
     public function findActiveByLocation(int $locationId): array;
+    /**
+     * @return array<int, Battle>
+     */
+    public function findRecent(int $limit = 15): array;
 
     /**
      * @return array<int, Battle>

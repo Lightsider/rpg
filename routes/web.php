@@ -23,6 +23,9 @@ Route::middleware(['auth'])->group(function () {
         return redirect()->route('game.index');
     });
 
+    Route::get('/battles', [FightController::class, 'history'])->name('fights.history');
+    Route::get('/battles/{id}', [FightController::class, 'showHistory'])->name('fights.show_history');
+
     // JSON API Endpoints
     Route::prefix('api')->group(function () {
         Route::get('/game', [GameController::class, 'index'])->name('api.game.index');
@@ -44,6 +47,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/fights/{id}/cancel', [FightController::class, 'cancel'])->name('api.fights.cancel');
         Route::post('/fights/{id}/actions', [FightController::class, 'submitActions'])->name('api.fights.submit_actions');
         Route::get('/fights/{id}/log', [FightController::class, 'log'])->name('api.fights.log');
+        Route::get('/battles/recent', [FightController::class, 'recent'])->name('api.fights.recent');
 
         Route::post('/chat/send', [ChatController::class, 'send'])->name('api.chat.send');
         Route::get('/chat/state', [ChatController::class, 'state'])->name('api.chat.state');

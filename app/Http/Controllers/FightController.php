@@ -11,8 +11,11 @@ use App\Application\Battle\JoinBattle;
 use App\Application\Battle\ListBattles;
 use App\Application\Battle\ShowBattle;
 use App\Application\Battle\SubmitBattleActions;
+use App\Application\Battle\ListRecentBattles;
 use App\Domain\DomainException;
 use App\Http\Requests\SubmitActionsRequest;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +29,8 @@ class FightController extends Controller
         private readonly CancelBattle $cancelBattle,
         private readonly ShowBattle $showBattle,
         private readonly GetBattleLog $getBattleLog,
-        private readonly SubmitBattleActions $submitBattleActions
+        private readonly SubmitBattleActions $submitBattleActions,
+        private readonly ListRecentBattles $listRecentBattles
     ) {
     }
 
@@ -134,6 +138,27 @@ class FightController extends Controller
         }
     }
 
+    public function history(): InertiaResponse
+    {
+        return Inertia::render('Battles/History');
+    }
+
+    public function recent(): JsonResponse
+    {
+        try {
+            $battles = $this->listRecentBattles->execute(20);
+            return response()->json($battles);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function showHistory(int $id): InertiaResponse
+    {
+        return Inertia::render('Battles/Show', [
+            'fightId' => $id
+        ]);
+    }
 }
 
 

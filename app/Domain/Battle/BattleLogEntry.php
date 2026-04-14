@@ -21,6 +21,8 @@ class BattleLogEntry
         public readonly ?string $outcome = null,
         public readonly ?bool $isCrit = null,
         public readonly ?bool $isMax = null,
+        public readonly ?string $weaponName = null,
+        public readonly ?string $damageType = null,
         public readonly DateTimeImmutable $timestamp = new DateTimeImmutable()
     ) {
     }

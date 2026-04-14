@@ -26,6 +26,8 @@ class BattleEventPayloadFactory
                 'outcome' => $entry->outcome,
                 'is_crit' => $entry->isCrit,
                 'is_max' => $entry->isMax,
+                'weapon_name' => $entry->weaponName,
+                'damage_type' => $entry->damageType,
                 'occurred_at' => $entry->timestamp->format(\DateTimeInterface::ATOM),
             ], fn($v) => $v !== null),
             $logs

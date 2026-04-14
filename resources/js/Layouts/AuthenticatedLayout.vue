@@ -45,6 +45,12 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Game
                                 </NavLink>
+                                <NavLink
+                                    :href="route('fights.history')"
+                                    :active="route().current('fights.history') || route().current('fights.show_history')"
+                                >
+                                    Last Fights
+                                </NavLink>
                             </div>
                         </div>
 
@@ -151,6 +157,18 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('dashboard')"
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('game.index')"
+                            :active="route().current('game.index')"
+                        >
+                            Game
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('fights.history')"
+                            :active="route().current('fights.history') || route().current('fights.show_history')"
+                        >
+                            Last Fights
                         </ResponsiveNavLink>
                     </div>
 

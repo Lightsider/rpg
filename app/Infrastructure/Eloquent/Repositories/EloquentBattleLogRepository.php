@@ -24,6 +24,8 @@ class EloquentBattleLogRepository implements BattleLogRepositoryInterface
                 'outcome' => $entry->outcome,
                 'is_crit' => $entry->isCrit,
                 'is_max' => $entry->isMax,
+                'weapon_name' => $entry->weaponName,
+                'damage_type' => $entry->damageType,
                 'occurred_at' => $entry->timestamp,
             ]);
         }
@@ -55,6 +57,8 @@ class EloquentBattleLogRepository implements BattleLogRepositoryInterface
                 'outcome' => $log->outcome,
                 'is_crit' => $log->is_crit,
                 'is_max' => $log->is_max,
+                'weapon_name' => $log->weapon_name,
+                'damage_type' => $log->damage_type,
                 'occurred_at' => $log->occurred_at->toIso8601String(),
             ];
         }

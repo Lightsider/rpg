@@ -177,6 +177,16 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         return $this->findById((int) $battleId);
     }
 
+    public function findRecent(int $limit = 15): array
+    {
+        $models = BattleModel::with(['participants', 'location'])
+            ->orderBy('updated_at', 'desc')
+            ->limit($limit)
+            ->get();
+
+        return $models->map(fn(BattleModel $m) => $this->mapToDomain($m))->toArray();
+    }
+
     private function mapToDomain(BattleModel $model): Battle
     {
         $positions = FighterPositionModel::where('fight_id', $model->id)
