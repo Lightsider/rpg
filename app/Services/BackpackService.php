@@ -426,8 +426,12 @@ class BackpackService
             'ad_armor' => $item->ad_armor,
             'dodge_bonus' => $item->dodge_bonus,
             'armor_subtype' => $item->armor_subtype,
+            'defensive_ap_bonus' => $item->defensive_ap_bonus,
+            'offhand_ap_bonus' => $item->type === 'offhand_weapon' ? 1 : 0,
+            'parry_rating' => $item->parry_rating,
         ];
     }
+
 
     private function itemPayloadById(?int $itemId): ?array
     {

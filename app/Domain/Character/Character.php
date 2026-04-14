@@ -101,8 +101,19 @@ class Character implements \JsonSerializable
 
     public function canQueueAttack(): bool
     {
-        return !$this->isCommitted && $this->currentActionPoints > 0 && $this->attackPointsUsed < self::MAX_ATTACKS_PER_TURN;
+        return !$this->isCommitted && $this->currentActionPoints > 0 && $this->attackPointsUsed < $this->getMaxAttacks();
     }
+
+    public function getMaxAttacks(): int
+    {
+        $bonus = 0;
+        $offhand = $this->equipment->getItem(EquipmentSlot::OFF_HAND);
+        if ($offhand && method_exists($offhand, 'getOffHandAPBonus')) {
+            $bonus = $offhand->getOffHandAPBonus();
+        }
+        return self::MAX_ATTACKS_PER_TURN + $bonus;
+    }
+
 
     public function canQueueDefense(): bool
     {
@@ -115,13 +126,41 @@ class Character implements \JsonSerializable
             return false;
         }
 
-        // Only allow if we have a dagger in offhand
-        $offhand = $this->equipment->getItem(\App\Domain\Equipment\EquipmentSlot::OFF_HAND);
-        if (!$offhand || !method_exists($offhand, 'getOffHandAPBonus')) {
+        if (!$this->hasDagger()) {
             return false;
         }
 
         return $this->offhandAttackPointsUsed < 1;
+    }
+
+    public function hasShield(): bool
+    {
+        $offhand = $this->equipment->getItem(\App\Domain\Equipment\EquipmentSlot::OFF_HAND);
+        return $offhand instanceof \App\Domain\Armor\Shield;
+    }
+
+    public function hasDagger(): bool
+    {
+        $offhand = $this->equipment->getItem(\App\Domain\Equipment\EquipmentSlot::OFF_HAND);
+        return $offhand instanceof \App\Domain\Weapon\Dagger;
+    }
+
+    public function getBonusDefensiveAP(): int
+    {
+        $item = $this->equipment->getItem(\App\Domain\Equipment\EquipmentSlot::OFF_HAND);
+        if ($item instanceof \App\Domain\Armor\Shield) {
+            return $item->getDefensiveAPBonus();
+        }
+        return 0;
+    }
+
+    public function getBonusOffhandAP(): int
+    {
+        $item = $this->equipment->getItem(\App\Domain\Equipment\EquipmentSlot::OFF_HAND);
+        if ($item instanceof \App\Domain\Weapon\Dagger) {
+            return $item->getOffHandAPBonus();
+        }
+        return 0;
     }
 
     public function canSpendAP(int $cost): bool

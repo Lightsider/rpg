@@ -6,18 +6,33 @@ const props = defineProps({
         type: Number,
         default: 3
     },
+    maxAttacks: {
+        type: Number,
+        default: 2
+    },
+    hasShield: {
+        type: Boolean,
+        default: false
+    },
+    hasDagger: {
+        type: Boolean,
+        default: false
+    },
     disabled: {
         type: Boolean,
         default: false
     }
 });
 
+
+
 const emit = defineEmits(['submitActions']);
 
 const queue = ref([]);
 
-const MAX_ACTIONS = 3;
-const MAX_ATTACKS = 2;
+const MAX_ACTIONS = computed(() => props.apAvailable);
+const MAX_ATTACKS = computed(() => props.maxAttacks);
+
 
 const availableZones = [
     { value: 'head', label: 'Head' },
@@ -30,25 +45,65 @@ const availableZones = [
 const actionType = ref('attack');
 const targetZone = ref('torso');
 
+const availableActionOptions = computed(() => {
+    const options = [
+        { value: 'attack', label: 'Attack (Main)' },
+        { value: 'block', label: 'Block' }
+    ];
+    if (props.hasDagger) {
+        options.push({ value: 'attack_offhand', label: 'Attack (Dagger)' });
+    }
+    return options;
+});
+
+const currentOffhandInQueue = computed(() => {
+    return queue.value.filter(a => a.type === 'attack_offhand').length;
+});
+
+const currentGeneralInQueue = computed(() => {
+    return queue.value.filter(a => a.type !== 'attack_offhand').length;
+});
+
 const currentAttacksInQueue = computed(() => {
     return queue.value.filter(a => a.type === 'attack').length;
 });
 
+
 const canAddAttack = computed(() => {
-    return currentAttacksInQueue.value < MAX_ATTACKS && queue.value.length < props.apAvailable;
+    return currentAttacksInQueue.value < 2 && currentGeneralInQueue.value < 3 && queue.value.length < props.apAvailable;
+});
+
+const canAddOffhand = computed(() => {
+    return props.hasDagger && currentOffhandInQueue.value < 1 && queue.value.length < props.apAvailable;
 });
 
 const canAddBlock = computed(() => {
-    return queue.value.length < props.apAvailable;
+    const limit = 3 + (props.hasShield ? 1 : 0);
+    return currentGeneralInQueue.value < limit && queue.value.length < props.apAvailable;
 });
 
 const addActionToQueue = () => {
     if (queue.value.length >= props.apAvailable) return;
     
     if (actionType.value === 'attack' && !canAddAttack.value) {
-        alert("Maximum 2 attacks allowed per round.");
+        if (currentAttacksInQueue.value >= 2) {
+            alert("Maximum 2 main-hand attacks allowed per round.");
+        } else {
+            alert("No General AP left for main attack.");
+        }
         return;
     }
+
+    if (actionType.value === 'attack_offhand' && !canAddOffhand.value) {
+        alert("Maximum 1 off-hand dagger attack allowed.");
+        return;
+    }
+
+    if (actionType.value === 'block' && !canAddBlock.value) {
+        alert("No AP left for more blocks.");
+        return;
+    }
+
 
     queue.value.push({
         id: Date.now() + Math.random(),
@@ -65,12 +120,21 @@ const randomZone = () => {
 const fillRandomQueue = (attackCountTarget) => {
     if (props.apAvailable <= 0) return;
 
-    const maxActions = Math.min(MAX_ACTIONS, props.apAvailable);
-    const attackCount = Math.min(attackCountTarget, MAX_ATTACKS, maxActions);
-    const blockCount = Math.max(0, maxActions - attackCount);
-
     const nextQueue = [];
-    for (let i = 0; i < attackCount; i++) {
+    
+    // 1. Dagger offhand first if applicable
+    if (props.hasDagger) {
+        nextQueue.push({
+            id: Date.now() + Math.random(),
+            type: 'attack_offhand',
+            zone: randomZone()
+        });
+    }
+
+    // 2. Main attacks
+    const mainAttacksToFill = Math.min(attackCountTarget - (props.hasDagger ? 1 : 0), 2, 3 - nextQueue.length, props.apAvailable - nextQueue.length);
+    for (let i = 0; i < mainAttacksToFill; i++) {
+        if (nextQueue.length >= props.apAvailable) break;
         nextQueue.push({
             id: Date.now() + Math.random(),
             type: 'attack',
@@ -78,8 +142,12 @@ const fillRandomQueue = (attackCountTarget) => {
         });
     }
 
+    // 3. Blocks
+    const totalLimit = 3 + (props.hasShield ? 1 : 0) + (props.hasDagger ? 1 : 0);
+    const actionsLimit = Math.min(totalLimit, props.apAvailable);
+    
     const availableBlockZones = availableZones.map(zone => zone.value);
-    for (let i = 0; i < blockCount; i++) {
+    while (nextQueue.length < actionsLimit) {
         if (availableBlockZones.length === 0) break;
         const index = Math.floor(Math.random() * availableBlockZones.length);
         const zone = availableBlockZones.splice(index, 1)[0];
@@ -93,13 +161,15 @@ const fillRandomQueue = (attackCountTarget) => {
     queue.value = nextQueue;
 };
 
+
 const randomAttackPattern = () => {
-    fillRandomQueue(2);
+    fillRandomQueue(MAX_ATTACKS.value);
 };
 
 const randomDefensePattern = () => {
     fillRandomQueue(1);
 };
+
 
 const removeAction = (index) => {
     queue.value.splice(index, 1);
@@ -146,8 +216,9 @@ defineExpose({
                 <div class="flex-1">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Action Type</label>
                     <select v-model="actionType" class="w-full border-gray-300 rounded-md shadow-sm focus:border-red-500 focus:ring-red-500 min-h-[42px] px-3 border bg-white cursor-pointer select-none ring-0 outline-none hover:bg-gray-50 transition-colors">
-                        <option value="attack" :disabled="!canAddAttack">Attack (Melee)</option>
-                        <option value="block" :disabled="!canAddBlock">Block (Defend)</option>
+                        <option v-for="opt in availableActionOptions" :key="opt.value" :value="opt.value">
+                            {{ opt.label }}
+                        </option>
                     </select>
                 </div>
                 
@@ -175,15 +246,17 @@ defineExpose({
                     :disabled="disabled"
                     class="w-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-semibold py-2 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Random Attack (2 atk + block)
+                    Random Attack ({{ props.hasDagger ? '3' : '2' }} atk)
                 </button>
                 <button
                     @click="randomDefensePattern"
                     :disabled="disabled"
                     class="w-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 font-semibold py-2 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Random Defense (1 atk + block)
+                    Random Defense (Full AP)
                 </button>
+
+
             </div>
         </div>
 
@@ -198,10 +271,26 @@ defineExpose({
             <ul v-else class="space-y-2">
                 <li v-for="(action, index) in queue" :key="action.id" class="flex justify-between items-center bg-gray-50 p-3 rounded border">
                     <div class="flex items-center gap-3">
-                        <span class="font-bold text-gray-500 w-6">{{ index + 1 }}.</span>
-                        <span class="capitalize font-semibold" :class="action.type === 'attack' ? 'text-red-700' : 'text-blue-700'">{{ action.type }}</span>
-                        <span class="text-gray-600 capitalize">-> {{ action.zone.replace('_', ' ') }}</span>
+                        <span class="font-bold text-gray-400 w-6">{{ index + 1 }}.</span>
+                        
+                        <div class="flex flex-col">
+                            <div class="flex items-center gap-2">
+                                <span v-if="action.type === 'attack_offhand'" class="text-[10px] font-bold bg-amber-100 text-amber-800 px-1 rounded border border-amber-200 uppercase">Dagger</span>
+                                <span v-if="action.type === 'block' && index >= 3 && props.hasShield" class="text-[10px] font-bold bg-blue-100 text-blue-800 px-1 rounded border border-blue-200 uppercase">Shield</span>
+                                
+                                <span class="capitalize font-semibold" 
+                                    :class="{
+                                        'text-red-700': action.type === 'attack',
+                                        'text-amber-700': action.type === 'attack_offhand',
+                                        'text-blue-700': action.type === 'block'
+                                    }">
+                                    {{ action.type.replace('attack_offhand', 'attack') }}
+                                </span>
+                            </div>
+                            <span class="text-xs text-gray-500 capitalize ml-0">Target: {{ action.zone.replace('_', ' ') }}</span>
+                        </div>
                     </div>
+
                     <button @click="removeAction(index)" class="text-red-500 hover:text-red-700" :disabled="disabled">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />

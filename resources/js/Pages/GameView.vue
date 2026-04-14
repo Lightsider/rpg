@@ -88,7 +88,26 @@ const amICommitted = computed(() => {
     return fightState.value.actions_submitted.includes(myCharacterId.value);
 });
 const isFightActive = computed(() => fightState.value?.status === 'active');
-const apAvailable = computed(() => 3);
+const apAvailable = computed(() => {
+    let base = 3;
+    const offhand = loadout.value.equipment.off_hand;
+    if (offhand?.defensive_ap_bonus) base += offhand.defensive_ap_bonus;
+    if (offhand?.offhand_ap_bonus) base += offhand.offhand_ap_bonus;
+    return base;
+});
+
+const maxAttacks = computed(() => {
+    let base = 2;
+    if (loadout.value.equipment.off_hand?.offhand_ap_bonus) {
+        base += loadout.value.equipment.off_hand.offhand_ap_bonus;
+    }
+    return base;
+});
+
+const hasShield = computed(() => !!loadout.value.equipment.off_hand?.defensive_ap_bonus);
+const hasDagger = computed(() => !!loadout.value.equipment.off_hand?.offhand_ap_bonus);
+
+
 const moveCost = computed(() => (selectedTile.value ? 1 + selectedBlocks.value.length : 0));
 const apAvailableForQueue = computed(() => (actionMode.value === 'move' ? Math.max(0, apAvailable.value - moveCost.value) : apAvailable.value));
 
@@ -311,7 +330,9 @@ const initLocationWebSocket = (locationId) => {
 
 
 const handleQueueSubmit = async (queuedActions) => {
-    if (queuedActions.filter(a => a.type === 'attack').length > 2) return alert('Max 2 attacks.');
+    if (queuedActions.filter(a => a.type === 'attack').length > maxAttacks.value) {
+        return alert(`Max ${maxAttacks.value} attacks.`);
+    }
     
     const moveAction = actionMode.value === 'move' && selectedTile.value 
         ? { type: 'move', target: { x: selectedTile.value.x, y: selectedTile.value.y }, blocks: selectedBlocks.value }
@@ -322,11 +343,21 @@ const handleQueueSubmit = async (queuedActions) => {
     const attackTargetId = actionMode.value === 'attack' && selectedEnemy.value
         ? getCharacterAt(selectedEnemy.value)
         : null;
+
+    let attackCountSeen = 0;
     const normalizedActions = queuedActions.map(action => {
-        if (action.type === 'attack' && attackTargetId) {
-            return { ...action, target_id: attackTargetId };
+        let type = action.type;
+        if (type === 'attack') {
+            attackCountSeen++;
+            if (attackCountSeen > 2 && loadout.value.equipment.off_hand?.offhand_ap_bonus) {
+                type = 'attack_offhand';
+            }
         }
-        return action;
+
+        if (type.startsWith('attack') && attackTargetId) {
+            return { ...action, type, target_id: attackTargetId };
+        }
+        return { ...action, type };
     });
     const payload = moveAction ? [...normalizedActions, moveAction] : [...normalizedActions];
     if (!payload.length) return alert('No actions.');
@@ -953,7 +984,16 @@ onUnmounted(() => {
                                             </div>
                                             <div v-else class="text-sm text-gray-600">Click actions below to queue your turn.</div>
                                         </div>
-                                        <FightActionPanel v-if="actionMode !== 'none'" ref="actionPanelRef" :apAvailable="apAvailableForQueue" :disabled="submitting" @submitActions="handleQueueSubmit" />
+                                        <FightActionPanel 
+                                            v-if="actionMode !== 'none'" 
+                                            ref="actionPanelRef" 
+                                            :apAvailable="apAvailableForQueue" 
+                                            :maxAttacks="maxAttacks" 
+                                            :hasShield="hasShield"
+                                            :hasDagger="hasDagger"
+                                            :disabled="submitting" 
+                                            @submitActions="handleQueueSubmit" 
+                                        />
                                         <div v-else class="text-sm text-gray-500 bg-gray-50 border border-dashed rounded p-4 text-center">
                                             Select an empty adjacent tile to move, or click an adjacent enemy to attack.
                                         </div>
