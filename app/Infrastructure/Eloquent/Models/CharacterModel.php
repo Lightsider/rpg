@@ -8,8 +8,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Infrastructure\Eloquent\Models\ItemModel;
 use App\Infrastructure\Eloquent\Models\CharacterItemModel;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class CharacterModel extends Model
 {
+    use HasFactory;
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\CharacterModelFactory::new();
+    }
     protected $table = 'characters';
 
     protected $fillable = [

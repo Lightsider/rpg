@@ -13,6 +13,7 @@ use App\Domain\Battle\TargetZone;
 use App\Domain\Armor\ArmorSubtype;
 use App\Domain\Armor\Shield;
 use App\Domain\Armor\Armor;
+use App\Domain\Item\Item;
 
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
 
@@ -702,10 +703,26 @@ class Character implements \JsonSerializable
         return 0.0;
     }
 
-    public function canEquip(Weapon $weapon): bool
+    public function canEquip(Item $item): bool
     {
-        return $this->strength >= $weapon->getRequiredStrength() &&
-               $this->wit >= $weapon->getRequiredWit();
+        if ($item instanceof Weapon) {
+            return $this->strength >= $item->getRequiredStrength() &&
+                   $this->wit >= $item->getRequiredWit();
+        }
+
+        if ($item instanceof Armor) {
+            return $this->strength >= $item->getRequiredStrength() &&
+                   $this->wit >= $item->getRequiredWit() &&
+                   $this->agility >= $item->getRequiredDexterity() &&
+                   $this->constitution >= $item->getRequiredConstitution();
+        }
+
+        if ($item instanceof Seal) {
+            return $this->strength >= $item->getRequiredStrength() &&
+                   $this->wit >= $item->getRequiredWit();
+        }
+
+        return true;
     }
 
     /**

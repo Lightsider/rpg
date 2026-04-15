@@ -4,8 +4,16 @@ namespace App\Infrastructure\Eloquent\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class ItemModel extends Model
 {
+    use HasFactory;
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\ItemModelFactory::new();
+    }
     protected $table = 'items';
 
     protected $fillable = [

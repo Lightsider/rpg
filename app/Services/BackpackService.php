@@ -113,9 +113,8 @@ class BackpackService
                 throw new DomainException('Item cannot be equipped in that slot.');
             }
 
-            $strength = (int) ($character->strength ?? 0);
-            $wit = (int) ($character->wit ?? 0);
-            if ($strength < $weapon->getRequiredStrength() || $wit < $weapon->getRequiredWit()) {
+            $charDomain = $this->hydrateCharacterDomain($character);
+            if (!$charDomain->canEquip($weapon)) {
                 throw new DomainException('You do not meet the requirements for this weapon.');
             }
 
@@ -147,9 +146,8 @@ class BackpackService
                     throw new DomainException('Item cannot be equipped in that slot.');
                 }
 
-                $strength = (int) ($character->strength ?? 0);
-                $wit = (int) ($character->wit ?? 0);
-                if ($strength < $weapon->getRequiredStrength() || $wit < $weapon->getRequiredWit()) {
+                $charDomain = $this->hydrateCharacterDomain($character);
+                if (!$charDomain->canEquip($weapon)) {
                     throw new DomainException('You do not meet the requirements for this weapon.');
                 }
 
@@ -173,17 +171,9 @@ class BackpackService
                 throw new DomainException('Item cannot be equipped in that slot.');
             }
 
-            $strength = (int) ($character->strength ?? 0);
-            $wit = (int) ($character->wit ?? 0);
-            $dexterity = (int) ($character->dexterity ?? 0);
-            $constitution = (int) ($character->constitution ?? 0);
-
-            if ($strength < $shield->getRequiredStrength() ||
-                $wit < $shield->getRequiredWit() ||
-                $dexterity < $shield->getRequiredDexterity() ||
-                $constitution < $shield->getRequiredConstitution()
-            ) {
-                throw new DomainException('You do not meet the requirements for this armor.');
+            $charDomain = $this->hydrateCharacterDomain($character);
+            if (!$charDomain->canEquip($shield)) {
+                throw new DomainException('You do not meet the requirements for this shield.');
             }
 
             DB::transaction(function () use ($character, $itemId, $oldMultiplier) {
@@ -212,9 +202,8 @@ class BackpackService
                 throw new DomainException('Item cannot be equipped in that slot.');
             }
 
-            $strength = (int) ($character->strength ?? 0);
-            $wit = (int) ($character->wit ?? 0);
-            if ($strength < $seal->getRequiredStrength() || $wit < $seal->getRequiredWit()) {
+            $charDomain = $this->hydrateCharacterDomain($character);
+            if (!$charDomain->canEquip($seal)) {
                 throw new DomainException('You do not meet the requirements for this seal.');
             }
 
@@ -249,16 +238,8 @@ class BackpackService
                 throw new DomainException('Item cannot be equipped in that slot.');
             }
 
-            $strength = (int) ($character->strength ?? 0);
-            $wit = (int) ($character->wit ?? 0);
-            $dexterity = (int) ($character->dexterity ?? 0);
-            $constitution = (int) ($character->constitution ?? 0);
-
-            if ($strength < $armor->getRequiredStrength() ||
-                $wit < $armor->getRequiredWit() ||
-                $dexterity < $armor->getRequiredDexterity() ||
-                $constitution < $armor->getRequiredConstitution()
-            ) {
+            $charDomain = $this->hydrateCharacterDomain($character);
+            if (!$charDomain->canEquip($armor)) {
                 throw new DomainException('You do not meet the requirements for this armor.');
             }
 
@@ -366,6 +347,90 @@ class BackpackService
         }
 
         throw new DomainException('Invalid equipment slot.');
+    }
+
+    public function validateEquippedItems(CharacterModel $character): array
+    {
+        $charDomain = $this->hydrateCharacterDomain($character);
+        $unequipped = [];
+
+        foreach (EquipmentSlot::cases() as $slot) {
+            $item = $charDomain->getEquipment()->getItem($slot);
+            if ($item && !$charDomain->canEquip($item)) {
+                $unequipped[] = $item->getName();
+                $this->unequipItem($character, $slot->value);
+            }
+        }
+
+        return $unequipped;
+    }
+
+    private function hydrateCharacterDomain(CharacterModel $model): \App\Domain\Character\Character
+    {
+        $weapon = null;
+        if ($model->weapon_id) {
+            $weaponItem = ItemModel::find($model->weapon_id);
+            if ($weaponItem) {
+                $weapon = $this->weaponHydrator->fromItem($weaponItem);
+            }
+        }
+
+        $equipment = new \App\Domain\Equipment\Equipment();
+        if ($weapon) {
+            $equipment->setItem(EquipmentSlot::MAIN_HAND, $weapon);
+        }
+
+        if ($model->off_hand_id) {
+            $offHandItem = ItemModel::find($model->off_hand_id);
+            if ($offHandItem) {
+                if (in_array($offHandItem->type, ['shield', 'armor', 'helmet', 'chest', 'legs', 'gloves'], true)) {
+                    $equipment->setItem(EquipmentSlot::OFF_HAND, $this->armorHydrator->fromItem($offHandItem));
+                } else {
+                    $equipment->setItem(EquipmentSlot::OFF_HAND, $this->weaponHydrator->fromItem($offHandItem));
+                }
+            }
+        }
+
+        foreach ([1, 2, 3, 4] as $i) {
+            $idField = "seal_{$i}_id";
+            if ($model->$idField) {
+                $item = ItemModel::find($model->$idField);
+                if ($item) {
+                    $slot = Constant("App\Domain\Equipment\EquipmentSlot::SEAL_{$i}");
+                    $equipment->setItem($slot, $this->sealHydrator->fromItem($item));
+                }
+            }
+        }
+
+        $armorFields = [
+            'helmet_id' => EquipmentSlot::HELMET,
+            'chest_id' => EquipmentSlot::CHEST,
+            'legs_id' => EquipmentSlot::LEGS,
+            'gloves_id' => EquipmentSlot::GLOVES,
+        ];
+
+        foreach ($armorFields as $field => $slot) {
+            if ($model->$field) {
+                $item = ItemModel::find($model->$field);
+                if ($item) {
+                    $equipment->setItem($slot, $this->armorHydrator->fromItem($item));
+                }
+            }
+        }
+
+        return new \App\Domain\Character\Character(
+            id: $model->id,
+            userId: $model->user_id,
+            name: $model->name,
+            strength: (int) $model->strength,
+            agility: (int) $model->dexterity,
+            constitution: (int) $model->constitution,
+            wit: (int) $model->wit,
+            maxHp: (int) $model->max_hp,
+            currentHp: (int) $model->hp,
+            equipment: $equipment,
+            locationId: (int) $model->location_id
+        );
     }
 
     private function addToBackpack(CharacterModel $character, int $itemId, int $quantity): void

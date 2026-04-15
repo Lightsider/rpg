@@ -100,17 +100,24 @@ class CharacterLoadoutController extends Controller
         CharacterModel::where('user_id', $user->id)
             ->update($updates);
 
-        $updatedCharacter = $this->characterRepository->findByUserId($user->id);
         $characterModel = CharacterModel::where('user_id', $user->id)->first();
+        if (!$characterModel) {
+             return response()->json(['error' => 'Character not found.'], 404);
+        }
+
+        $unequipped = $this->backpackService->validateEquippedItems($characterModel);
+
+        $updatedCharacter = $this->characterRepository->findByUserId($user->id);
 
         return response()->json([
             'character' => $updatedCharacter,
             'stats' => [
-                'strength' => (int) ($characterModel?->strength ?? 4),
-                'dexterity' => (int) ($characterModel?->dexterity ?? 4),
-                'constitution' => (int) ($characterModel?->constitution ?? 4),
-                'wit' => (int) ($characterModel?->wit ?? 4),
+                'strength' => (int) ($characterModel->strength ?? 4),
+                'dexterity' => (int) ($characterModel->dexterity ?? 4),
+                'constitution' => (int) ($characterModel->constitution ?? 4),
+                'wit' => (int) ($characterModel->wit ?? 4),
             ],
+            'unequipped' => $unequipped,
         ]);
     }
 }

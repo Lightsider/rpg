@@ -37,7 +37,8 @@ class Battle implements \JsonSerializable
         private array $committedCharacterIds = [],
         private ?int $maxParticipants = null,
         private ?int $startTimeoutSeconds = null,
-        private array $participantTeams = []
+        private array $participantTeams = [],
+        private array $winnerIds = []
     ) {
     }
 
@@ -326,6 +327,13 @@ class Battle implements \JsonSerializable
      */
     public function getVictoryWinners(): array
     {
+        if (!empty($this->winnerIds)) {
+            return array_values(array_filter(
+                $this->participants,
+                fn(Character $c) => in_array($c->getId(), $this->winnerIds, true)
+            ));
+        }
+
         $aliveParticipants = $this->getAliveParticipants();
         if ($aliveParticipants === []) {
             return [];
@@ -513,8 +521,19 @@ class Battle implements \JsonSerializable
             'max_participants' => $this->getMaxParticipants(),
             'start_timeout_seconds' => $this->getStartTimeoutSeconds(),
             'participant_teams' => $this->getParticipantTeams(),
+            'winner_ids' => $this->getWinnerIds(),
             'round_started_at' => $this->getRoundStartedAt()->format(\DateTime::ATOM),
         ];
+    }
+
+    public function getWinnerIds(): array
+    {
+        return $this->winnerIds;
+    }
+
+    public function setWinnerIds(array $ids): void
+    {
+        $this->winnerIds = $ids;
     }
 }
 

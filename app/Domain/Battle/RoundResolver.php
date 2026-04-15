@@ -309,7 +309,11 @@ class RoundResolver implements RoundResolverInterface
         $battle->finishResolving();
 
         if ($battle->isFinished()) {
-            foreach ($battle->getVictoryWinners() as $winner) {
+            $winners = $battle->getVictoryWinners();
+            $winnerIds = array_map(fn($w) => $w->getId(), $winners);
+            $battle->setWinnerIds($winnerIds);
+
+            foreach ($winners as $winner) {
                 $logs[] = new BattleLogEntry(
                     roundNumber: $battle->getRoundNumber(),
                     type: BattleLogType::VICTORY,

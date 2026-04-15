@@ -10,8 +10,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class BattleModel extends Model
 {
+    use HasFactory;
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\BattleModelFactory::new();
+    }
     protected $table = 'battles';
 
     protected $fillable = [
@@ -23,6 +31,7 @@ class BattleModel extends Model
         'max_participants',
         'start_timeout_seconds',
         'committed_character_ids',
+        'winner_ids',
         'map_width',
         'map_height',
     ];
@@ -30,6 +39,7 @@ class BattleModel extends Model
     protected $casts = [
         'round_started_at' => 'immutable_datetime',
         'committed_character_ids' => 'array',
+        'winner_ids' => 'array',
         'round_number' => 'integer',
         'round_duration_seconds' => 'integer',
         'max_participants' => 'integer',

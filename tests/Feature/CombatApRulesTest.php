@@ -29,7 +29,7 @@ class CombatApRulesTest extends TestCase
         $battle->participants()->attach($character->id);
 
         // Trying to submit 3 main attacks should fail
-        $response = $this->actingAs($user)->postJson("/fights/{$battle->id}/actions", [
+        $response = $this->actingAs($user)->postJson("/api/fights/{$battle->id}/actions", [
             'actions' => [
                 ['type' => 'attack', 'zone' => 'torso'],
                 ['type' => 'attack', 'zone' => 'torso'],
@@ -56,7 +56,7 @@ class CombatApRulesTest extends TestCase
         $battle->participants()->attach($character->id);
 
         // 3 attacks is invalid (max 2 main attacks)
-        $response = $this->actingAs($user)->postJson("/fights/{$battle->id}/actions", [
+        $response = $this->actingAs($user)->postJson("/api/fights/{$battle->id}/actions", [
             'actions' => [
                 ['type' => 'attack', 'zone' => 'torso'],
                 ['type' => 'attack', 'zone' => 'torso'],
@@ -66,7 +66,7 @@ class CombatApRulesTest extends TestCase
         $response->assertStatus(400);
 
         // 2 attacks + 2 blocks is valid for shield
-        $response = $this->actingAs($user)->postJson("/fights/{$battle->id}/actions", [
+        $response = $this->actingAs($user)->postJson("/api/fights/{$battle->id}/actions", [
             'actions' => [
                 ['type' => 'attack', 'zone' => 'torso'],
                 ['type' => 'attack', 'zone' => 'torso'],

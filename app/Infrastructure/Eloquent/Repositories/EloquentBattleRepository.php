@@ -69,6 +69,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $model->max_participants = $battle->getMaxParticipants();
         $model->start_timeout_seconds = $battle->getStartTimeoutSeconds();
         $model->committed_character_ids = $battle->getCommittedCharacterIds();
+        $model->winner_ids = $battle->getWinnerIds();
         $model->map_width = $battle->getMap()->getWidth();
         $model->map_height = $battle->getMap()->getHeight();
         $model->save();
@@ -242,7 +243,8 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             committedCharacterIds: $model->committed_character_ids,
             maxParticipants: $model->max_participants !== null ? (int) $model->max_participants : null,
             startTimeoutSeconds: $model->start_timeout_seconds !== null ? (int) $model->start_timeout_seconds : null,
-            participantTeams: $participantTeams
+            participantTeams: $participantTeams,
+            winnerIds: $model->winner_ids ?? []
         );
     }
 
