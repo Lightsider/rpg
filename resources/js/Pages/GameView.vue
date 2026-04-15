@@ -579,6 +579,10 @@ const handleSaveLoadout = async () => {
             wit: response.stats.wit,
         });
         loadoutMessage.value = 'Loadout updated.';
+        if (response.unequipped && response.unequipped.length > 0) {
+            loadoutMessage.value += ` Items unequipped due to requirements: ${response.unequipped.join(', ')}.`;
+        }
+        await fetchLoadoutData();
         await fetchGameData();
     } catch (e) {
         loadoutErrors.value = e.response?.status === 422 ? e.response.data.errors : { general: e.response?.data?.error || 'Failed to update loadout.' };
