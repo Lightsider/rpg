@@ -744,11 +744,22 @@ onUnmounted(() => {
                                     </div>
                                     <div class="font-semibold text-xl">{{ gameState.character.name }}</div>
                                 </div>
-                                <div class="flex justify-between items-center bg-indigo-50 p-3 rounded">
-                                    <div>
-                                        <span class="font-medium text-indigo-800">Level {{ gameState.character.level ?? 1 }}</span>
+                                <div class="bg-indigo-50 p-3 rounded">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <div>
+                                            <span class="font-medium text-indigo-800">Level {{ gameState.character.level ?? 1 }}</span>
+                                        </div>
+                                        <div class="text-indigo-600 text-xs font-semibold">
+                                            {{ gameState.character.experience ?? 0 }}
+                                            <span v-if="gameState.character.xp_next_level">/ {{ gameState.character.xp_next_level }}</span>
+                                            XP
+                                        </div>
                                     </div>
-                                    <span class="text-indigo-600 text-sm font-semibold">{{ gameState.character.experience ?? 0 }} XP</span>
+                                    <div v-if="gameState.character.xp_next_level" class="w-full bg-indigo-200 rounded-full h-1.5 mt-1">
+                                        <div class="bg-indigo-600 h-1.5 rounded-full transition-all duration-500" 
+                                             :style="{ width: Math.min(100, (gameState.character.experience / gameState.character.xp_next_level) * 100) + '%' }">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
                                     <span class="font-medium">Health</span>

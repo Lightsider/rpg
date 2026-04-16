@@ -66,8 +66,8 @@ class Character implements \JsonSerializable
         private int $parryFailStreak = 0,
         private int $parrySuccessStreak = 0,
         private int $offhandAttackPointsUsed = 0,
-        private readonly int $level = 1,
-        private readonly int $experience = 0,
+        private int $level = 1,
+        private int $experience = 0,
     ) {
         $this->adArmorHead = $this->normalizeAdArmorValue($this->adArmorHead);
         $this->adArmorChest = $this->normalizeAdArmorValue($this->adArmorChest);
@@ -869,14 +869,40 @@ class Character implements \JsonSerializable
         return $this->experience;
     }
 
+    public function addExperience(int $amount, array $xpRequirements): bool
+    {
+        if ($amount < 0) {
+            throw new \App\Domain\DomainException('Cannot add negative experience.');
+        }
+
+        $this->experience += $amount;
+        $leveledUp = false;
+
+        while (isset($xpRequirements[$this->level + 1]) && $this->experience >= $xpRequirements[$this->level + 1]) {
+            $this->level++;
+            $leveledUp = true;
+        }
+
+        return $leveledUp;
+    }
+
+    public function getXpForNextLevel(array $xpRequirements): ?int
+    {
+        return $xpRequirements[$this->level + 1] ?? null;
+    }
+
     public function jsonSerialize(): array
     {
+        $xpRequirements = config('game.xp_requirements', []);
+        $nextLevelXp = $this->getXpForNextLevel($xpRequirements);
+
         return [
             'id' => $this->getId(),
             'user_id' => $this->getUserId(),
             'name' => $this->getName(),
             'level' => $this->getLevel(),
             'experience' => $this->getExperience(),
+            'xp_next_level' => $nextLevelXp,
             'stats' => [
                 'strength' => $this->getStrength(),
                 'dexterity' => $this->getAgility(),
