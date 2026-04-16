@@ -20,7 +20,8 @@ class ArmorHydrator
                 blockResistRating: $item->block_rating ?? 40,
                 requiredStrength: $item->required_strength ?? 0,
                 adArmor: (float) $item->ad_armor,
-                dodgeBonus: (float) $item->dodge_bonus
+                dodgeBonus: (float) $item->dodge_bonus,
+                requiredLevel: (int) ($item->required_level ?? 1),
             );
         }
 
@@ -33,7 +34,8 @@ class ArmorHydrator
             requiredStrength: $item->required_strength ?? 0,
             requiredWit: $item->required_wit ?? 0,
             requiredDexterity: $item->required_dexterity ?? 0,
-            requiredConstitution: $item->required_constitution ?? 0
+            requiredConstitution: $item->required_constitution ?? 0,
+            requiredLevel: (int) ($item->required_level ?? 1),
         );
     }
 }

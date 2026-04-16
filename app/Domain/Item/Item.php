@@ -13,6 +13,7 @@ abstract class Item
         private readonly int $id,
         private readonly string $name,
         private readonly ItemType $itemType,
+        private readonly int $requiredLevel = 1,
     ) {
     }
 
@@ -29,6 +30,11 @@ abstract class Item
     public function getItemType(): ItemType
     {
         return $this->itemType;
+    }
+
+    public function getRequiredLevel(): int
+    {
+        return $this->requiredLevel;
     }
 
     /**

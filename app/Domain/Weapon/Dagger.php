@@ -20,6 +20,7 @@ class Dagger extends Weapon
         DamageType $damageType = DamageType::SLASHING,
         int $blockBreakRating = 20,
         private readonly int $parryRating = 5,
+        int $requiredLevel = 1,
     ) {
         parent::__construct(
             id: $id,
@@ -31,7 +32,8 @@ class Dagger extends Weapon
             blockBreakRating: $blockBreakRating,
             pierceMultiplier: 0.0,
             maxDamageRating: 0, // No max damage bonus
-            itemType: ItemType::OFFHAND_WEAPON
+            itemType: ItemType::OFFHAND_WEAPON,
+            requiredLevel: $requiredLevel,
         );
     }
 

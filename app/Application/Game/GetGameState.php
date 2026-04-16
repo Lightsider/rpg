@@ -58,7 +58,9 @@ class GetGameState
                 maxHp: $computedHp,
                 currentHp: $computedHp,
                 equipment: new Equipment(),
-                locationId: 1
+                locationId: 1,
+                level: 1,
+                experience: 0
             );
             $character = $this->characterRepository->create($newCharacter);
         }

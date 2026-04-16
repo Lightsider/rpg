@@ -429,7 +429,8 @@ class BackpackService
             maxHp: (int) $model->max_hp,
             currentHp: (int) $model->hp,
             equipment: $equipment,
-            locationId: (int) $model->location_id
+            locationId: (int) $model->location_id,
+            level: (int) ($model->level ?? 1),
         );
     }
 
@@ -494,6 +495,7 @@ class BackpackService
             'defensive_ap_bonus' => $item->defensive_ap_bonus,
             'offhand_ap_bonus' => $item->type === 'offhand_weapon' ? 1 : 0,
             'parry_rating' => $item->parry_rating,
+            'required_level' => $item->required_level ?? 1,
         ];
     }
 

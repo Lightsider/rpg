@@ -17,6 +17,7 @@ class ItemModelFactory extends Factory
             'min_damage' => 1.0,
             'max_damage' => 2.0,
             'damage_type' => 'slashing',
+            'archetype' => 'hybrid',
             'required_strength' => 0,
             'required_wit' => 0,
             'is_two_handed' => false,

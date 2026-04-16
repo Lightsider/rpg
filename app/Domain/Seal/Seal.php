@@ -22,8 +22,9 @@ class Seal extends Item
         private readonly WeaponArchetype $archetype = WeaponArchetype::HYBRID,
         private readonly int $requiredStrength = 0,
         private readonly int $requiredWit = 0,
+        int $requiredLevel = 1,
     ) {
-        parent::__construct($id, $name, ItemType::SEAL);
+        parent::__construct($id, $name, ItemType::SEAL, $requiredLevel);
     }
 
     public function rollBaseDamage(?RandomGeneratorInterface $rng = null): float

@@ -22,7 +22,8 @@ class WeaponHydrator
                 maxDamage: $item->max_damage,
                 damageType: DamageType::from(strtolower($item->damage_type ?? 'slashing')),
                 blockBreakRating: $item->block_break_rating,
-                parryRating: $item->parry_rating ?? 0
+                parryRating: $item->parry_rating ?? 0,
+                requiredLevel: (int) ($item->required_level ?? 1),
             );
         }
 
@@ -41,7 +42,8 @@ class WeaponHydrator
             requiredWit: $item->required_wit ?? 0,
             flatCritBonus: $item->flat_crit_bonus ?? 0,
             critChanceBonus: (float) ($item->crit_chance_bonus ?? 0),
-            isTwoHanded: (bool) ($item->is_two_handed ?? false)
+            isTwoHanded: (bool) ($item->is_two_handed ?? false),
+            requiredLevel: (int) ($item->required_level ?? 1),
         );
     }
 

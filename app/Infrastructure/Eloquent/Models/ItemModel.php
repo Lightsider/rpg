@@ -19,6 +19,7 @@ class ItemModel extends Model
     protected $fillable = [
         'name',
         'type',
+        'required_level',
         'min_damage',
         'max_damage',
         'damage_type',

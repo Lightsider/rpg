@@ -20,6 +20,7 @@ class Shield extends Armor
         private readonly int $requiredStrength = 0,
         float $adArmor = 0.0,
         float $dodgeBonus = 0.0,
+        int $requiredLevel = 1,
     ) {
         parent::__construct(
             id: $id,
@@ -30,7 +31,8 @@ class Shield extends Armor
             requiredStrength: $requiredStrength,
             blockResistRating: $blockResistRating,
             pierceDamageReduction: $pierceDamageReduction,
-            itemType: ItemType::SHIELD
+            itemType: ItemType::SHIELD,
+            requiredLevel: $requiredLevel,
         );
     }
 

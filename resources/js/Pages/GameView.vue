@@ -593,7 +593,8 @@ const handleSaveLoadout = async () => {
 
 const canEquipItem = (item) => {
     if (!item || !gameState.value?.character?.stats) return false;
-    return gameState.value.character.stats.strength >= (item.required_strength ?? 0) &&
+    return (gameState.value.character.level ?? 1) >= (item.required_level ?? 1) &&
+        gameState.value.character.stats.strength >= (item.required_strength ?? 0) &&
         gameState.value.character.stats.wit >= (item.required_wit ?? 0) &&
         gameState.value.character.stats.dexterity >= (item.required_dexterity ?? 0) &&
         gameState.value.character.stats.constitution >= (item.required_constitution ?? 0);
@@ -742,6 +743,12 @@ onUnmounted(() => {
                                         <CurrencyDisplay :copper="gameState.character.currency_copper || 0" />
                                     </div>
                                     <div class="font-semibold text-xl">{{ gameState.character.name }}</div>
+                                </div>
+                                <div class="flex justify-between items-center bg-indigo-50 p-3 rounded">
+                                    <div>
+                                        <span class="font-medium text-indigo-800">Level {{ gameState.character.level ?? 1 }}</span>
+                                    </div>
+                                    <span class="text-indigo-600 text-sm font-semibold">{{ gameState.character.experience ?? 0 }} XP</span>
                                 </div>
                                 <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
                                     <span class="font-medium">Health</span>
@@ -902,6 +909,7 @@ onUnmounted(() => {
                                                     Armor {{ item.ad_armor }}
                                                 </div>
                                                 <div class="text-[10px] text-gray-400">
+                                                    <span v-if="item.required_level > 1" class="mr-1">LVL {{ item.required_level }}</span>
                                                     <span v-if="item.required_dexterity || item.required_constitution">
                                                         Req DEX {{ item.required_dexterity }} / CON {{ item.required_constitution }}
                                                     </span>
@@ -1052,6 +1060,7 @@ onUnmounted(() => {
                                             </div>
                                             <div v-else-if="item.item.required_strength || item.item.required_wit">
                                                 Requirements:
+                                                <span v-if="item.item.required_level > 1"> LVL {{ item.item.required_level }}</span>
                                                 <span v-if="item.item.required_strength"> STR {{ item.item.required_strength }}</span>
                                                 <span v-if="item.item.required_wit"> WIT {{ item.item.required_wit }}</span>
                                             </div>

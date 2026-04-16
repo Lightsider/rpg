@@ -31,8 +31,9 @@ class Weapon extends Item
         private readonly float $critChanceBonus = 0.0,
         private readonly bool $isTwoHanded = false,
         private readonly ItemType $itemType = ItemType::WEAPON,
+        int $requiredLevel = 1,
     ) {
-        parent::__construct($id, $name, $this->itemType);
+        parent::__construct($id, $name, $this->itemType, $requiredLevel);
     }
 
     /**

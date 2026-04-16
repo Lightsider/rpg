@@ -58,6 +58,8 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
         $model = CharacterModel::create([
             'user_id' => $character->getUserId(),
             'name' => $character->getName(),
+            'level' => $character->getLevel(),
+            'experience' => $character->getExperience(),
             'strength' => $character->getStrength(),
             'dexterity' => $character->getAgility(),
             'constitution' => $character->getConstitution(),
@@ -187,6 +189,8 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             adArmorLegs: (float)($model->ad_armor_legs ?? 0.0),
             adArmorLeftArm: $leftArm,
             adArmorRightArm: $rightArm,
+            level: (int) ($model->level ?? 1),
+            experience: (int) ($model->experience ?? 0),
         );
     }
 }

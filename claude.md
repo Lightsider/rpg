@@ -38,7 +38,7 @@ This leads to:
 ## Key Mechanics
 
 - dodge (binary)
-- armor (damage absorption with depletion)
+- additional armor (damage absorption with depletion)
 - crit (burst modifier)
 - penetration (anti-armor)
 
@@ -68,9 +68,7 @@ Armor:
 
 ## Current Limitations
 
-- only 1v1 combat
 - no progression system
-- no multi-actor interactions
 
 ---
 

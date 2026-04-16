@@ -66,6 +66,8 @@ class Character implements \JsonSerializable
         private int $parryFailStreak = 0,
         private int $parrySuccessStreak = 0,
         private int $offhandAttackPointsUsed = 0,
+        private readonly int $level = 1,
+        private readonly int $experience = 0,
     ) {
         $this->adArmorHead = $this->normalizeAdArmorValue($this->adArmorHead);
         $this->adArmorChest = $this->normalizeAdArmorValue($this->adArmorChest);
@@ -705,6 +707,10 @@ class Character implements \JsonSerializable
 
     public function canEquip(Item $item): bool
     {
+        if ($this->level < $item->getRequiredLevel()) {
+            return false;
+        }
+
         if ($item instanceof Weapon) {
             return $this->strength >= $item->getRequiredStrength() &&
                    $this->wit >= $item->getRequiredWit();
@@ -853,12 +859,24 @@ class Character implements \JsonSerializable
         return (float) round(1.0 - $multiplier, 4);
     }
 
+    public function getLevel(): int
+    {
+        return $this->level;
+    }
+
+    public function getExperience(): int
+    {
+        return $this->experience;
+    }
+
     public function jsonSerialize(): array
     {
         return [
             'id' => $this->getId(),
             'user_id' => $this->getUserId(),
             'name' => $this->getName(),
+            'level' => $this->getLevel(),
+            'experience' => $this->getExperience(),
             'stats' => [
                 'strength' => $this->getStrength(),
                 'dexterity' => $this->getAgility(),

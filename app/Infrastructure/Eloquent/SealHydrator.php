@@ -21,7 +21,8 @@ class SealHydrator
             critChanceBonus: (float) ($item->crit_chance_bonus ?? 0),
             archetype: WeaponArchetype::from($item->archetype ?? 'hybrid'),
             requiredStrength: $item->required_strength ?? 0,
-            requiredWit: $item->required_wit ?? 0
+            requiredWit: $item->required_wit ?? 0,
+            requiredLevel: (int) ($item->required_level ?? 1),
         );
     }
 }

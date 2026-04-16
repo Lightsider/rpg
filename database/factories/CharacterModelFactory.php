@@ -16,6 +16,8 @@ class CharacterModelFactory extends Factory
         return [
             'user_id' => User::factory(),
             'name' => fake()->name(),
+            'level' => 1,
+            'experience' => 0,
             'strength' => 4,
             'dexterity' => 4,
             'constitution' => 4,

@@ -49,6 +49,8 @@ class CharacterLoadoutController extends Controller
                 'constitution' => (int) $characterModel->constitution,
                 'wit' => (int) $characterModel->wit,
             ],
+            'level' => (int) ($characterModel->level ?? 1),
+            'experience' => (int) ($characterModel->experience ?? 0),
             'equipment' => $this->backpackService->getEquipmentPayload($characterModel),
             'backpack' => $this->backpackService->getBackpackPayload($characterModel),
             'can_edit' => $canEdit,
