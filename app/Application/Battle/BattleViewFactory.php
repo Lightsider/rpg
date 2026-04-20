@@ -5,25 +5,23 @@ declare(strict_types=1);
 namespace App\Application\Battle;
 
 use App\Domain\Battle\Battle;
+use App\Domain\Battle\Repositories\BattleViewReadRepositoryInterface;
 use App\Domain\Character\Character;
-use App\Infrastructure\Eloquent\Models\FightMapModel;
-use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 
 class BattleViewFactory
 {
+    public function __construct(
+        private readonly BattleViewReadRepositoryInterface $battleViewReadRepository
+    ) {
+    }
+
     public function build(Battle $battle): array
     {
-        $mapModel = FightMapModel::where('fight_id', $battle->getId())->first();
-        $mapWidth = $mapModel?->width ?? $battle->getMap()->getWidth();
-        $mapHeight = $mapModel?->height ?? $battle->getMap()->getHeight();
-
-        $positions = FighterPositionModel::where('fight_id', $battle->getId())
-            ->get()
-            ->map(fn(FighterPositionModel $pos) => [
-                'character_id' => $pos->character_id,
-                'x' => $pos->x,
-                'y' => $pos->y,
-            ])->toArray();
+        $snapshot = $this->battleViewReadRepository->getMapSnapshot(
+            $battle->getId(),
+            $battle->getMap()->getWidth(),
+            $battle->getMap()->getHeight()
+        );
 
         return [
             'battle_id' => $battle->getId(),
@@ -44,10 +42,10 @@ class BattleViewFactory
                 ],
             ], array_values($battle->getParticipants())),
             'map' => [
-                'width' => $mapWidth,
-                'height' => $mapHeight,
+                'width' => $snapshot['width'],
+                'height' => $snapshot['height'],
             ],
-            'positions' => $positions,
+            'positions' => $snapshot['positions'],
             'actions_submitted' => $battle->getCommittedCharacterIds(),
             'rewards' => $battle->getRewards(),
         ];

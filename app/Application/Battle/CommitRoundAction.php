@@ -15,8 +15,7 @@ use App\Events\Battle\BattleEnded;
 use App\Events\Battle\BattleUpdated;
 use App\Events\Battle\RoundStarted;
 use App\Events\Battle\BattleCommitted;
-use App\Infrastructure\Eloquent\Models\BattleModel;
-use Illuminate\Support\Facades\DB;
+use App\Application\Contracts\TransactionInterface;
 
 /**
  * Application service to commit a character's actions and potentially resolve the round.
@@ -26,7 +25,8 @@ class CommitRoundAction
     public function __construct(
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly BattleLogRepositoryInterface $battleLogRepository,
-        private readonly RoundResolverInterface $roundResolver
+        private readonly RoundResolverInterface $roundResolver,
+        private readonly TransactionInterface $transaction
     ) {
     }
 
@@ -41,10 +41,8 @@ class CommitRoundAction
         // only once the DB is consistent (avoids broadcasting stale data).
         $pendingEvents = [];
 
-        DB::transaction(function () use ($battleId, $characterId, &$pendingEvents) {
-            // Guard against concurrent resolution by locking the battle row.
-            $battleModel = BattleModel::where('id', $battleId)->lockForUpdate()->first();
-            if (!$battleModel) {
+        $this->transaction->run(function () use ($battleId, $characterId, &$pendingEvents) {
+            if (!$this->battleRepository->lockForUpdate($battleId)) {
                 throw new DomainException('Battle not found.');
             }
 

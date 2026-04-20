@@ -14,9 +14,8 @@ use App\Events\Battle\BattleEnded;
 use App\Events\Battle\BattleUpdated;
 use App\Events\Battle\RoundStarted;
 use App\Events\Location\BattleRemoved;
-use App\Infrastructure\Eloquent\Models\BattleModel;
+use App\Application\Contracts\TransactionInterface;
 use App\Services\MapGenerator;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Service tasked with detecting and resolving battles where the round time has run out.
@@ -27,7 +26,8 @@ class RoundExpirationHandler
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly BattleLogRepositoryInterface $battleLogRepository,
         private readonly RoundResolverInterface $roundResolver,
-        private readonly MapGenerator $mapGenerator
+        private readonly MapGenerator $mapGenerator,
+        private readonly TransactionInterface $transaction
     ) {
     }
 
@@ -38,13 +38,12 @@ class RoundExpirationHandler
     {
         $pendingEvents = [];
 
-        DB::transaction(function () use (&$pendingEvents) {
+        $this->transaction->run(function () use (&$pendingEvents) {
             $activeBattles = $this->battleRepository->findActive();
 
             foreach ($activeBattles as $battle) {
                 if ($battle->getState() === BattleState::ACTIVE && $battle->isRoundExpired()) {
-                    // Lock the row to avoid double resolution with commit flow.
-                    BattleModel::where('id', $battle->getId())->lockForUpdate()->first();
+                    $this->battleRepository->lockForUpdate($battle->getId());
 
                     $result = $this->roundResolver->resolve($battle);
 
@@ -63,19 +62,23 @@ class RoundExpirationHandler
                 }
             }
 
-            $waitingBattles = BattleModel::where('state', BattleState::WAITING->value)->get();
-            foreach ($waitingBattles as $waitingModel) {
-                if (!$waitingModel->start_timeout_seconds) {
+            $waitingBattles = $this->battleRepository->findWaiting();
+            foreach ($waitingBattles as $battle) {
+                $timeout = $battle->getStartTimeoutSeconds();
+                if (!$timeout) {
                     continue;
                 }
 
-                $expiryTime = $waitingModel->round_started_at->modify("+{$waitingModel->start_timeout_seconds} seconds");
+                $expiryTime = $battle->getRoundStartedAt()->modify("+{$timeout} seconds");
                 if (new \DateTimeImmutable() < $expiryTime) {
                     continue;
                 }
 
-                BattleModel::where('id', $waitingModel->id)->lockForUpdate()->first();
-                $battle = $this->battleRepository->findById($waitingModel->id);
+                if (!$this->battleRepository->lockForUpdate($battle->getId())) {
+                    continue;
+                }
+
+                $battle = $this->battleRepository->findById($battle->getId());
                 if (!$battle || $battle->getState() !== BattleState::WAITING) {
                     continue;
                 }
@@ -94,8 +97,8 @@ class RoundExpirationHandler
                         timeout: $battle->getRoundDurationSeconds(),
                     );
                 } else {
-                    $waitingModel->delete();
-                    $pendingEvents[] = new BattleRemoved($waitingModel->location_id, $waitingModel->id);
+                    $this->battleRepository->delete($battle->getId());
+                    $pendingEvents[] = new BattleRemoved($battle->getLocationId(), $battle->getId());
                 }
             }
         });

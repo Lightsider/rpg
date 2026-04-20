@@ -11,7 +11,6 @@ use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Location\Repositories\LocationRepositoryInterface;
-use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Services\BackpackService;
 use App\Services\CharacterStatService;
 use App\Services\CharacterStatValidator;
@@ -65,11 +64,8 @@ class GetGameState
             $character = $this->characterRepository->create($newCharacter);
         }
 
-        $characterModel = CharacterModel::where('user_id', $userId)->first();
-        if ($characterModel) {
-            $this->backpackService->ensureSeeded($characterModel);
-            $character = $this->characterRepository->findByUserId($userId) ?? $character;
-        }
+        $this->backpackService->ensureSeededByUserId($userId);
+        $character = $this->characterRepository->findByUserId($userId) ?? $character;
 
         $location = $this->locationRepository->findById($character->getLocationId());
 

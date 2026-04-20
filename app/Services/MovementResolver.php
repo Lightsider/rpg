@@ -4,15 +4,20 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Application\Contracts\TransactionInterface;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\MovementResolverInterface;
 use App\Domain\Battle\TargetZone;
 use App\Domain\DomainException;
 use App\Infrastructure\Eloquent\Models\FighterPositionModel;
-use Illuminate\Support\Facades\DB;
 
 class MovementResolver implements MovementResolverInterface
 {
+    public function __construct(
+        private readonly ?TransactionInterface $transaction = null
+    ) {
+    }
+
     /**
      * @param array<int, array<string, mixed>> $moveActions
      */
@@ -133,7 +138,7 @@ class MovementResolver implements MovementResolverInterface
             $resolvedMoves[$winnerId] = $validTargets[$winnerId];
         }
 
-        DB::transaction(function () use ($battle, $resolvedMoves) {
+        $work = function () use ($battle, $resolvedMoves): void {
             foreach ($resolvedMoves as $characterId => $target) {
                 $tempX = -1;
                 $tempY = -1 - $characterId;
@@ -152,7 +157,14 @@ class MovementResolver implements MovementResolverInterface
                     ->where('character_id', $characterId)
                     ->update(['x' => $target['x'], 'y' => $target['y']]);
             }
-        });
+        };
+
+        if ($this->transaction) {
+            $this->transaction->run($work);
+            return;
+        }
+
+        $work();
     }
 
     /**

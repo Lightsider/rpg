@@ -9,6 +9,8 @@ use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageConfig;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\MovementResolverInterface;
+use App\Application\Contracts\TransactionInterface;
+use App\Infrastructure\Persistence\LaravelTransactionManager;
 use App\Services\MovementResolver;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -41,6 +43,11 @@ class AppServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(
+            TransactionInterface::class,
+            LaravelTransactionManager::class
+        );
+
+        $this->app->bind(
             \App\Domain\Battle\Repositories\BattleRepositoryInterface::class,
             \App\Infrastructure\Eloquent\Repositories\EloquentBattleRepository::class
         );
@@ -48,6 +55,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             \App\Domain\Battle\Repositories\BattleLogRepositoryInterface::class,
             \App\Infrastructure\Eloquent\Repositories\EloquentBattleLogRepository::class
+        );
+
+        $this->app->bind(
+            \App\Domain\Battle\Repositories\BattleViewReadRepositoryInterface::class,
+            \App\Infrastructure\Eloquent\Repositories\EloquentBattleViewReadRepository::class
         );
 
         $this->app->bind(
@@ -94,17 +106,6 @@ class AppServiceProvider extends ServiceProvider
                     maxFinalChance: (float) config('combat.block_penetration.max_final_chance', 0.95),
                     prngScale: (float) config('combat.block_penetration.prng_scale', 0.3),
                 )
-            );
-        });
-
-        $this->app->singleton(\App\Application\Battle\BattleService::class, function ($app) {
-            return new \App\Application\Battle\BattleService(
-                $app->make(\App\Domain\Battle\Repositories\BattleRepositoryInterface::class),
-                $app->make(\App\Domain\Character\Repositories\CharacterRepositoryInterface::class),
-                $app->make(\App\Application\Battle\QueueAttackAction::class),
-                $app->make(\App\Application\Battle\QueueDefenseAction::class),
-                $app->make(\App\Application\Battle\QueueMoveAction::class),
-                $app->make(\App\Application\Battle\CommitRoundAction::class)
             );
         });
 

@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace App\Application\Location;
 
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
+use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
 use App\Domain\Location\Repositories\LocationRepositoryInterface;
-use App\Infrastructure\Eloquent\Models\CharacterModel;
 
 class EnterLocation
 {
     public function __construct(
         private readonly LocationRepositoryInterface $locationRepository,
-        private readonly BattleRepositoryInterface $battleRepository
+        private readonly BattleRepositoryInterface $battleRepository,
+        private readonly CharacterRepositoryInterface $characterRepository
     ) {
     }
 
@@ -22,12 +23,12 @@ class EnterLocation
      */
     public function execute(int $userId, int $locationId): array
     {
-        $character = CharacterModel::where('user_id', $userId)->first();
+        $character = $this->characterRepository->findByUserId($userId);
         if (!$character) {
             throw new DomainException('Character not found.');
         }
 
-        if ($this->battleRepository->isCharacterInBattle($userId)) {
+        if ($this->battleRepository->isCharacterInBattle($character->getId())) {
             throw new DomainException('You cannot change locations while in a fight.');
         }
 
@@ -36,8 +37,8 @@ class EnterLocation
             throw new DomainException('Location not found');
         }
 
-        if ((int) $character->location_id !== $location->getId()) {
-            $character->update(['location_id' => $location->getId()]);
+        if ($character->getLocationId() !== $location->getId()) {
+            $this->characterRepository->updateLocation($character->getId(), $location->getId());
         }
 
         return ['location' => $location];

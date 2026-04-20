@@ -4,33 +4,13 @@ declare(strict_types=1);
 
 namespace App\Application\Battle;
 
-use App\Domain\Battle\Repositories\BattleRepositoryInterface;
-use App\Domain\Character\Repositories\CharacterRepositoryInterface;
-use App\Events\Battle\BattleUpdated;
-use App\Events\Battle\BattleEnded;
-use App\Events\Battle\RoundStarted;
-use App\Events\Battle\BattleJoined;
 use App\Domain\Character\Character;
-use Illuminate\Support\Facades\Event;
 
 /**
- * Service to handle battle-related logic and state synchronization.
- * Now exclusively uses Laravel Events for real-time updates via Reverb/Echo.
+ * Service to build battle state payloads for clients.
  */
 class BattleService
 {
-    public function __construct(
-        private readonly BattleRepositoryInterface $battleRepository,
-        private readonly CharacterRepositoryInterface $characterRepository,
-        private readonly QueueAttackAction $queueAttackAction,
-        private readonly QueueDefenseAction $queueDefenseAction,
-        private readonly QueueMoveAction $queueMoveAction,
-        private readonly CommitRoundAction $commitRoundAction
-    ) {
-        // We no longer need to register listeners inside the constructor for Workerman.
-        // Standard Laravel broadcasting handles everything through the Event classes themselves.
-    }
-
     /**
      * Build the full battle state for bootstrapping clients.
      */

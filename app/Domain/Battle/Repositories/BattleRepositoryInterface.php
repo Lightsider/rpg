@@ -39,4 +39,17 @@ interface BattleRepositoryInterface
     public function isCharacterInBattle(int $characterId): bool;
 
     public function findActiveBattleForCharacter(int $characterId): ?Battle;
+
+    /**
+     * @return array<int, Battle>
+     */
+    public function findWaiting(): array;
+
+    public function lockForUpdate(int $battleId): bool;
+
+    public function delete(int $battleId): void;
+
+    public function removeParticipant(int $battleId, int $characterId): void;
+
+    public function hasParticipant(int $battleId, int $characterId): bool;
 }

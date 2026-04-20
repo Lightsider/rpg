@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Application\Contracts\TransactionInterface;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\Map;
 use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 use App\Infrastructure\Eloquent\Models\FightMapModel;
-use Illuminate\Support\Facades\DB;
 
 class MapGenerator
 {
@@ -17,9 +17,14 @@ class MapGenerator
     private const int STARTING_ROW_DIVISOR = 2;
     private const int TEAM_SIDE_PADDING = 1;
 
+    public function __construct(
+        private readonly TransactionInterface $transaction
+    ) {
+    }
+
     public function generateForFight(Battle $fight): void
     {
-        DB::transaction(function () use ($fight) {
+        $this->transaction->run(function () use ($fight) {
             $participants = array_values($fight->getParticipants());
             if (count($participants) === 0) {
                 return;

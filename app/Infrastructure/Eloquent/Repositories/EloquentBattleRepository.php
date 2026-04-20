@@ -147,6 +147,13 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         return $models->map(fn(BattleModel $m) => $this->mapToDomain($m))->toArray();
     }
 
+    public function findWaiting(): array
+    {
+        $models = BattleModel::where('state', BattleState::WAITING->value)->get();
+
+        return $models->map(fn(BattleModel $m) => $this->mapToDomain($m))->toArray();
+    }
+
     public function findJoinableByLocation(int $locationId): array
     {
         $models = BattleModel::where('location_id', $locationId)
@@ -179,6 +186,34 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         }
 
         return $this->findById((int) $battleId);
+    }
+
+    public function lockForUpdate(int $battleId): bool
+    {
+        return BattleModel::where('id', $battleId)->lockForUpdate()->exists();
+    }
+
+    public function delete(int $battleId): void
+    {
+        BattleModel::where('id', $battleId)->delete();
+    }
+
+    public function removeParticipant(int $battleId, int $characterId): void
+    {
+        $model = BattleModel::find($battleId);
+        if (!$model) {
+            return;
+        }
+
+        $model->participants()->detach($characterId);
+    }
+
+    public function hasParticipant(int $battleId, int $characterId): bool
+    {
+        return DB::table('battle_participants')
+            ->where('battle_id', $battleId)
+            ->where('character_id', $characterId)
+            ->exists();
     }
 
     public function findRecent(int $limit = 15): array

@@ -7,7 +7,6 @@ namespace App\Application\Battle;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\BattleLogEntry;
 use App\Domain\Character\Character;
-use App\Infrastructure\Eloquent\Models\FightMapModel;
 
 class BattleEventPayloadFactory
 {
@@ -69,10 +68,6 @@ class BattleEventPayloadFactory
             $participants
         );
 
-        $mapModel = FightMapModel::where('fight_id', $battle->getId())->first();
-        $mapWidth = $mapModel?->width ?? $battle->getMap()->getWidth();
-        $mapHeight = $mapModel?->height ?? $battle->getMap()->getHeight();
-
         return [
             'battle_id' => $battle->getId(),
             'round' => $battle->getRoundNumber(),
@@ -87,8 +82,8 @@ class BattleEventPayloadFactory
                 'team' => $p['team'],
             ], $participantsData),
             'map' => [
-                'width' => $mapWidth,
-                'height' => $mapHeight,
+                'width' => $battle->getMap()->getWidth(),
+                'height' => $battle->getMap()->getHeight(),
             ],
             'positions' => array_map(
                 fn($p) => [

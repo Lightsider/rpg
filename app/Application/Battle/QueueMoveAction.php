@@ -9,7 +9,7 @@ use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\TargetZone;
 use App\Domain\Battle\TurnAction;
 use App\Domain\DomainException;
-use Illuminate\Support\Facades\DB;
+use App\Application\Contracts\TransactionInterface;
 
 /**
  * Application service to queue a move action in a battle.
@@ -19,7 +19,8 @@ class QueueMoveAction
     private const int MOVE_AP_COST = 1;
 
     public function __construct(
-        private readonly BattleRepositoryInterface $battleRepository
+        private readonly BattleRepositoryInterface $battleRepository,
+        private readonly ?TransactionInterface $transaction = null
     ) {
     }
 
@@ -31,7 +32,7 @@ class QueueMoveAction
      */
     public function execute(int $battleId, int $characterId, int $toX, int $toY, array $blocks = []): void
     {
-        DB::transaction(function () use ($battleId, $characterId, $toX, $toY, $blocks) {
+        $this->withinTransaction(function () use ($battleId, $characterId, $toX, $toY, $blocks) {
             // 1. Load battle
             $battle = $this->battleRepository->findById($battleId);
             if (!$battle) {
@@ -111,6 +112,16 @@ class QueueMoveAction
             // 11. Save battle
             $this->battleRepository->save($battle);
         });
+    }
+
+    private function withinTransaction(callable $callback): void
+    {
+        if ($this->transaction === null) {
+            $callback();
+            return;
+        }
+
+        $this->transaction->run($callback);
     }
 }
 

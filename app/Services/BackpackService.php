@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Application\Contracts\TransactionInterface;
 use App\Domain\DomainException;
 use App\Domain\Equipment\EquipmentService;
 use App\Domain\Equipment\EquipmentSlot;
@@ -14,7 +15,6 @@ use App\Infrastructure\Eloquent\Models\ItemModel;
 use App\Infrastructure\Eloquent\ArmorHydrator;
 use App\Infrastructure\Eloquent\SealHydrator;
 use App\Infrastructure\Eloquent\WeaponHydrator;
-use Illuminate\Support\Facades\DB;
 
 class BackpackService
 {
@@ -24,7 +24,8 @@ class BackpackService
         private readonly ArmorHydrator $armorHydrator,
         private readonly SealHydrator $sealHydrator,
         private readonly EquipmentService $equipmentService,
-        private readonly CharacterStatService $statService
+        private readonly CharacterStatService $statService,
+        private readonly TransactionInterface $transaction
     ) {
     }
 
@@ -37,6 +38,16 @@ class BackpackService
 
         $character->backpack_seeded = true;
         $character->save();
+    }
+
+    public function ensureSeededByUserId(int $userId): void
+    {
+        $character = CharacterModel::where('user_id', $userId)->first();
+        if (!$character) {
+            return;
+        }
+
+        $this->ensureSeeded($character);
     }
 
     /**
@@ -64,6 +75,14 @@ class BackpackService
     }
 
     /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function getBackpackPayloadByCharacterId(int $characterId): array
+    {
+        return $this->getBackpackPayload($this->requireCharacter($characterId));
+    }
+
+    /**
      * @return array<string, array<string, mixed>|null>
      */
     public function getEquipmentPayload(CharacterModel $character): array
@@ -80,6 +99,14 @@ class BackpackService
             EquipmentSlot::LEGS->value => $this->itemPayloadById($character->legs_id),
             EquipmentSlot::GLOVES->value => $this->itemPayloadById($character->gloves_id),
         ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>|null>
+     */
+    public function getEquipmentPayloadByCharacterId(int $characterId): array
+    {
+        return $this->getEquipmentPayload($this->requireCharacter($characterId));
     }
 
     public function equipItem(CharacterModel $character, int $itemId, string $slot): void
@@ -118,7 +145,7 @@ class BackpackService
                 throw new DomainException('You do not meet the requirements for this weapon.');
             }
 
-            DB::transaction(function () use ($character, $itemId, $oldMultiplier) {
+            $this->transaction->run(function () use ($character, $itemId, $oldMultiplier) {
                 if ($character->weapon_id && (int) $character->weapon_id !== $itemId) {
                     $this->addToBackpack($character, (int) $character->weapon_id, 1);
                 }
@@ -151,7 +178,7 @@ class BackpackService
                     throw new DomainException('You do not meet the requirements for this weapon.');
                 }
 
-                DB::transaction(function () use ($character, $itemId, $oldMultiplier) {
+                $this->transaction->run(function () use ($character, $itemId, $oldMultiplier) {
                     if ($character->off_hand_id && (int) $character->off_hand_id !== $itemId) {
                         $this->addToBackpack($character, (int) $character->off_hand_id, 1);
                     }
@@ -176,7 +203,7 @@ class BackpackService
                 throw new DomainException('You do not meet the requirements for this shield.');
             }
 
-            DB::transaction(function () use ($character, $itemId, $oldMultiplier) {
+            $this->transaction->run(function () use ($character, $itemId, $oldMultiplier) {
                 if ($character->off_hand_id && (int) $character->off_hand_id !== $itemId) {
                     $this->addToBackpack($character, (int) $character->off_hand_id, 1);
                 }
@@ -207,7 +234,7 @@ class BackpackService
                 throw new DomainException('You do not meet the requirements for this seal.');
             }
 
-            DB::transaction(function () use ($character, $itemId, $slotEnum, $oldMultiplier) {
+            $this->transaction->run(function () use ($character, $itemId, $slotEnum, $oldMultiplier) {
                 $currentSealId = $this->getSealSlotId($character, $slotEnum);
                 if ($currentSealId && $currentSealId !== $itemId) {
                     $this->addToBackpack($character, $currentSealId, 1);
@@ -243,7 +270,7 @@ class BackpackService
                 throw new DomainException('You do not meet the requirements for this armor.');
             }
 
-            DB::transaction(function () use ($character, $itemId, $slotEnum, $armor, $oldMultiplier) {
+            $this->transaction->run(function () use ($character, $itemId, $slotEnum, $armor, $oldMultiplier) {
                 $currentArmorId = $this->getArmorSlotId($character, $slotEnum);
                 if ($currentArmorId && $currentArmorId !== $itemId) {
                     $this->addToBackpack($character, $currentArmorId, 1);
@@ -266,6 +293,11 @@ class BackpackService
         throw new DomainException('Invalid equipment slot.');
     }
 
+    public function equipItemByCharacterId(int $characterId, int $itemId, string $slot): void
+    {
+        $this->equipItem($this->requireCharacter($characterId), $itemId, $slot);
+    }
+
     public function unequipItem(CharacterModel $character, string $slot): void
     {
         $slotEnum = EquipmentSlot::tryFrom($slot);
@@ -279,7 +311,7 @@ class BackpackService
                 throw new DomainException('No item equipped in that slot.');
             }
 
-            DB::transaction(function () use ($character, $oldMultiplier) {
+            $this->transaction->run(function () use ($character, $oldMultiplier) {
                 $this->addToBackpack($character, (int) $character->weapon_id, 1);
 
                 $character->weapon_id = null;
@@ -297,7 +329,7 @@ class BackpackService
                 throw new DomainException('No item equipped in that slot.');
             }
 
-            DB::transaction(function () use ($character, $oldMultiplier) {
+            $this->transaction->run(function () use ($character, $oldMultiplier) {
                 $this->addToBackpack($character, (int) $character->off_hand_id, 1);
 
                 $character->off_hand_id = null;
@@ -315,7 +347,7 @@ class BackpackService
                 throw new DomainException('No item equipped in that slot.');
             }
 
-            DB::transaction(function () use ($character, $slotEnum, $currentSealId, $oldMultiplier) {
+            $this->transaction->run(function () use ($character, $slotEnum, $currentSealId, $oldMultiplier) {
                 $this->addToBackpack($character, $currentSealId, 1);
                 $this->setSealSlotId($character, $slotEnum, null);
                 $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
@@ -332,7 +364,7 @@ class BackpackService
                 throw new DomainException('No item equipped in that slot.');
             }
 
-            DB::transaction(function () use ($character, $slotEnum, $currentArmorId, $oldMultiplier) {
+            $this->transaction->run(function () use ($character, $slotEnum, $currentArmorId, $oldMultiplier) {
                 $this->addToBackpack($character, $currentArmorId, 1);
                 $this->setArmorSlotId($character, $slotEnum, null);
                 $this->setArmorValueForSlot($character, $slotEnum, 0.0);
@@ -347,6 +379,11 @@ class BackpackService
         }
 
         throw new DomainException('Invalid equipment slot.');
+    }
+
+    public function unequipItemByCharacterId(int $characterId, string $slot): void
+    {
+        $this->unequipItem($this->requireCharacter($characterId), $slot);
     }
 
     public function validateEquippedItems(CharacterModel $character): array
@@ -694,9 +731,17 @@ class BackpackService
             default => null,
         };
     }
+
+    private function requireCharacter(int $characterId): CharacterModel
+    {
+        $character = CharacterModel::find($characterId);
+        if (!$character) {
+            throw new DomainException('Character not found.');
+        }
+
+        return $character;
+    }
 }
-
-
 
 
 

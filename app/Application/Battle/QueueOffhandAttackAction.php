@@ -9,7 +9,7 @@ use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\TargetZone;
 use App\Domain\Battle\TurnAction;
 use App\Domain\DomainException;
-use Illuminate\Support\Facades\DB;
+use App\Application\Contracts\TransactionInterface;
 
 /**
  * Application service to queue an offhand attack action in a battle.
@@ -19,7 +19,8 @@ class QueueOffhandAttackAction
     private const int ATTACK_AP_COST = 1;
 
     public function __construct(
-        private readonly BattleRepositoryInterface $battleRepository
+        private readonly BattleRepositoryInterface $battleRepository,
+        private readonly ?TransactionInterface $transaction = null
     ) {
     }
 
@@ -30,7 +31,7 @@ class QueueOffhandAttackAction
      */
     public function execute(int $battleId, int $characterId, string $targetZone, ?int $targetCharacterId = null): void
     {
-        DB::transaction(function () use ($battleId, $characterId, $targetZone, $targetCharacterId) {
+        $this->withinTransaction(function () use ($battleId, $characterId, $targetZone, $targetCharacterId) {
             $battle = $this->battleRepository->findById($battleId);
             if (!$battle) {
                 throw new DomainException('Battle not found.');
@@ -71,5 +72,15 @@ class QueueOffhandAttackAction
 
             $this->battleRepository->save($battle);
         });
+    }
+
+    private function withinTransaction(callable $callback): void
+    {
+        if ($this->transaction === null) {
+            $callback();
+            return;
+        }
+
+        $this->transaction->run($callback);
     }
 }

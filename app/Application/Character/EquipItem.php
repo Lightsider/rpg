@@ -7,7 +7,6 @@ namespace App\Application\Character;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
-use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Services\BackpackService;
 
 class EquipItem
@@ -29,25 +28,18 @@ class EquipItem
             throw new DomainException('Character not found.');
         }
 
-        $characterModel = CharacterModel::where('user_id', $userId)->first();
-        if (!$characterModel) {
-            throw new DomainException('Character not found.');
-        }
-
         $activeBattle = $this->battleRepository->findActiveBattleForCharacter($character->getId());
         if ($activeBattle !== null) {
             throw new DomainException('Cannot edit loadout during an active fight.');
         }
 
-        $this->backpackService->equipItem($characterModel, $itemId, $slot);
-
-        $characterModel->refresh();
+        $this->backpackService->equipItemByCharacterId($character->getId(), $itemId, $slot);
         $updatedCharacter = $this->characterRepository->findByUserId($userId);
 
         return [
             'character' => $updatedCharacter,
-            'equipment' => $this->backpackService->getEquipmentPayload($characterModel),
-            'backpack' => $this->backpackService->getBackpackPayload($characterModel),
+            'equipment' => $this->backpackService->getEquipmentPayloadByCharacterId($character->getId()),
+            'backpack' => $this->backpackService->getBackpackPayloadByCharacterId($character->getId()),
         ];
     }
 }

@@ -13,6 +13,7 @@ interface CharacterRepositoryInterface
     public function create(Character $character): Character;
     public function updateHp(int $id, int $currentHp): void;
     public function updateCurrency(int $id, int $copper): void;
+    public function updateLocation(int $id, int $locationId): void;
 
     /**
      * @return Character[]
