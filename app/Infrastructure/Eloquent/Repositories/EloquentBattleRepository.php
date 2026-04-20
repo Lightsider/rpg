@@ -70,6 +70,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $model->start_timeout_seconds = $battle->getStartTimeoutSeconds();
         $model->committed_character_ids = $battle->getCommittedCharacterIds();
         $model->winner_ids = $battle->getWinnerIds();
+        $model->rewards = array_map(fn($r) => $r->jsonSerialize(), $battle->getRewards());
         $model->map_width = $battle->getMap()->getWidth();
         $model->map_height = $battle->getMap()->getHeight();
         $model->save();
@@ -112,6 +113,8 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                     'ad_armor_legs' => $participant->getAdArmorForZone('legs'),
                     'ad_armor_left_arm' => $participant->getAdArmorForZone('left_arm'),
                     'ad_armor_right_arm' => $participant->getAdArmorForZone('right_arm'),
+                    'level' => $participant->getLevel(),
+                    'experience' => $participant->getExperience(),
                 ]);
             }
         }
@@ -244,7 +247,8 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             maxParticipants: $model->max_participants !== null ? (int) $model->max_participants : null,
             startTimeoutSeconds: $model->start_timeout_seconds !== null ? (int) $model->start_timeout_seconds : null,
             participantTeams: $participantTeams,
-            winnerIds: $model->winner_ids ?? []
+            winnerIds: $model->winner_ids ?? [],
+            rewards: array_map(fn($r) => \App\Domain\Battle\BattleReward::fromArray($r), $model->rewards ?? [])
         );
     }
 
@@ -331,6 +335,8 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             adArmorLegs: (float) ($characterModel->ad_armor_legs ?? 0.0),
             adArmorLeftArm: $leftArm,
             adArmorRightArm: $rightArm,
+            level: (int) ($characterModel->level ?? 1),
+            experience: (int) ($characterModel->experience ?? 0),
         );
     }
 }

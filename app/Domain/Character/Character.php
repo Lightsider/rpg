@@ -109,12 +109,7 @@ class Character implements \JsonSerializable
 
     public function getMaxAttacks(): int
     {
-        $bonus = 0;
-        $offhand = $this->equipment->getItem(EquipmentSlot::OFF_HAND);
-        if ($offhand && method_exists($offhand, 'getOffHandAPBonus')) {
-            $bonus = $offhand->getOffHandAPBonus();
-        }
-        return self::MAX_ATTACKS_PER_TURN + $bonus;
+        return self::MAX_ATTACKS_PER_TURN;
     }
 
 

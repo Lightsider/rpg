@@ -102,6 +102,38 @@ const getParticipantName = (id) => {
                         </div>
                     </div>
 
+                    <!-- Battle Rewards (Regards) -->
+                    <div v-if="battle.status === 'finished'" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mt-6">
+                        <div class="p-6">
+                            <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 border-b pb-2">Battle Statistics & Rewards (Regards)</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div 
+                                    v-for="p in battle.participants" 
+                                    :key="`reward-${p.character_id}`"
+                                    class="p-4 border rounded-lg bg-gray-50 flex flex-col justify-between"
+                                    :class="p.hp > 0 ? 'border-green-100 bg-green-50/30' : 'border-gray-200'"
+                                >
+                                    <div class="flex items-center justify-between mb-3">
+                                        <span class="font-bold text-gray-900">{{ p.name }}</span>
+                                        <span v-if="p.hp > 0" class="text-[10px] font-black uppercase bg-green-100 text-green-700 px-1.5 py-0.5 rounded tracking-tighter">Winner</span>
+                                        <span v-else class="text-[10px] font-black uppercase bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded tracking-tighter">Defeated</span>
+                                    </div>
+                                    
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-center text-sm">
+                                            <span class="text-gray-500">Experience</span>
+                                            <span class="font-black text-indigo-600">+{{ battle.rewards?.[p.character_id]?.xp || 0 }} XP</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-sm">
+                                            <span class="text-gray-500">Copper</span>
+                                            <span class="font-black text-yellow-600">+{{ battle.rewards?.[p.character_id]?.copper || 0 }} GC</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- The Battle Log -->
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div class="p-6">

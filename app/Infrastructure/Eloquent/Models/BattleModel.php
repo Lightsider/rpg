@@ -40,6 +40,7 @@ class BattleModel extends Model
         'round_started_at' => 'immutable_datetime',
         'committed_character_ids' => 'array',
         'winner_ids' => 'array',
+        'rewards' => 'array',
         'round_number' => 'integer',
         'round_duration_seconds' => 'integer',
         'max_participants' => 'integer',

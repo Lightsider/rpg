@@ -20,13 +20,13 @@ class CombatApRulesTest extends TestCase
         
         $dagger = ItemModel::factory()->create([
             'type' => 'offhand_weapon',
-            'damage_type' => 'pierce',
-            'offhand_ap_bonus' => 1
+            'damage_type' => 'pierce'
         ]);
         $character->update(['off_hand_id' => $dagger->id]);
         
         $battle = BattleModel::factory()->create(['state' => 'active']);
-        $battle->participants()->attach($character->id);
+        $opponent = CharacterModel::factory()->create(['user_id' => User::factory()->create()->id]);
+        $battle->participants()->attach([$character->id, $opponent->id]);
 
         // Trying to submit 3 main attacks should fail
         $response = $this->actingAs($user)->postJson("/api/fights/{$battle->id}/actions", [
@@ -38,7 +38,7 @@ class CombatApRulesTest extends TestCase
         ]);
 
         $response->assertStatus(400); // DomainException
-        $response->assertJsonPath('message', 'Maximum 2 main-hand attacks per round.');
+        $response->assertJsonPath('error', 'Maximum 2 main-hand attacks per round.');
     }
 
     public function test_shield_bearer_can_use_bonus_ap_for_block_but_not_attack(): void
@@ -53,7 +53,8 @@ class CombatApRulesTest extends TestCase
         $character->update(['off_hand_id' => $shield->id]);
         
         $battle = BattleModel::factory()->create(['state' => 'active']);
-        $battle->participants()->attach($character->id);
+        $opponent = CharacterModel::factory()->create(['user_id' => User::factory()->create()->id]);
+        $battle->participants()->attach([$character->id, $opponent->id]);
 
         // 3 attacks is invalid (max 2 main attacks)
         $response = $this->actingAs($user)->postJson("/api/fights/{$battle->id}/actions", [

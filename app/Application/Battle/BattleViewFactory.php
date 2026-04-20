@@ -49,6 +49,7 @@ class BattleViewFactory
             ],
             'positions' => $positions,
             'actions_submitted' => $battle->getCommittedCharacterIds(),
+            'rewards' => $battle->getRewards(),
         ];
     }
 }

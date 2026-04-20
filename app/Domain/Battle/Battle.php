@@ -38,7 +38,8 @@ class Battle implements \JsonSerializable
         private ?int $maxParticipants = null,
         private ?int $startTimeoutSeconds = null,
         private array $participantTeams = [],
-        private array $winnerIds = []
+        private array $winnerIds = [],
+        private array $rewards = []
     ) {
     }
 
@@ -522,6 +523,7 @@ class Battle implements \JsonSerializable
             'start_timeout_seconds' => $this->getStartTimeoutSeconds(),
             'participant_teams' => $this->getParticipantTeams(),
             'winner_ids' => $this->getWinnerIds(),
+            'rewards' => $this->getRewards(),
             'round_started_at' => $this->getRoundStartedAt()->format(\DateTime::ATOM),
         ];
     }
@@ -534,6 +536,22 @@ class Battle implements \JsonSerializable
     public function setWinnerIds(array $ids): void
     {
         $this->winnerIds = $ids;
+    }
+
+    /**
+     * @return array<int, BattleReward>
+     */
+    public function getRewards(): array
+    {
+        return $this->rewards;
+    }
+
+    /**
+     * @param array<int, BattleReward> $rewards
+     */
+    public function setRewards(array $rewards): void
+    {
+        $this->rewards = $rewards;
     }
 }
 

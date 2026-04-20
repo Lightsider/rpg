@@ -11,6 +11,7 @@ use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\Rng\DeterministicRandomGenerator;
 use App\Domain\DomainException;
 use App\Domain\Battle\MovementResolverInterface;
+use App\Domain\Battle\BattleReward;
 use Exception;
 
 /**
@@ -320,6 +321,19 @@ class RoundResolver implements RoundResolverInterface
                     actorId: $winner->getId()
                 );
             }
+
+            // Generate "regards" (rewards) for all participants
+            $rewards = [];
+            foreach ($participants as $participant) {
+                // In production, awards are currently 0 as per user request.
+                // This structure allows for future expansion into coins, XP, and items.
+                $rewards[$participant->getId()] = new BattleReward(
+                    xp: 0,
+                    copper: 0,
+                    items: []
+                );
+            }
+            $battle->setRewards($rewards);
         }
 
         // Reset block-penetration and max-damage counters when combat ends
