@@ -823,7 +823,7 @@ class Character implements \JsonSerializable
      */
     public function restoreHp(): void
     {
-        $this->currentHp = $this->maxHp;
+        $this->currentHp = $this->getMaxHp();
     }
 
     /**

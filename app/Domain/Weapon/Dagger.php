@@ -17,7 +17,7 @@ class Dagger extends Weapon
         string $name,
         float $minDamage,
         float $maxDamage,
-        DamageType $damageType = DamageType::SLASHING,
+        DamageType $damageType = DamageType::PIERCE,
         int $blockBreakRating = 20,
         private readonly int $parryRating = 5,
         int $requiredLevel = 1,

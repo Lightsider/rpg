@@ -20,7 +20,7 @@ class WeaponHydrator
                 name: $item->name,
                 minDamage: $item->min_damage,
                 maxDamage: $item->max_damage,
-                damageType: DamageType::from(strtolower($item->damage_type ?? 'slashing')),
+                damageType: DamageType::PIERCE,
                 blockBreakRating: $item->block_break_rating,
                 parryRating: $item->parry_rating ?? 0,
                 requiredLevel: (int) ($item->required_level ?? 1),
