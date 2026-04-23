@@ -26,6 +26,7 @@ use App\Domain\Weapon\DamageType;
 use App\Domain\Weapon\Weapon;
 use App\Domain\Weapon\WeaponArchetype;
 use App\Domain\Shield\Shield;
+use App\Domain\Battle\Rewards\BattleRewardsConfig;
 use PHPUnit\Framework\TestCase;
 
 class WeaponBalanceTest extends TestCase
@@ -46,7 +47,18 @@ class WeaponBalanceTest extends TestCase
 
         $repoMock = $this->createMock(BattleRepositoryInterface::class);
         $movementResolver = $this->createMock(MovementResolver::class);
-        $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds, $movementResolver);
+
+        $effectivenessConfig = new BattleRewardsConfig(
+            armorKoefs: [
+                'tank' => 1.0,
+                'universal' => 1.16,
+                'dodge' => 1.38,
+                'non_armor' => 1.0,
+            ],
+            levelKoef: 1.5
+        );
+
+        $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds, $movementResolver, $effectivenessConfig);
     }
 
     private function createFighter(string $name, int $id, Weapon $weapon, ?Item $offHand = null, int $x = 0, int $y = 0): Character

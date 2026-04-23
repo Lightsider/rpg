@@ -36,6 +36,7 @@ class ArmorHydrator
             requiredDexterity: $item->required_dexterity ?? 0,
             requiredConstitution: $item->required_constitution ?? 0,
             requiredLevel: (int) ($item->required_level ?? 1),
+            archetype: $item->archetype ?? 'universal',
         );
     }
 }

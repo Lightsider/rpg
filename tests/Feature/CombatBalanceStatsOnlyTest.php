@@ -20,6 +20,7 @@ use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\PseudoRandom\PseudoRandomConfig;
 use App\Domain\Battle\PseudoRandom\PseudoRandomService;
 use App\Services\MovementResolver;
+use App\Domain\Battle\Rewards\BattleRewardsConfig;
 use App\Domain\Character\Character;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
@@ -62,7 +63,18 @@ class CombatBalanceStatsOnlyTest extends TestCase
 
         $repoMock = $this->createMock(BattleRepositoryInterface::class);
         $movementResolver = $this->createMock(MovementResolver::class);
-        $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds, $movementResolver);
+
+        $effectivenessConfig = new BattleRewardsConfig(
+            armorKoefs: [
+                'tank' => 1.0,
+                'universal' => 1.16,
+                'dodge' => 1.38,
+                'non_armor' => 1.0,
+            ],
+            levelKoef: 1.5
+        );
+
+        $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds, $movementResolver, $effectivenessConfig);
     }
 
     // =========================================================================

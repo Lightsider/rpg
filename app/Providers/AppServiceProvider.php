@@ -9,6 +9,7 @@ use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageConfig;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\MovementResolverInterface;
+use App\Domain\Battle\Rewards\BattleRewardsConfig;
 use App\Application\Contracts\TransactionInterface;
 use App\Infrastructure\Persistence\LaravelTransactionManager;
 use App\Services\MovementResolver;
@@ -117,6 +118,22 @@ class AppServiceProvider extends ServiceProvider
                     prngScale: (float) config('combat.max_damage.prng_scale', 0.25),
                     debug: (bool) config('combat.max_damage.debug', false),
                 )
+            );
+        });
+
+        $this->app->singleton(BattleRewardsConfig::class, function () {
+            return new BattleRewardsConfig(
+                armorKoefs: config('game.armor_koef', [
+                    'tank' => 1.0,
+                    'universal' => 1.16,
+                    'dodge' => 1.38,
+                    'non_armor' => 1.0,
+                ]),
+                levelKoef: (float) config('game.level_koef', 1.5),
+                xpRequirements: config('game.xp_requirements', []),
+                coinBasePerItem: (int) config('game.rewards.coins.base_per_item', 10),
+                coinMultipliers: config('game.rewards.coins.multipliers', []),
+                teamCoinSplits: config('game.rewards.coins.team_split', [])
             );
         });
     }

@@ -11,7 +11,7 @@ use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\Rng\DeterministicRandomGenerator;
 use App\Domain\DomainException;
 use App\Domain\Battle\MovementResolverInterface;
-use App\Domain\Battle\BattleReward;
+use App\Domain\Battle\Rewards\BattleRewardsConfig;
 use Exception;
 
 /**
@@ -25,6 +25,7 @@ class RoundResolver implements RoundResolverInterface
         private readonly BlockPenetrationService $blockPenetrationService,
         private readonly MaxDamageService $maxDamageService,
         private readonly MovementResolverInterface $movementResolver,
+        private readonly BattleRewardsConfig $effectivenessConfig,
     ) {
     }
 
@@ -250,7 +251,21 @@ class RoundResolver implements RoundResolverInterface
             }
 
             $result = $this->combatResolver->resolveAttack($attacker, $defender, $isBlocked, $action->getTargetZone(), $forcedWeapon);
-            $attackResults[] = ['defender' => $defender, 'result' => $result, 'attacker' => $attacker, 'zone' => $action->getTargetZone()->value];
+            $attackResults[] = ['defender' => $defender, 'result' => $result, 'attacker' => $attacker, 'zone' => $action->getTargetZone()];
+            
+            // Calculate effectiveness for both attacker and defender
+            if ($result->damage > 0) {
+                $defenderArmorKoef = $this->effectivenessConfig->armorKoefs[$defender->getArmorArchetype($action->getTargetZone())] ?? 1.0;
+                $levelKoef = $this->effectivenessConfig->levelKoef;
+                
+                // Attacker effectiveness (FullDamageDealt)
+                $attackerEffGain = max(0, ($result->damage * $defenderArmorKoef) + ($levelKoef * ($defender->getLevel() - $attacker->getLevel())));
+                $attacker->addEffectiveness($attackerEffGain);
+                
+                // Defender effectiveness (FullDamageTaken)
+                $defenderEffGain = max(0, ($result->damage * $defenderArmorKoef) + ($levelKoef * ($attacker->getLevel() - $defender->getLevel())));
+                $defender->addEffectiveness($defenderEffGain);
+            }
 
             $outcome = 'hit';
             $damage = $result->damage;
@@ -322,16 +337,63 @@ class RoundResolver implements RoundResolverInterface
                 );
             }
 
-            // Generate "regards" (rewards) for all participants
+            // Calculate total coin fund from all participants
+            $totalCoinFund = 0;
+            foreach ($participants as $participant) {
+                $totalCoinFund += $participant->calculateCoinContribution(
+                    $this->effectivenessConfig->coinBasePerItem,
+                    $this->effectivenessConfig->coinMultipliers
+                );
+            }
+
+            // Identify teams and winner
+            $teams = [];
+            foreach ($participants as $p) {
+                $teamId = $battle->getParticipantTeam($p->getId()) ?? 'unassigned';
+                $teams[$teamId][] = $p;
+            }
+
+            $winnerTeamName = $battle->getWinningTeamName();
+            $winnerShareTotal = (int) round($totalCoinFund * ($this->effectivenessConfig->teamCoinSplits['winner'] ?? 0.7));
+            $loserShareTotal = $totalCoinFund - $winnerShareTotal;
+
+            // Pre-calculate team effectiveness
+            $teamEffectiveness = [];
+            foreach ($teams as $teamId => $members) {
+                $teamEffectiveness[$teamId] = array_reduce($members, fn($carry, $m) => $carry + $m->getEffectiveness(), 0.0);
+            }
+
+            // Generate rewards (XP and Coins)
             $rewards = [];
             foreach ($participants as $participant) {
-                // In production, awards are currently 0 as per user request.
-                // This structure allows for future expansion into coins, XP, and items.
+                $eff = $participant->getEffectiveness();
+                $baseXp = max(0, $eff) / 2;
+                
+                $teamId = $battle->getParticipantTeam($participant->getId());
+                $isWinner = $teamId !== null && $teamId === $winnerTeamName;
+                $finalXp = $isWinner ? $baseXp : ($baseXp * 0.5);
+
+                // Coin distribution within team
+                $teamShare = $isWinner ? $winnerShareTotal : $loserShareTotal;
+                $totalTeamEff = $teamEffectiveness[$teamId] ?? 0.0;
+
+                $finalCoins = 0;
+                if ($totalTeamEff > 0) {
+                    $finalCoins = (int) round($teamShare * ($eff / $totalTeamEff));
+                } else {
+                    // Equal split if team total effectiveness is 0
+                    $memberCount = count($teams[$teamId] ?? []);
+                    $finalCoins = $memberCount > 0 ? (int) floor($teamShare / $memberCount) : 0;
+                }
+                
                 $rewards[$participant->getId()] = new BattleReward(
-                    xp: 0,
-                    copper: 0,
+                    xp: (int) round($finalXp),
+                    copper: $finalCoins,
                     items: []
                 );
+
+                $participant->addExperience((int)round($finalXp), $this->effectivenessConfig->xpRequirements);
+                $participant->addCurrencyCopper($finalCoins);
             }
             $battle->setRewards($rewards);
         }
@@ -344,6 +406,7 @@ class RoundResolver implements RoundResolverInterface
                 $participant->restoreHp();
                 $participant->initializeAdArmor();
                 $participant->resetAllStreaks();
+                $participant->resetEffectiveness();
             }
 
             // Save the battle with restored HP to database

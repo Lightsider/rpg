@@ -15,6 +15,7 @@ use App\Domain\Battle\TargetZone;
 use App\Domain\Battle\TurnAction;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
+use App\Domain\Battle\Rewards\BattleRewardsConfig;
 use App\Services\MovementResolver;
 use App\Domain\Character\Character;
 use App\Domain\Weapon\DamageType;
@@ -61,8 +62,9 @@ class RoundResolverTest extends TestCase
         $blockPenetrationService = $this->createMock(BlockPenetrationService::class);
         $maxDamageService = $this->createMock(MaxDamageService::class);
         $movementResolver = $this->createMock(MovementResolver::class);
+        $effectivenessConfig = new BattleRewardsConfig(['tank' => 1.0, 'universal' => 1.0, 'dodge' => 1.0, 'non_armor' => 1.0], 1.5);
 
-        return new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver);
+        return new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver, $effectivenessConfig);
     }
 
     public function test_battle_logs_with_value_objects(): void
@@ -104,7 +106,8 @@ class RoundResolverTest extends TestCase
         $blockPenetrationService = $this->createMock(BlockPenetrationService::class);
         $maxDamageService = $this->createMock(MaxDamageService::class);
         $movementResolver = $this->createMock(MovementResolver::class);
-        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver);
+        $effectivenessConfig = new BattleRewardsConfig(['tank' => 1.0, 'universal' => 1.0, 'dodge' => 1.0, 'non_armor' => 1.0], 1.5);
+        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver, $effectivenessConfig);
 
         // Mock a hit that lands despite the defense (partial damage)
         $attackResult = new \App\Domain\Battle\AttackResult(10, false, false, false, DamageType::SLASHING);
@@ -155,7 +158,8 @@ class RoundResolverTest extends TestCase
         $blockPenetrationService = $this->createMock(BlockPenetrationService::class);
         $maxDamageService = $this->createMock(MaxDamageService::class);
         $movementResolver = $this->createMock(MovementResolver::class);
-        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver);
+        $effectivenessConfig = new BattleRewardsConfig(['tank' => 1.0, 'universal' => 1.0, 'dodge' => 1.0, 'non_armor' => 1.0], 1.5);
+        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver, $effectivenessConfig);
 
         // Mock total block (0 damage)
         $attackResult = new \App\Domain\Battle\AttackResult(0, false, false, false, DamageType::SLASHING);
@@ -195,7 +199,8 @@ class RoundResolverTest extends TestCase
         $blockPenetrationService = $this->createMock(BlockPenetrationService::class);
         $maxDamageService = $this->createMock(MaxDamageService::class);
         $movementResolver = $this->createMock(MovementResolver::class);
-        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver);
+        $effectivenessConfig = new BattleRewardsConfig(['tank' => 1.0, 'universal' => 1.0, 'dodge' => 1.0, 'non_armor' => 1.0], 1.5);
+        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver, $effectivenessConfig);
 
         $attackResult = new \App\Domain\Battle\AttackResult(10, false, false, false, DamageType::SLASHING);
         $combatResolver->method('resolveAttack')->willReturn($attackResult);
@@ -233,7 +238,8 @@ class RoundResolverTest extends TestCase
         $blockPenetrationService = $this->createMock(BlockPenetrationService::class);
         $maxDamageService = $this->createMock(MaxDamageService::class);
         $movementResolver = $this->createMock(MovementResolver::class);
-        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver);
+        $effectivenessConfig = new BattleRewardsConfig(['tank' => 1.0, 'universal' => 1.0, 'dodge' => 1.0, 'non_armor' => 1.0], 1.5);
+        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver, $effectivenessConfig);
         $attackResult = new \App\Domain\Battle\AttackResult(5, false, false, false, DamageType::SLASHING);
         $combatResolver->method('resolveAttack')->willReturn($attackResult);
 
@@ -281,7 +287,8 @@ class RoundResolverTest extends TestCase
         $blockPenetrationService = $this->createMock(BlockPenetrationService::class);
         $maxDamageService = $this->createMock(MaxDamageService::class);
         $movementResolver = $this->createMock(MovementResolver::class);
-        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver);
+        $effectivenessConfig = new BattleRewardsConfig(['tank' => 1.0, 'universal' => 1.0, 'dodge' => 1.0, 'non_armor' => 1.0], 1.5);
+        $resolver = new RoundResolver($combatResolver, $battleRepository, $blockPenetrationService, $maxDamageService, $movementResolver, $effectivenessConfig);
 
         $attackResult = new \App\Domain\Battle\AttackResult(0, false, false, false, DamageType::SLASHING);
         $combatResolver->method('resolveAttack')->willReturn($attackResult);

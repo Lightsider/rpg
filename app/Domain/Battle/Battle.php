@@ -413,7 +413,8 @@ class Battle implements \JsonSerializable
         }
 
         if (count($teams) <= 1) {
-            return array_key_first($teams);
+            $key = array_key_first($teams);
+            return $key !== null ? (string)$key : null;
         }
 
         return null;

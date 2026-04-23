@@ -23,6 +23,7 @@ class Armor extends Item
         private readonly float $pierceDamageReduction = 0.0,
         private readonly ItemType $itemType = ItemType::ARMOR,
         int $requiredLevel = 1,
+        private readonly string $archetype = 'universal',
     ) {
         parent::__construct($id, $name, $this->itemType, $requiredLevel);
     }
@@ -70,5 +71,10 @@ class Armor extends Item
     public function getPierceDamageReduction(): float
     {
         return $this->pierceDamageReduction;
+    }
+
+    public function getArchetype(): string
+    {
+        return $this->archetype;
     }
 }

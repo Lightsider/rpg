@@ -115,6 +115,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                     'ad_armor_right_arm' => $participant->getAdArmorForZone('right_arm'),
                     'level' => $participant->getLevel(),
                     'experience' => $participant->getExperience(),
+                    'currency_copper' => $participant->getCurrencyCopper(),
                 ]);
             }
         }

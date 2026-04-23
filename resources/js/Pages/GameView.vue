@@ -8,6 +8,7 @@ import BlockSelector from '@/Components/Fight/BlockSelector.vue';
 import FightActionPanel from '@/Components/Fight/FightActionPanel.vue';
 import CurrencyDisplay from '@/Components/CurrencyDisplay.vue';
 import ChatPanel from '@/Components/Chat/ChatPanel.vue';
+import BattleSummaryModal from '@/Components/Fight/BattleSummaryModal.vue';
 import {
     getGameState,
     getAvailableFights,
@@ -981,10 +982,7 @@ onUnmounted(() => {
                                     <p class="text-gray-600">Fight #{{ fightState.id }} will automatically begin when a second player joins.</p>
                                     <button @click="handleCancelFight" class="mt-4 bg-gray-800 hover:bg-gray-900 text-white font-semibold py-2 px-4 rounded">Cancel Fight</button>
                                 </div>
-                                <div v-else-if="fightState.status === 'finished'" class="bg-gray-100 border p-6 rounded-lg text-center">
-                                    <h3 class="font-bold text-lg mb-2">Battle Concluded</h3>
-                                    <button @click="handleReturnToLobby" class="text-blue-600 hover:underline">Return to Lobby</button>
-                                </div>
+
                                 <template v-else>
                                     <div class="bg-white rounded-lg p-4 shadow-sm border" v-if="fightState.map && fightState.positions">
                                         <h3 class="font-bold text-lg mb-3">Tactical Map</h3>
@@ -1017,77 +1015,22 @@ onUnmounted(() => {
                                             :disabled="submitting" 
                                             @submitActions="handleQueueSubmit" 
                                         />
+                                        <div v-if="actionMode === 'none'" class="text-sm text-gray-500 bg-gray-50 border border-dashed rounded p-6 text-center">
                                             Select an empty adjacent tile to move, or click an adjacent enemy to attack.
                                         </div>
                                     </div>
 
-                                    <!-- Battle Results Overlay -->
-                                    <div v-if="fightState.status === 'finished'" class="absolute inset-0 z-50 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm rounded-lg overflow-hidden animate-in fade-in duration-500">
-                                        <div class="bg-white w-full max-w-md p-8 rounded-xl shadow-2xl border-4" 
-                                             :class="fightState.participants.find(p => p.character_id === myCharacterId)?.hp > 0 ? 'border-green-500' : 'border-red-500'">
-                                            
-                                            <div class="text-center mb-6">
-                                                <div v-if="fightState.participants.find(p => p.character_id === myCharacterId)?.hp > 0" class="text-green-600">
-                                                    <svg class="h-16 w-16 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                    <h3 class="text-3xl font-black uppercase tracking-tighter italic">Victory!</h3>
-                                                </div>
-                                                <div v-else class="text-red-600">
-                                                    <svg class="h-16 w-16 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                    <h3 class="text-3xl font-black uppercase tracking-tighter italic">Defeat</h3>
-                                                </div>
-                                                <p class="text-sm text-gray-400 mt-1 uppercase font-bold tracking-widest">Battle #{{ fightState.id }} Summarized</p>
-                                            </div>
 
-                                            <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-gray-100">
-                                                <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 border-b pb-2">Battle Rewards (Regards)</h4>
-                                                
-                                                <div class="space-y-4">
-                                                    <div class="flex justify-between items-center bg-white p-3 rounded border shadow-sm">
-                                                        <div class="flex items-center gap-3">
-                                                            <div class="p-2 bg-indigo-100 rounded text-indigo-700">
-                                                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                                                </svg>
-                                                            </div>
-                                                            <span class="font-bold text-gray-700">Experience</span>
-                                                        </div>
-                                                        <span class="text-indigo-600 font-black text-xl">+{{ fightState.rewards?.[myCharacterId]?.xp || 0 }}</span>
-                                                    </div>
-
-                                                    <div class="flex justify-between items-center bg-white p-3 rounded border shadow-sm">
-                                                        <div class="flex items-center gap-3">
-                                                            <div class="p-2 bg-yellow-100 rounded text-yellow-700">
-                                                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                </svg>
-                                                            </div>
-                                                            <span class="font-bold text-gray-700">Copper</span>
-                                                        </div>
-                                                        <span class="text-yellow-600 font-black text-xl">+{{ fightState.rewards?.[myCharacterId]?.copper || 0 }}</span>
-                                                    </div>
-
-                                                    <div v-if="fightState.rewards?.[myCharacterId]?.items?.length" class="bg-white p-3 rounded border shadow-sm">
-                                                        <div class="text-xs font-bold text-gray-400 mb-2">Items Found</div>
-                                                        <div class="flex flex-wrap gap-2">
-                                                            <div v-for="itemId in fightState.rewards[myCharacterId].items" :key="itemId" class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded border">
-                                                                Item #{{ itemId }}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <button @click="handleReturnToLobby" class="w-full bg-gray-900 hover:bg-black text-white font-black py-4 rounded-lg shadow-xl uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]">
-                                                Return to Lobby
-                                            </button>
-                                        </div>
-                                    </div>
                                 </template>
                                 <FightLog ref="logRef" :fightId="fightState.id" :fightStatus="fightState.status" :fightNumber="fightState.id" :participants="fightState.participants || []" />
+                                
+                                <!-- Battle Results Modal -->
+                                <BattleSummaryModal 
+                                    :show="fightState.status === 'finished'"
+                                    :battle="fightState"
+                                    :myCharacterId="myCharacterId"
+                                    @close="handleReturnToLobby"
+                                />
                             </div>
 
                             <!-- Shop UI -->

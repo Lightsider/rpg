@@ -48,6 +48,7 @@ class BattleViewFactory
             'positions' => $snapshot['positions'],
             'actions_submitted' => $battle->getCommittedCharacterIds(),
             'rewards' => $battle->getRewards(),
+            'winning_team' => $battle->getWinningTeamName(),
         ];
     }
 }

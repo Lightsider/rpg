@@ -14,6 +14,7 @@ use App\Domain\Armor\ArmorSubtype;
 use App\Domain\Armor\Shield;
 use App\Domain\Armor\Armor;
 use App\Domain\Item\Item;
+use App\Domain\Item\ItemType;
 
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
 
@@ -68,6 +69,7 @@ class Character implements \JsonSerializable
         private int $offhandAttackPointsUsed = 0,
         private int $level = 1,
         private int $experience = 0,
+        private float $effectiveness = 0.0,
     ) {
         $this->adArmorHead = $this->normalizeAdArmorValue($this->adArmorHead);
         $this->adArmorChest = $this->normalizeAdArmorValue($this->adArmorChest);
@@ -241,6 +243,62 @@ class Character implements \JsonSerializable
     public function getDodgeFailStreak(): int
     {
         return $this->dodgeFailStreak;
+    }
+
+    public function addEffectiveness(float $val): void
+    {
+        $this->effectiveness += $val;
+    }
+
+    public function calculateCoinContribution(int $base, array $multipliers): int
+    {
+        $total = 0;
+        $items = $this->equipment->getAllEquipped();
+
+        foreach ($items as $slot => $item) {
+            $itemMultiplier = 1;
+
+            if ($item instanceof Armor && $item->getSubtype() === ArmorSubtype::BODY) {
+                $itemMultiplier = $multipliers['body'] ?? 1;
+            } elseif ($item instanceof Weapon && $item->getItemType() === ItemType::WEAPON) {
+                if ($item->isTwoHanded()) {
+                    $itemMultiplier = $multipliers['weapon_2h'] ?? 1;
+                } else {
+                    $itemMultiplier = $multipliers['weapon_1h'] ?? 1;
+                }
+            }
+
+            $total += $base * $itemMultiplier;
+        }
+
+        return $total;
+    }
+
+    public function resetEffectiveness(): void
+    {
+        $this->effectiveness = 0.0;
+    }
+
+    public function getEffectiveness(): float
+    {
+        return $this->effectiveness;
+    }
+
+    public function getArmorArchetype(TargetZone $zone): string
+    {
+        $slot = match ($zone) {
+            TargetZone::HEAD => EquipmentSlot::HELMET,
+            TargetZone::TORSO => EquipmentSlot::CHEST,
+            TargetZone::LEGS => EquipmentSlot::LEGS,
+            TargetZone::LEFT_ARM, TargetZone::RIGHT_ARM => EquipmentSlot::GLOVES,
+        };
+
+        $item = $this->equipment->getItem($slot);
+        if ($item instanceof Armor) {
+            return $item->getArchetype();
+        }
+
+        return 'non_armor';
     }
 
     public function getDodgeSuccessStreak(): int
@@ -796,6 +854,14 @@ class Character implements \JsonSerializable
     public function getCurrencyCopper(): int
     {
         return $this->currencyCopper;
+    }
+
+    public function addCurrencyCopper(int $amount): void
+    {
+        if ($amount < 0) {
+            throw new \App\Domain\DomainException('Cannot add negative copper.');
+        }
+        $this->currencyCopper += $amount;
     }
 
     public function addCurrency(int $amount): void
