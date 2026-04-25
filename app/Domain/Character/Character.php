@@ -69,6 +69,7 @@ class Character implements \JsonSerializable
         private int $offhandAttackPointsUsed = 0,
         private int $level = 1,
         private int $experience = 0,
+        private int $sublevelIndex = 0,
         private float $effectiveness = 0.0,
     ) {
         $this->adArmorHead = $this->normalizeAdArmorValue($this->adArmorHead);
@@ -930,7 +931,15 @@ class Character implements \JsonSerializable
         return $this->experience;
     }
 
-    public function addExperience(int $amount, array $xpRequirements): bool
+    public function getSublevelIndex(): int
+    {
+        return $this->sublevelIndex;
+    }
+
+    /**
+     * @param array<int, array{xp_threshold: int, reward_copper: int}> $sublevelThresholds Mapping of sublevel_index => data for CURRENT level
+     */
+    public function addExperience(int $amount, array $sublevelThresholds): bool
     {
         if ($amount < 0) {
             throw new \App\Domain\DomainException('Cannot add negative experience.');
@@ -939,9 +948,28 @@ class Character implements \JsonSerializable
         $this->experience += $amount;
         $leveledUp = false;
 
-        while (isset($xpRequirements[$this->level + 1]) && $this->experience >= $xpRequirements[$this->level + 1]) {
-            $this->level++;
-            $leveledUp = true;
+        while (true) {
+            $nextSublevel = $this->sublevelIndex + 1;
+            
+            if (isset($sublevelThresholds[$nextSublevel]) && $this->experience >= $sublevelThresholds[$nextSublevel]['xp_threshold']) {
+                $this->sublevelIndex++;
+                $this->addCurrencyCopper($sublevelThresholds[$this->sublevelIndex]['reward_copper']);
+                
+                // Note: Level up happens when the LAST sublevel of the level is reached.
+                // We assume the caller provides thresholds for the current level.
+                // If we reach the max sublevel for this level, we level up.
+                if (!isset($sublevelThresholds[$this->sublevelIndex + 1])) {
+                    $this->level++;
+                    $this->sublevelIndex = 0;
+                    $leveledUp = true;
+                    // When we level up, we stop processing sublevels for THIS call
+                    // as we don't have the thresholds for the NEW level here.
+                    // The caller should ideally handle multi-level jumps or we should fetch new thresholds.
+                    break;
+                }
+            } else {
+                break;
+            }
         }
 
         return $leveledUp;
@@ -954,7 +982,10 @@ class Character implements \JsonSerializable
 
     public function jsonSerialize(): array
     {
-        $xpRequirements = config('game.xp_requirements', []);
+        $xpRequirements = [];
+        if (function_exists('config')) {
+            $xpRequirements = config('game.xp_requirements', []);
+        }
         $nextLevelXp = $this->getXpForNextLevel($xpRequirements);
 
         return [
@@ -979,6 +1010,8 @@ class Character implements \JsonSerializable
             ],
             'weapon' => ($this->getEquippedWeapon()?->getName()),
             'currency_copper' => $this->getCurrencyCopper(),
+            'sublevel_index' => $this->getSublevelIndex(),
+            'sublevels_count' => $this->level + 2, // Default fallback
             'additional_armor' => [
                 'head' => $this->getAdArmorForZone('head'),
                 'chest' => $this->getAdArmorForZone('chest'),

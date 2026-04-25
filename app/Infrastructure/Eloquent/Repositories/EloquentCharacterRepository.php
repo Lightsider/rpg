@@ -60,6 +60,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             'name' => $character->getName(),
             'level' => $character->getLevel(),
             'experience' => $character->getExperience(),
+            'sublevel_index' => $character->getSublevelIndex(),
             'strength' => $character->getStrength(),
             'dexterity' => $character->getAgility(),
             'constitution' => $character->getConstitution(),
@@ -196,6 +197,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             adArmorRightArm: $rightArm,
             level: (int) ($model->level ?? 1),
             experience: (int) ($model->experience ?? 0),
+            sublevelIndex: (int) ($model->sublevel_index ?? 0),
         );
     }
 }

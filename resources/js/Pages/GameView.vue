@@ -756,10 +756,19 @@ onUnmounted(() => {
                                             XP
                                         </div>
                                     </div>
-                                    <div v-if="gameState.character.xp_next_level" class="w-full bg-indigo-200 rounded-full h-1.5 mt-1">
+                                    <div v-if="gameState.character.xp_next_level" class="w-full bg-indigo-200 rounded-full h-1.5 mt-1 relative overflow-hidden">
                                         <div class="bg-indigo-600 h-1.5 rounded-full transition-all duration-500" 
                                              :style="{ width: Math.min(100, (gameState.character.experience / gameState.character.xp_next_level) * 100) + '%' }">
                                         </div>
+                                    </div>
+                                    <div v-if="gameState.character.sublevels_count" class="flex gap-1.5 mt-3 px-0.5">
+                                        <div 
+                                            v-for="i in gameState.character.sublevels_count" 
+                                            :key="i"
+                                            class="flex-1 h-1.5 rounded-full transition-all duration-500"
+                                            :class="i <= gameState.character.sublevel_index ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-indigo-100'"
+                                            :title="`Sublevel ${i} of ${gameState.character.sublevels_count}`"
+                                        ></div>
                                     </div>
                                 </div>
                                 <div class="flex justify-between items-center bg-gray-50 p-3 rounded">

@@ -130,7 +130,6 @@ class AppServiceProvider extends ServiceProvider
                     'non_armor' => 1.0,
                 ]),
                 levelKoef: (float) config('game.level_koef', 1.5),
-                xpRequirements: config('game.xp_requirements', []),
                 coinBasePerItem: (int) config('game.rewards.coins.base_per_item', 10),
                 coinMultipliers: config('game.rewards.coins.multipliers', []),
                 teamCoinSplits: config('game.rewards.coins.team_split', [])

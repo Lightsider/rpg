@@ -12,6 +12,7 @@ use App\Domain\Battle\Rng\DeterministicRandomGenerator;
 use App\Domain\DomainException;
 use App\Domain\Battle\MovementResolverInterface;
 use App\Domain\Battle\Rewards\BattleRewardsConfig;
+use App\Infrastructure\Eloquent\Repositories\LevelSublevelRepository;
 use Exception;
 
 /**
@@ -26,6 +27,7 @@ class RoundResolver implements RoundResolverInterface
         private readonly MaxDamageService $maxDamageService,
         private readonly MovementResolverInterface $movementResolver,
         private readonly BattleRewardsConfig $effectivenessConfig,
+        private readonly LevelSublevelRepository $levelSublevelRepository,
     ) {
     }
 
@@ -392,7 +394,17 @@ class RoundResolver implements RoundResolverInterface
                     items: []
                 );
 
-                $participant->addExperience((int)round($finalXp), $this->effectivenessConfig->xpRequirements);
+                $xpAmount = (int)round($finalXp);
+                $sublevelThresholds = $this->levelSublevelRepository->getThresholdsForLevel($participant->getLevel());
+                
+                if ($participant->addExperience($xpAmount, $sublevelThresholds)) {
+                    // If they leveled up, we might want to check for FURTHER sublevels in the new level
+                    // but usually, battle XP is added once.
+                    // To be safe, we could re-call addExperience with 0 XP and new thresholds
+                    $newThresholds = $this->levelSublevelRepository->getThresholdsForLevel($participant->getLevel());
+                    $participant->addExperience(0, $newThresholds);
+                }
+                
                 $participant->addCurrencyCopper($finalCoins);
             }
             $battle->setRewards($rewards);

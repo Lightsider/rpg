@@ -29,4 +29,7 @@ return [
             ],
         ],
     ],
+    'sublevels' => [
+        'reward_multiplier' => 0.5,
+    ],
 ];

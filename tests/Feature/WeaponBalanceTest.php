@@ -58,7 +58,8 @@ class WeaponBalanceTest extends TestCase
             levelKoef: 1.5
         );
 
-        $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds, $movementResolver, $effectivenessConfig);
+        $lsr = $this->createMock(\App\Infrastructure\Eloquent\Repositories\LevelSublevelRepository::class);
+        $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds, $movementResolver, $effectivenessConfig, $lsr);
     }
 
     private function createFighter(string $name, int $id, Weapon $weapon, ?Item $offHand = null, int $x = 0, int $y = 0): Character

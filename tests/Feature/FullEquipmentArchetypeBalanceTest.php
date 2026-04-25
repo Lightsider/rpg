@@ -78,7 +78,8 @@ class FullEquipmentArchetypeBalanceTest extends TestCase
             levelKoef: 1.5
         );
 
-        $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds, $movementResolver, $effectivenessConfig);
+        $lsr = $this->createMock(\App\Infrastructure\Eloquent\Repositories\LevelSublevelRepository::class);
+        $this->resolver = new RoundResolver($combatResolver, $repoMock, $bps, $mds, $movementResolver, $effectivenessConfig, $lsr);
     }
 
     // =========================================================================
