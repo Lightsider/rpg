@@ -14,7 +14,6 @@ use App\Domain\Item\ItemType;
 use App\Domain\Weapon\DamageType;
 use App\Domain\Weapon\Weapon;
 use Tests\TestCase;
-use Illuminate\Support\Facades\Config;
 
 class EquipmentServiceTest extends TestCase
 {
@@ -24,7 +23,7 @@ class EquipmentServiceTest extends TestCase
     {
         parent::setUp();
 
-        Config::set('equipment.slots', [
+        $allowedTypes = [
             'main_hand' => ['weapon'],
             'off_hand' => ['shield', 'offhand_weapon'],
             'helmet' => ['helmet'],
@@ -35,9 +34,9 @@ class EquipmentServiceTest extends TestCase
             'charm_2' => ['charm'],
             'charm_3' => ['charm'],
             'charm_4' => ['charm'],
-        ]);
+        ];
 
-        $this->service = new EquipmentService();
+        $this->service = new EquipmentService($allowedTypes);
     }
 
     private function createCharacter(): Character

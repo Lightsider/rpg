@@ -10,8 +10,12 @@ use App\Domain\Battle\MaxDamage\MaxDamageConfig;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\MovementResolverInterface;
 use App\Domain\Battle\Rewards\BattleRewardsConfig;
+use App\Application\Contracts\EventDispatcherInterface;
+use App\Application\Contracts\PasswordHasherInterface;
 use App\Application\Contracts\TransactionInterface;
+use App\Infrastructure\Events\LaravelEventDispatcher;
 use App\Infrastructure\Persistence\LaravelTransactionManager;
+use App\Infrastructure\Security\LaravelPasswordHasher;
 use App\Services\MovementResolver;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -34,6 +38,21 @@ class AppServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(
+            \App\Application\Contracts\UserRegistrationNotifierInterface::class,
+            \App\Infrastructure\Auth\LaravelUserRegistrationNotifier::class
+        );
+
+        $this->app->bind(
+            \App\Domain\Character\Repositories\LevelSublevelRepositoryInterface::class,
+            \App\Infrastructure\Eloquent\Repositories\LevelSublevelRepository::class
+        );
+
+        $this->app->bind(
+            \App\Domain\Character\Repositories\ProgressionThresholdsProviderInterface::class,
+            \App\Infrastructure\Persistence\ConfigAwareProgressionThresholdsProvider::class
+        );
+
+        $this->app->bind(
             \App\Domain\Battle\RoundResolverInterface::class,
             \App\Domain\Battle\RoundResolver::class
         );
@@ -46,6 +65,21 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             TransactionInterface::class,
             LaravelTransactionManager::class
+        );
+
+        $this->app->bind(
+            \App\Application\Contracts\ClockInterface::class,
+            \App\Infrastructure\Time\SystemClock::class
+        );
+
+        $this->app->bind(
+            EventDispatcherInterface::class,
+            LaravelEventDispatcher::class
+        );
+
+        $this->app->bind(
+            PasswordHasherInterface::class,
+            LaravelPasswordHasher::class
         );
 
         $this->app->bind(
@@ -97,6 +131,11 @@ class AppServiceProvider extends ServiceProvider
             \App\Domain\Item\Repositories\CharacterItemRepositoryInterface::class,
             \App\Infrastructure\Persistence\EloquentCharacterItemRepository::class
         );
+
+        $this->app->singleton(\App\Domain\Equipment\EquipmentService::class, function ($app) {
+            $slots = $app->make('config')->get('equipment.slots', []);
+            return new \App\Domain\Equipment\EquipmentService(is_array($slots) ? $slots : []);
+        });
 
         // BlockPenetrationService is a singleton because it carries per-battle
         // state (failure counters) that must survive across the same request.

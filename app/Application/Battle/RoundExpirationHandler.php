@@ -10,6 +10,8 @@ use App\Domain\Battle\BattleState;
 use App\Domain\Battle\Repositories\BattleLogRepositoryInterface;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\RoundResolverInterface;
+use App\Application\Contracts\ClockInterface;
+use App\Application\Contracts\EventDispatcherInterface;
 use App\Events\Battle\BattleEnded;
 use App\Events\Battle\BattleUpdated;
 use App\Events\Battle\RoundStarted;
@@ -27,7 +29,9 @@ class RoundExpirationHandler
         private readonly BattleLogRepositoryInterface $battleLogRepository,
         private readonly RoundResolverInterface $roundResolver,
         private readonly MapGenerator $mapGenerator,
-        private readonly TransactionInterface $transaction
+        private readonly TransactionInterface $transaction,
+        private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly ClockInterface $clock
     ) {
     }
 
@@ -70,7 +74,7 @@ class RoundExpirationHandler
                 }
 
                 $expiryTime = $battle->getRoundStartedAt()->modify("+{$timeout} seconds");
-                if (new \DateTimeImmutable() < $expiryTime) {
+                if ($this->clock->now() < $expiryTime) {
                     continue;
                 }
 
@@ -105,7 +109,7 @@ class RoundExpirationHandler
 
         // Dispatch broadcast events outside the transaction
         foreach ($pendingEvents as $event) {
-            event($event);
+            $this->eventDispatcher->dispatch($event);
         }
     }
 

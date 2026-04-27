@@ -2,16 +2,18 @@
 
 namespace App\Application\User\Actions;
 
+use App\Application\Contracts\PasswordHasherInterface;
+use App\Application\Contracts\UserRegistrationNotifierInterface;
 use App\Domain\User\Entities\UserEntity;
 use App\Domain\User\Repositories\UserRepositoryInterface;
 use App\DTOs\UserRegistrationDTO;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Auth\Events\Registered;
 
 class RegisterUserAction
 {
     public function __construct(
-        private readonly UserRepositoryInterface $userRepository
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly PasswordHasherInterface $passwordHasher,
+        private readonly UserRegistrationNotifierInterface $registrationNotifier
     ) {
     }
 
@@ -20,17 +22,12 @@ class RegisterUserAction
         $userEntity = UserEntity::create([
             'name' => $dto->name,
             'email' => $dto->email,
-            'password' => Hash::make($dto->password),
+            'password' => $this->passwordHasher->hash($dto->password),
         ]);
 
         $savedUser = $this->userRepository->create($userEntity);
 
-        if (method_exists($this->userRepository, 'findByIdModel')) {
-            $userModel = $this->userRepository->findByIdModel($savedUser->id);
-            if ($userModel) {
-                event(new Registered($userModel));
-            }
-        }
+        $this->registrationNotifier->notifyRegistered($savedUser->id);
 
         return $savedUser;
     }

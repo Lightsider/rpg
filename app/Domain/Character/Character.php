@@ -28,6 +28,7 @@ class Character implements \JsonSerializable
     public const int MAX_ATTACKS_PER_TURN = 2;
 
     private static ?Weapon $unarmedWeapon = null;
+    private ?int $xpNextLevel = null;
 
     public function __construct(
         private readonly int $id,
@@ -937,15 +938,27 @@ class Character implements \JsonSerializable
     }
 
     /**
-     * @param array<int, array{xp_threshold: int, reward_copper: int}> $sublevelThresholds Mapping of sublevel_index => data for CURRENT level
+     * @param array<int, array{xp_threshold: int, reward_copper: int}>|array<int, int> $thresholds
      */
-    public function addExperience(int $amount, array $sublevelThresholds): bool
+    public function addExperience(int $amount, array $thresholds): bool
     {
         if ($amount < 0) {
             throw new \App\Domain\DomainException('Cannot add negative experience.');
         }
 
         $this->experience += $amount;
+        if ($this->isLegacyLevelThresholds($thresholds)) {
+            return $this->applyLegacyLevelThresholds($thresholds);
+        }
+
+        return $this->applySublevelThresholds($thresholds);
+    }
+
+    /**
+     * @param array<int, array{xp_threshold: int, reward_copper: int}> $sublevelThresholds
+     */
+    private function applySublevelThresholds(array $sublevelThresholds): bool
+    {
         $leveledUp = false;
 
         while (true) {
@@ -975,26 +988,60 @@ class Character implements \JsonSerializable
         return $leveledUp;
     }
 
+    /**
+     * @param array<int, int> $xpRequirements
+     */
+    private function applyLegacyLevelThresholds(array $xpRequirements): bool
+    {
+        $leveledUp = false;
+
+        while (true) {
+            $nextLevel = $this->level + 1;
+            $requiredXp = $xpRequirements[$nextLevel] ?? null;
+            if ($requiredXp === null || $this->experience < $requiredXp) {
+                break;
+            }
+
+            $this->level++;
+            $this->sublevelIndex = 0;
+            $leveledUp = true;
+        }
+
+        return $leveledUp;
+    }
+
+    /**
+     * @param array<int, mixed> $thresholds
+     */
+    private function isLegacyLevelThresholds(array $thresholds): bool
+    {
+        if ($thresholds === []) {
+            return false;
+        }
+
+        $first = reset($thresholds);
+        return is_int($first);
+    }
+
     public function getXpForNextLevel(array $xpRequirements): ?int
     {
         return $xpRequirements[$this->level + 1] ?? null;
     }
 
+    public function setXpNextLevel(?int $xpNextLevel): void
+    {
+        $this->xpNextLevel = $xpNextLevel;
+    }
+
     public function jsonSerialize(): array
     {
-        $xpRequirements = [];
-        if (function_exists('config')) {
-            $xpRequirements = config('game.xp_requirements', []);
-        }
-        $nextLevelXp = $this->getXpForNextLevel($xpRequirements);
-
         return [
             'id' => $this->getId(),
             'user_id' => $this->getUserId(),
             'name' => $this->getName(),
             'level' => $this->getLevel(),
             'experience' => $this->getExperience(),
-            'xp_next_level' => $nextLevelXp,
+            'xp_next_level' => $this->xpNextLevel,
             'stats' => [
                 'strength' => $this->getStrength(),
                 'dexterity' => $this->getAgility(),

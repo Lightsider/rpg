@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Chat;
 
+use App\Application\Contracts\EventDispatcherInterface;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Chat\ChatMessage;
 use App\Domain\Chat\ChatType;
@@ -13,6 +14,7 @@ use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
 use App\Events\Chat\ChatMessageSent;
 use DateTimeImmutable;
+use Psr\Log\LoggerInterface;
 
 class SendMessage
 {
@@ -20,7 +22,9 @@ class SendMessage
         private readonly ChatRepositoryInterface $chatRepository,
         private readonly ChatMessageRepositoryInterface $chatMessageRepository,
         private readonly CharacterRepositoryInterface $characterRepository,
-        private readonly BattleRepositoryInterface $battleRepository
+        private readonly BattleRepositoryInterface $battleRepository,
+        private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly LoggerInterface $logger
     ) {
     }
 
@@ -77,7 +81,7 @@ class SendMessage
         $message = $this->chatMessageRepository->save($message);
 
         try {
-            event(new ChatMessageSent(
+            $this->eventDispatcher->dispatch(new ChatMessageSent(
                 chatType: $chatType,
                 contextId: $contextId,
                 chatId: $chat->getId(),
@@ -87,8 +91,13 @@ class SendMessage
                 message: $message->getMessage(),
                 timestamp: $message->getCreatedAt()
             ));
-        } catch (\Exception $e) {
-            \Log::error('Broadcast failed: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            $this->logger->error('Broadcast failed.', [
+                'exception' => $e,
+                'chat_type' => $chatType->value,
+                'context_id' => $contextId,
+                'sender_id' => $senderId,
+            ]);
         }
 
         return [

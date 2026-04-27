@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Application\Chat;
 
+use App\Application\Contracts\EventDispatcherInterface;
 use App\Application\Chat\SendMessage;
 use App\Domain\Chat\Chat;
-use App\Domain\Chat\ChatMessage;
 use App\Domain\Chat\ChatType;
 use App\Domain\Chat\Repositories\ChatMessageRepositoryInterface;
 use App\Domain\Chat\Repositories\ChatRepositoryInterface;
 use App\Domain\Character\Character;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
-use App\Events\Chat\ChatMessageSent;
-use DateTimeImmutable;
-use Illuminate\Support\Facades\Event;
+use Psr\Log\LoggerInterface;
 use Tests\TestCase;
 
 class SendMessageTest extends TestCase
@@ -24,6 +22,8 @@ class SendMessageTest extends TestCase
     private ChatMessageRepositoryInterface $chatMessageRepository;
     private CharacterRepositoryInterface $characterRepository;
     private BattleRepositoryInterface $battleRepository;
+    private EventDispatcherInterface $eventDispatcher;
+    private LoggerInterface $logger;
     private SendMessage $useCase;
 
     protected function setUp(): void
@@ -33,19 +33,21 @@ class SendMessageTest extends TestCase
         $this->chatMessageRepository = $this->createMock(ChatMessageRepositoryInterface::class);
         $this->characterRepository = $this->createMock(CharacterRepositoryInterface::class);
         $this->battleRepository = $this->createMock(BattleRepositoryInterface::class);
+        $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
+        $this->logger = $this->createMock(LoggerInterface::class);
 
         $this->useCase = new SendMessage(
             $this->chatRepository,
             $this->chatMessageRepository,
             $this->characterRepository,
-            $this->battleRepository
+            $this->battleRepository,
+            $this->eventDispatcher,
+            $this->logger
         );
     }
 
     public function testExecuteSuccessful(): void
     {
-        Event::fake();
-
         $senderId = 1;
         $contextId = 100;
         $chatType = ChatType::LOCATION;
@@ -75,11 +77,13 @@ class SendMessageTest extends TestCase
             ->method('save')
             ->willReturnCallback(fn($msg) => $msg);
 
+        $this->eventDispatcher->expects($this->once())
+            ->method('dispatch');
+
         $result = $this->useCase->execute($senderId, $chatType, $contextId, $messageText);
 
         $this->assertEquals('Hero', $result['message']['sender_name']);
         $this->assertEquals($messageText, $result['message']['message']);
         
-        Event::assertDispatched(ChatMessageSent::class);
     }
 }

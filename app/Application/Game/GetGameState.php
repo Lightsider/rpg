@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Game;
 
+use App\Application\Battle\BattleSummaryPresenter;
+use App\Application\Contracts\ClockInterface;
 use App\Domain\Battle\BattleState;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Character;
@@ -23,7 +25,9 @@ class GetGameState
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly BackpackService $backpackService,
         private readonly CharacterStatValidator $statValidator,
-        private readonly CharacterStatService $statService
+        private readonly CharacterStatService $statService,
+        private readonly ClockInterface $clock,
+        private readonly BattleSummaryPresenter $battleSummaryPresenter
     ) {
     }
 
@@ -75,13 +79,13 @@ class GetGameState
             $expiresAt = $timeout !== null
                 ? $currentFight->getRoundStartedAt()->modify("+{$timeout} seconds")
                 : null;
-            $timerRemaining = $expiresAt ? max(0, $expiresAt->getTimestamp() - (new \DateTimeImmutable())->getTimestamp()) : null;
+            $timerRemaining = $expiresAt ? max(0, $expiresAt->getTimestamp() - $this->clock->now()->getTimestamp()) : null;
 
-            $currentFight = array_merge($currentFight->jsonSerialize(), [
+            $currentFight = array_merge($this->battleSummaryPresenter->present($currentFight), [
                 'timer_remaining' => $timerRemaining,
             ]);
         } elseif ($currentFight) {
-            $currentFight = $currentFight->jsonSerialize();
+            $currentFight = $this->battleSummaryPresenter->present($currentFight);
         }
 
         $availableFights = $this->battleRepository->findActiveByLocation($character->getLocationId());

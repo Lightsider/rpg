@@ -9,6 +9,8 @@ use App\Domain\Battle\BattleState;
 use App\Domain\Battle\Map;
 use App\Domain\Character\Character;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
+use App\Application\Contracts\ClockInterface;
+use App\Application\Contracts\EventDispatcherInterface;
 use App\Domain\DomainException;
 use App\Events\Battle\BattleJoined;
 use App\Events\Battle\RoundStarted;
@@ -24,7 +26,10 @@ class BattleLobbyService
         private readonly LeaveWaitingBattleAction $leaveWaitingBattleAction,
         private readonly MapGenerator $mapGenerator,
         private readonly \App\Domain\Location\Repositories\LocationRepositoryInterface $locationRepository,
-        private readonly TeamAssigner $teamAssigner
+        private readonly TeamAssigner $teamAssigner,
+        private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly ClockInterface $clock,
+        private readonly BattleSummaryPresenter $battleSummaryPresenter
     ) {
     }
 
@@ -58,7 +63,7 @@ class BattleLobbyService
         $battle = $this->battleRepository->findById($battleId);
         if ($battle) {
             $this->mapGenerator->generateForFight($battle);
-            event(new BattleCreated($battle->jsonSerialize()));
+            $this->eventDispatcher->dispatch(new BattleCreated($this->battleSummaryPresenter->present($battle)));
         }
 
         return $battleId;
@@ -94,11 +99,11 @@ class BattleLobbyService
 
         if ($battle) {
             $timerRemaining = $this->calculateTimerRemaining($battle);
-            event(new BattleJoined($battle, $timerRemaining));
+            $this->eventDispatcher->dispatch(new BattleJoined($battle, $timerRemaining));
 
             if ($battle->getState() === BattleState::ACTIVE) {
-                event(new BattleRemoved($battle->getLocationId(), $battle->getId()));
-                event(new RoundStarted(
+                $this->eventDispatcher->dispatch(new BattleRemoved($battle->getLocationId(), $battle->getId()));
+                $this->eventDispatcher->dispatch(new RoundStarted(
                     battleId: $battle->getId(),
                     round: $battle->getRoundNumber(),
                     timeout: $battle->getRoundDurationSeconds(),
@@ -115,12 +120,12 @@ class BattleLobbyService
     public function cancelBattle(int $battleId, Character $character): void
     {
         $this->leaveWaitingBattleAction->execute($battleId, $character->getId());
-        event(new BattleRemoved($character->getLocationId(), $battleId));
+        $this->eventDispatcher->dispatch(new BattleRemoved($character->getLocationId(), $battleId));
     }
 
     private function calculateTimerRemaining(Battle $battle): int
     {
-        $now = new \DateTimeImmutable();
+        $now = $this->clock->now();
         $timeout = $battle->getStartTimeoutSeconds() ?? $battle->getRoundDurationSeconds();
         $expiryTime = $battle->getRoundStartedAt()->modify("+{$timeout} seconds");
         return max(0, $expiryTime->getTimestamp() - $now->getTimestamp());
@@ -135,7 +140,7 @@ class BattleLobbyService
         $max = $battle->getMaxParticipants();
         $count = count($battle->getParticipants());
 
-        $now = new \DateTimeImmutable();
+        $now = $this->clock->now();
         $timeout = $battle->getStartTimeoutSeconds();
         $expired = $timeout !== null
             ? $now >= $battle->getRoundStartedAt()->modify("+{$timeout} seconds")

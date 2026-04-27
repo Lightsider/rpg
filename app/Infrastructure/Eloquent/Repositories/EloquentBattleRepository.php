@@ -349,7 +349,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $leftArm = $characterModel->ad_armor_left_arm !== null ? (float) $characterModel->ad_armor_left_arm : $armFallback;
         $rightArm = $characterModel->ad_armor_right_arm !== null ? (float) $characterModel->ad_armor_right_arm : $armFallback;
 
-        return new Character(
+        $character = new Character(
             id: (int) $characterModel->id,
             userId: (int) $characterModel->user_id,
             name: $characterModel->name,
@@ -374,5 +374,12 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             level: (int) ($characterModel->level ?? 1),
             experience: (int) ($characterModel->experience ?? 0),
         );
+
+        $legacyThresholds = config('game.xp_requirements', []);
+        if (is_array($legacyThresholds)) {
+            $character->setXpNextLevel($character->getXpForNextLevel($legacyThresholds));
+        }
+
+        return $character;
     }
 }

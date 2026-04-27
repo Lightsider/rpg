@@ -174,7 +174,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
         $leftArm = $model->ad_armor_left_arm !== null ? (float) $model->ad_armor_left_arm : $armFallback;
         $rightArm = $model->ad_armor_right_arm !== null ? (float) $model->ad_armor_right_arm : $armFallback;
 
-        return new Character(
+        $character = new Character(
             id: $model->id,
             userId: $model->user_id,
             name: $model->name,
@@ -199,5 +199,12 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             experience: (int) ($model->experience ?? 0),
             sublevelIndex: (int) ($model->sublevel_index ?? 0),
         );
+
+        $legacyThresholds = config('game.xp_requirements', []);
+        if (is_array($legacyThresholds)) {
+            $character->setXpNextLevel($character->getXpForNextLevel($legacyThresholds));
+        }
+
+        return $character;
     }
 }

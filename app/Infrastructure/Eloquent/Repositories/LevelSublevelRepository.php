@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Infrastructure\Eloquent\Repositories;
 
+use App\Domain\Character\Repositories\LevelSublevelRepositoryInterface;
 use App\Infrastructure\Eloquent\Models\LevelSublevelModel;
 
-class LevelSublevelRepository
+class LevelSublevelRepository implements LevelSublevelRepositoryInterface
 {
     /**
      * @return array<int, array{xp_threshold: int, reward_copper: int}>

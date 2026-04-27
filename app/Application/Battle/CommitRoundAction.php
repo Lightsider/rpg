@@ -10,6 +10,7 @@ use App\Domain\Battle\BattleState;
 use App\Domain\Battle\Repositories\BattleLogRepositoryInterface;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\RoundResolverInterface;
+use App\Application\Contracts\EventDispatcherInterface;
 use App\Domain\DomainException;
 use App\Events\Battle\BattleEnded;
 use App\Events\Battle\BattleUpdated;
@@ -26,7 +27,8 @@ class CommitRoundAction
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly BattleLogRepositoryInterface $battleLogRepository,
         private readonly RoundResolverInterface $roundResolver,
-        private readonly TransactionInterface $transaction
+        private readonly TransactionInterface $transaction,
+        private readonly EventDispatcherInterface $eventDispatcher
     ) {
     }
 
@@ -95,7 +97,7 @@ class CommitRoundAction
 
         // Dispatch broadcast events outside the transaction
         foreach ($pendingEvents as $event) {
-            event($event);
+            $this->eventDispatcher->dispatch($event);
         }
     }
 

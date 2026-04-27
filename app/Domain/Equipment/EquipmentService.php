@@ -12,16 +12,11 @@ use App\Domain\Item\ItemType;
 class EquipmentService
 {
     /**
-     * @var array<string, string[]> config('equipment.slots')
+     * @var array<string, string[]>
      */
-    private array $allowedItemTypes;
-
-    public function __construct()
-    {
-        // For a true domain service, we might pass this via constructor mapping,
-        // but since we want to be pragmatic within Laravel, we read config here.
-        // We cast to array to satisfy phpstan.
-        $this->allowedItemTypes = (array) config('equipment.slots', []);
+    public function __construct(
+        private readonly array $allowedItemTypes
+    ) {
     }
 
     /**

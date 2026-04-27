@@ -13,7 +13,8 @@ class ListRecentBattles
 {
     public function __construct(
         private readonly BattleRepositoryInterface $battleRepository,
-        private readonly LocationRepositoryInterface $locationRepository
+        private readonly LocationRepositoryInterface $locationRepository,
+        private readonly BattleSummaryPresenter $battleSummaryPresenter
     ) {
     }
 
@@ -27,6 +28,7 @@ class ListRecentBattles
         return array_map(function (Battle $battle) {
             $winners = $battle->getVictoryWinners();
             $winnerNames = array_map(fn(Character $c) => $c->getName(), $winners);
+            $summary = $this->battleSummaryPresenter->present($battle);
             
             $locationName = $this->locationRepository
                 ->findById($battle->getLocationId())
@@ -39,7 +41,7 @@ class ListRecentBattles
                 'winner_names' => $winnerNames,
                 'status' => $battle->getState()->value,
                 'round' => $battle->getRoundNumber(),
-                'ended_at' => $battle->jsonSerialize()['round_started_at'] ?? null, // Default
+                'ended_at' => $summary['round_started_at'] ?? null,
             ];
         }, $battles);
     }
