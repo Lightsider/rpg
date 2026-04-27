@@ -21,25 +21,25 @@ class ItemSeeder extends Seeder
 
     private function createStableItems(): void
     {
-        $this->createWeapon(1, $this->swordArgs(), 'Steadfast Sword', 'stable', 9, 11, 0, 0);
-        $this->createWeapon(2, $this->axeArgs(), 'Steadfast Axe', 'stable', 9, 11, 0, 0);
-        $this->createWeapon(22, $this->twoHandedArgs(), 'Steadfast Battleaxe', 'stable', 11.7, 14.3, 0, 0);
+        $this->createWeapon(1, $this->swordArgs(), 'Steadfast Sword', 'stable', 9, 11, 0, 0,8,0);
+        $this->createWeapon(2, $this->axeArgs(), 'Steadfast Axe', 'stable', 9, 11, 0, 0,8,0);
+        $this->createWeapon(22, $this->twoHandedArgs(), 'Steadfast Battleaxe', 'stable', 11.7, 14.3, 0, 0,8,0);
         $this->createDagger(25, 'Steadfast Dagger', 'stable', 4.5, 5.5, 0, 0,8,0);
     }
 
     private function createCritItems(): void
     {
-        $this->createWeapon(3, $this->swordArgs(), 'Executioner Sword', 'crit', 7.0, 9.0, 10.0, 5.0);
-        $this->createWeapon(4, $this->axeArgs(), 'Executioner Axe', 'crit', 7.0, 9.0, 10.0, 5.0);
-        $this->createWeapon(23, $this->twoHandedArgs(), 'Executioner Battleaxe', 'crit', 9.1, 11.7, 13.0, 5.0);
+        $this->createWeapon(3, $this->swordArgs(), 'Executioner Sword', 'crit', 7.0, 9.0, 10.0, 5.0,4,4);
+        $this->createWeapon(4, $this->axeArgs(), 'Executioner Axe', 'crit', 7.0, 9.0, 10.0, 5.0,4,4);
+        $this->createWeapon(23, $this->twoHandedArgs(), 'Executioner Battleaxe', 'crit', 9.1, 11.7, 13.0, 5.0,4,4);
         $this->createDagger(26, 'Executioner Dagger', 'crit', 3.5, 4.5, 5.0, 5.0,4,4);
     }
 
     private function createHybridItems(): void
     {
-        $this->createWeapon(5, $this->swordArgs(), 'Versatile Sword', 'hybrid', 8.5, 10.5, 4.5, 3.0);
-        $this->createWeapon(6, $this->axeArgs(), 'Versatile Axe', 'hybrid', 8.5, 10.5, 4.5, 3.0);
-        $this->createWeapon(24, $this->twoHandedArgs(), 'Versatile Battleaxe', 'hybrid', 11.05, 13.65, 5.5, 3.0);
+        $this->createWeapon(5, $this->swordArgs(), 'Versatile Sword', 'hybrid', 8.5, 10.5, 4.5, 3.0,6,2);
+        $this->createWeapon(6, $this->axeArgs(), 'Versatile Axe', 'hybrid', 8.5, 10.5, 4.5, 3.0,6,2);
+        $this->createWeapon(24, $this->twoHandedArgs(), 'Versatile Battleaxe', 'hybrid', 11.05, 13.65, 5.5, 3.0,6,2);
         $this->createDagger(27, 'Versatile Dagger', 'hybrid', 4.25, 5.25, 2.25, 3.0,6,2);
     }
 
@@ -58,7 +58,7 @@ class ItemSeeder extends Seeder
         return ['damage_type' => 'chopping', 'block_break_rating' => 120, 'pierce_multiplier' => 0.75, 'max_damage_rating' => 75, 'is_two_handed' => true];
     }
 
-    private function createWeapon($id, $baseArgs, $name, $arch, $min, $max, $flat, $cc)
+    private function createWeapon($id, $baseArgs, $name, $arch, $min, $max, $flat, $cc, $requiredStrenght = 4, $requiredWit = 0)
     {
         $args = array_merge([
             'name' => $name,
@@ -69,8 +69,8 @@ class ItemSeeder extends Seeder
             'flat_crit_bonus' => $flat,
             'crit_chance_bonus' => $cc,
             'accuracy_bonus' => 0.0,
-            'required_strength' => 4,
-            'required_wit' => 0,
+            'required_strength' => $requiredStrenght,
+            'required_wit' => $requiredWit,
         ], $baseArgs);
 
         ItemModel::updateOrCreate(['id' => $id], $args);
@@ -101,15 +101,15 @@ class ItemSeeder extends Seeder
     {
         ItemModel::updateOrCreate(['id' => 7], [
             'name' => 'Steadfast Seal', 'type' => 'seal', 'archetype' => 'stable',
-            'min_damage' => 0.7, 'max_damage' => 0.8, 'flat_crit_bonus' => 0.0, 'crit_chance_bonus' => 0.0, 'required_strength' => 4
+            'min_damage' => 0.7, 'max_damage' => 0.8, 'flat_crit_bonus' => 0.0, 'crit_chance_bonus' => 0.0, 'required_strength' => 8, 'required_wit' => 0
         ]);
         ItemModel::updateOrCreate(['id' => 8], [
             'name' => 'Executioner Seal', 'type' => 'seal', 'archetype' => 'crit',
-            'min_damage' => 0.5, 'max_damage' => 0.65, 'flat_crit_bonus' => 0.8, 'crit_chance_bonus' => 0.7, 'required_strength' => 4
+            'min_damage' => 0.5, 'max_damage' => 0.65, 'flat_crit_bonus' => 0.8, 'crit_chance_bonus' => 0.7, 'required_strength' => 4, 'required_wit' => 4
         ]);
         ItemModel::updateOrCreate(['id' => 9], [
             'name' => 'Versatile Seal', 'type' => 'seal', 'archetype' => 'hybrid',
-            'min_damage' => 0.65, 'max_damage' => 0.7, 'flat_crit_bonus' => 0.4, 'crit_chance_bonus' => 0.6, 'required_strength' => 4
+            'min_damage' => 0.65, 'max_damage' => 0.7, 'flat_crit_bonus' => 0.4, 'crit_chance_bonus' => 0.6, 'required_strength' => 6, 'required_wit' => 2
         ]);
     }
 

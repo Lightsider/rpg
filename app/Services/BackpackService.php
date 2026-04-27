@@ -145,7 +145,16 @@ class BackpackService
                 throw new DomainException('You do not meet the requirements for this weapon.');
             }
 
-            $this->transaction->run(function () use ($character, $itemId, $oldMultiplier) {
+            $this->transaction->run(function () use ($character, $itemId, $oldMultiplier, $weapon) {
+                if ($weapon->isTwoHanded()) {
+                    if ($character->off_hand_id !== null) {
+                        throw new DomainException("Offhand must be empty to equip a 2-handed weapon.");
+                    }
+                    if ($character->weapon_id !== null) {
+                        throw new DomainException("Main hand must be empty to equip a 2-handed weapon.");
+                    }
+                }
+
                 if ($character->weapon_id && (int) $character->weapon_id !== $itemId) {
                     $this->addToBackpack($character, (int) $character->weapon_id, 1);
                 }
@@ -163,6 +172,14 @@ class BackpackService
 
         if ($slotEnum === EquipmentSlot::OFF_HAND) {
             $oldMultiplier = $this->getMaxHpMultiplier($character);
+
+            if ($character->weapon_id) {
+                $mainHandModel = ItemModel::find($character->weapon_id);
+                if ($mainHandModel && $mainHandModel->is_two_handed) {
+                    throw new DomainException('Cannot equip offhand item when a 2-handed weapon is equipped.');
+                }
+            }
+
             if (!in_array($item->type, ['shield', 'offhand_weapon'], true)) {
                 throw new DomainException('Item cannot be equipped in that slot.');
             }
@@ -397,6 +414,14 @@ class BackpackService
                 $unequipped[] = $item->getName();
                 $this->unequipItem($character, $slot->value);
             }
+        }
+
+        // Final check for 2H weapon conflict
+        $mainHand = $charDomain->getEquipment()->getItem(EquipmentSlot::MAIN_HAND);
+        $offHand = $charDomain->getEquipment()->getItem(EquipmentSlot::OFF_HAND);
+        if ($mainHand instanceof \App\Domain\Weapon\Weapon && $mainHand->isTwoHanded() && $offHand) {
+            $unequipped[] = $offHand->getName();
+            $this->unequipItem($character, EquipmentSlot::OFF_HAND->value);
         }
 
         return $unequipped;

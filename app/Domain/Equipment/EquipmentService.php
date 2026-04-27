@@ -8,11 +8,12 @@ use App\Domain\Character\Character;
 use App\Domain\DomainException;
 use App\Domain\Item\Item;
 use App\Domain\Item\ItemType;
+use App\Domain\Weapon\Weapon;
 
 class EquipmentService
 {
     /**
-     * @var array<string, string[]>
+     * @param array<string, string[]> $allowedItemTypes
      */
     public function __construct(
         private readonly array $allowedItemTypes
@@ -44,6 +45,23 @@ class EquipmentService
                     $slot->value
                 )
             );
+        }
+
+        // Special handling for 2-handed weapons
+        if ($slot === EquipmentSlot::MAIN_HAND && $item instanceof Weapon && $item->isTwoHanded()) {
+            if ($character->getEquipment()->getItem(EquipmentSlot::OFF_HAND) !== null) {
+                throw new DomainException("Offhand must be empty to equip a 2-handed weapon.");
+            }
+            if ($character->getEquipment()->getItem(EquipmentSlot::MAIN_HAND) !== null) {
+                throw new DomainException("Main hand must be empty to equip a 2-handed weapon.");
+            }
+        }
+
+        if ($slot === EquipmentSlot::OFF_HAND) {
+            $mainHandItem = $character->getEquipment()->getItem(EquipmentSlot::MAIN_HAND);
+            if ($mainHandItem instanceof Weapon && $mainHandItem->isTwoHanded()) {
+                throw new DomainException("Cannot equip offhand item when a 2-handed weapon is equipped.");
+            }
         }
 
         $character->getEquipment()->setItem($slot, $item);
