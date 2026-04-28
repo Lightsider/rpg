@@ -17,7 +17,7 @@ const props = defineProps({
     }
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'closeAndReturn']);
 
 const myReward = computed(() => {
     return props.battle?.rewards?.[props.myCharacterId] || { xp: 0, copper: 0, items: [] };
@@ -128,14 +128,23 @@ const handleClose = () => {
                     </div>
                 </div>
 
-                <!-- Footer Action -->
-                <button 
-                    @click="handleClose"
-                    class="group relative w-full py-4 bg-gray-900 rounded-xl overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                    <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <span class="relative text-white font-black uppercase tracking-widest text-sm">Return to Lobby</span>
-                </button>
+                <!-- Footer Actions -->
+                <div class="flex flex-col gap-3">
+                    <button 
+                        @click="handleClose"
+                        class="group relative w-full py-4 bg-gray-900 rounded-xl overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                        <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <span class="relative text-white font-black uppercase tracking-widest text-sm">Review Logs</span>
+                    </button>
+                    
+                    <button 
+                        @click="emit('closeAndReturn')"
+                        class="w-full py-3 bg-white text-gray-500 font-bold uppercase tracking-widest text-[10px] hover:text-gray-900 transition-colors"
+                    >
+                        Return to Lobby
+                    </button>
+                </div>
             </div>
         </div>
     </div>

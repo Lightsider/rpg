@@ -44,6 +44,7 @@ const loadoutMessage = ref('');
 const savingLoadout = ref(false);
 const changingLocation = ref(false);
 const locationError = ref('');
+const showBattleSummary = ref(false);
 
 const storeState = ref(null);
 const loadingStore = ref(false);
@@ -183,6 +184,18 @@ const fetchFightState = async (id) => {
         console.error("Failed to fetch fight state", e);
     }
 };
+
+watch(() => fightState.value?.status, (newStatus, oldStatus) => {
+    if (newStatus === 'active' && oldStatus !== 'active') {
+        startLocalTimer();
+        showBattleSummary.value = false;
+    } else if (newStatus === 'finished') {
+        stopLocalTimer();
+        showBattleSummary.value = true;
+    } else if (newStatus === 'waiting') {
+        showBattleSummary.value = false;
+    }
+}, { immediate: true });
 
 let battleChannel = null;
 
@@ -429,9 +442,15 @@ const handleCancelFight = async () => {
 
 const handleReturnToLobby = async () => {
     fightState.value = null;
+    showBattleSummary.value = false;
     stopLocalTimer();
     clearBattleChannel();
     await fetchGameData();
+    await fetchLoadoutData();
+};
+
+const handleReviewLogs = () => {
+    showBattleSummary.value = false;
 };
 
 const handleChangeLocation = async (locationId) => {
@@ -1035,11 +1054,21 @@ onUnmounted(() => {
                                 
                                 <!-- Battle Results Modal -->
                                 <BattleSummaryModal 
-                                    :show="fightState.status === 'finished'"
+                                    :show="showBattleSummary"
                                     :battle="fightState"
                                     :myCharacterId="myCharacterId"
-                                    @close="handleReturnToLobby"
+                                    @close="handleReviewLogs"
+                                    @closeAndReturn="handleReturnToLobby"
                                 />
+                                
+                                <div v-if="fightState.status === 'finished' && !showBattleSummary" class="mt-4 flex justify-center">
+                                    <button 
+                                        @click="handleReturnToLobby"
+                                        class="bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95"
+                                    >
+                                        Return to Lobby
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Shop UI -->

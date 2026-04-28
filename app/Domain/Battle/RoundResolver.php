@@ -326,7 +326,7 @@ class RoundResolver implements RoundResolverInterface
         $battle->finishResolving();
 
         if ($battle->isFinished()) {
-            $winners = $battle->getVictoryWinners();
+            $winners = $battle->calculateWinners();
             $winnerIds = array_map(fn($w) => $w->getId(), $winners);
             $battle->setWinnerIds($winnerIds);
 

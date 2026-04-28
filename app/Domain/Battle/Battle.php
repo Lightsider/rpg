@@ -328,26 +328,41 @@ class Battle implements \JsonSerializable
      */
     public function getVictoryWinners(): array
     {
+        // Strictly return based on winnerIds if available
         if (!empty($this->winnerIds)) {
             return array_values(array_filter(
                 $this->participants,
-                fn(Character $c) => in_array($c->getId(), $this->winnerIds, true)
+                fn(Character $c) => in_array($c->getId(), $this->winnerIds, false)
             ));
         }
 
-        $aliveParticipants = $this->getAliveParticipants();
-        if ($aliveParticipants === []) {
+        // If finished but no winnerIds, it's a draw or old record
+        if ($this->isFinished()) {
             return [];
         }
 
+        // For ongoing battles, return current "potential" winners
+        return $this->calculateWinners();
+    }
+
+    /**
+     * Internal logic to determine winners based on CURRENT state (HP/Teams).
+     * @return Character[]
+     */
+    public function calculateWinners(): array
+    {
+        $aliveParticipants = $this->getAliveParticipants();
+        
+        // Check for team victory
         $winnerTeam = $this->getWinningTeam($aliveParticipants);
         if ($winnerTeam !== null) {
             return array_values(array_filter(
-                $aliveParticipants,
+                $this->participants,
                 fn(Character $c) => ($this->participantTeams[$c->getId()] ?? null) === $winnerTeam
             ));
         }
 
+        // Fallback to single survivor
         if ($this->hasSingleSurvivor($aliveParticipants)) {
             return array_values($aliveParticipants);
         }
@@ -357,6 +372,18 @@ class Battle implements \JsonSerializable
 
     public function getWinningTeamName(): ?string
     {
+        // 1. If we have explicit winners, derive team from them
+        if (!empty($this->winnerIds)) {
+            $firstWinnerId = $this->winnerIds[0];
+            return $this->participantTeams[$firstWinnerId] ?? null;
+        }
+
+        // 2. If finished, we can't reliably calculate from HP
+        if ($this->isFinished()) {
+            return null;
+        }
+
+        // 3. Fallback to calculating from alive participants
         return $this->getWinningTeam($this->getAliveParticipants());
     }
 
