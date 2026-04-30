@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Battle;
 
+use App\Domain\Battle\Combatant;
 use App\Domain\Character\Character;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
@@ -56,7 +57,7 @@ class RoundResolver implements RoundResolverInterface
         $participants = $battle->getParticipants();
         $preHp = [];
 
-        // Map ID to Character for quick access
+        // Map ID to Combatant for quick access
         $characterMap = [];
         foreach ($participants as $participant) {
             $characterMap[$participant->getId()] = $participant;
@@ -196,7 +197,7 @@ class RoundResolver implements RoundResolverInterface
                 continue;
             }
 
-            /** @var Character $attacker */
+            /** @var Combatant $attacker */
             $attacker = $context['attacker'];
             $attackerId = $attacker->getId();
             $defenses = $this->addAutoBlocks(
@@ -208,9 +209,9 @@ class RoundResolver implements RoundResolverInterface
         }
 
         foreach ($attackContexts as $context) {
-            /** @var Character $attacker */
+            /** @var Combatant $attacker */
             $attacker = $context['attacker'];
-            /** @var Character $defender */
+            /** @var Combatant $defender */
             $defender = $context['defender'];
             $action = $context['action'];
             $attackerId = $attacker->getId();
@@ -300,7 +301,7 @@ class RoundResolver implements RoundResolverInterface
 
         // 4. Apply damage
         foreach ($attackResults as $attack) {
-            /** @var Character $defender */
+            /** @var Combatant $defender */
             $defender = $attack['defender'];
             /** @var AttackResult $result */
             $result = $attack['result'];
@@ -338,13 +339,15 @@ class RoundResolver implements RoundResolverInterface
                 );
             }
 
-            // Calculate total coin fund from all participants
+            // Calculate total coin fund from player participants only
             $totalCoinFund = 0;
             foreach ($participants as $participant) {
-                $totalCoinFund += $participant->calculateCoinContribution(
-                    $this->effectivenessConfig->coinBasePerItem,
-                    $this->effectivenessConfig->coinMultipliers
-                );
+                if ($participant instanceof Character) {
+                    $totalCoinFund += $participant->calculateCoinContribution(
+                        $this->effectivenessConfig->coinBasePerItem,
+                        $this->effectivenessConfig->coinMultipliers
+                    );
+                }
             }
 
             // Identify teams and winner
@@ -364,9 +367,13 @@ class RoundResolver implements RoundResolverInterface
                 $teamEffectiveness[$teamId] = array_reduce($members, fn($carry, $m) => $carry + $m->getEffectiveness(), 0.0);
             }
 
-            // Generate rewards (XP and Coins)
+            // Generate rewards (XP and Coins) — only for player characters
             $rewards = [];
             foreach ($participants as $participant) {
+                if (!($participant instanceof Character)) {
+                    continue;
+                }
+
                 $eff = $participant->getEffectiveness();
                 $baseXp = max(0, $eff) / 2;
                 
@@ -397,9 +404,6 @@ class RoundResolver implements RoundResolverInterface
                 $sublevelThresholds = $this->getProgressionThresholds($participant->getLevel());
                 
                 if ($participant->addExperience($xpAmount, $sublevelThresholds)) {
-                    // If they leveled up, we might want to check for FURTHER sublevels in the new level
-                    // but usually, battle XP is added once.
-                    // To be safe, we could re-call addExperience with 0 XP and new thresholds
                     $newThresholds = $this->getProgressionThresholds($participant->getLevel());
                     $participant->addExperience(0, $newThresholds);
                 }
@@ -412,8 +416,11 @@ class RoundResolver implements RoundResolverInterface
         // Reset block-penetration and max-damage counters when combat ends
         if ($battle->isFinished()) {
 
-            // Restore HP to max and reset streaks after battle ends
+            // Restore HP to max and reset streaks after battle ends (players only)
             foreach ($participants as $participant) {
+                if ($participant->isNpc()) {
+                    continue;
+                }
                 $participant->restoreHp();
                 $participant->initializeAdArmor();
                 $participant->resetAllStreaks();

@@ -132,6 +132,17 @@ class AppServiceProvider extends ServiceProvider
             \App\Infrastructure\Persistence\EloquentCharacterItemRepository::class
         );
 
+        $this->app->bind(
+            \App\Domain\Npc\Repositories\NpcTemplateRepositoryInterface::class,
+            \App\Infrastructure\Eloquent\Repositories\EloquentNpcTemplateRepository::class
+        );
+
+        $this->app->singleton(\App\Domain\Npc\Behavior\BehaviorModelRegistry::class, function ($app) {
+            $registry = new \App\Domain\Npc\Behavior\BehaviorModelRegistry();
+            $registry->register('reach_and_hit', new \App\Domain\Npc\Behavior\ReachAndHitBehavior());
+            return $registry;
+        });
+
         $this->app->singleton(\App\Domain\Equipment\EquipmentService::class, function ($app) {
             $slots = $app->make('config')->get('equipment.slots', []);
             return new \App\Domain\Equipment\EquipmentService(is_array($slots) ? $slots : []);

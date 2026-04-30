@@ -68,8 +68,8 @@ class CombatResolver
     }
 
     public function resolveAttack(
-        Character $attacker,
-        Character $defender,
+        Combatant $attacker,
+        Combatant $defender,
         bool $isBlocked,
         ?TargetZone $targetZone = null,
         ?\App\Domain\Weapon\Weapon $forcedWeapon = null
@@ -154,7 +154,7 @@ class CombatResolver
         return new AttackResult($finalDamageInt, $isCritical, false, false, $damageType, $isPierced, $isMaxDamage, false);
     }
 
-    private function checkParry(Character $defender, \App\Domain\Weapon\Weapon $attackerWeapon): bool
+    private function checkParry(Combatant $defender, \App\Domain\Weapon\Weapon $attackerWeapon): bool
     {
         $rating = $defender->getParryRating();
         if ($rating <= 0) {
@@ -192,7 +192,7 @@ class CombatResolver
         return ($this->rng->nextFloat() < 0.5) ? TargetZone::LEFT_ARM->value : TargetZone::RIGHT_ARM->value;
     }
 
-    private function applyArmorReduction(Character $defender, string $zone, float $incomingDamage, Character $attacker): int
+    private function applyArmorReduction(Combatant $defender, string $zone, float $incomingDamage, Combatant $attacker): int
     {
         $currentAd = $defender->getAdArmorForZone($zone);
         
@@ -218,7 +218,7 @@ class CombatResolver
         return $this->applyFractionalAccumulation($attacker, $hpDamage);
     }
 
-    private function applyFractionalAccumulation(Character $attacker, float $damage): int
+    private function applyFractionalAccumulation(Combatant $attacker, float $damage): int
     {
         $totalWithAccumulator = round($damage + $attacker->getDamageAccumulator(), 4);
         $finalDamageInt = (int) floor($totalWithAccumulator);
@@ -228,7 +228,7 @@ class CombatResolver
         return $finalDamageInt;
     }
 
-    private function checkDodge(Character $defender, TargetZone $zone): bool
+    private function checkDodge(Combatant $defender, TargetZone $zone): bool
     {
         $result = $this->dodgePRNG->rollWithPRNG(
             $defender->calculateDodgeChance($zone),
@@ -244,7 +244,7 @@ class CombatResolver
         return $result->success;
     }
 
-    private function checkCritical(Character $attacker): \App\Domain\Battle\PseudoRandom\PRNGResult
+    private function checkCritical(Combatant $attacker): \App\Domain\Battle\PseudoRandom\PRNGResult
     {
         $result = $this->critPRNG->rollWithPRNG(
             $attacker->calculateCritChance(),

@@ -30,7 +30,8 @@ class FightController extends Controller
         private readonly ShowBattle $showBattle,
         private readonly GetBattleLog $getBattleLog,
         private readonly SubmitBattleActions $submitBattleActions,
-        private readonly ListRecentBattles $listRecentBattles
+        private readonly ListRecentBattles $listRecentBattles,
+        private readonly \App\Application\Battle\AddBotToBattle $addBotToBattle
     ) {
     }
 
@@ -89,6 +90,22 @@ class FightController extends Controller
             return response()->json(['error' => $e->getMessage()], 400);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to cancel fight.'], 500);
+        }
+    }
+
+    public function addBot(int $id, Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'npc_template_id' => ['required', 'integer', 'exists:npc_templates,id']
+        ]);
+
+        try {
+            $this->addBotToBattle->execute($id, $data['npc_template_id']);
+            return response()->json(['success' => true]);
+        } catch (DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to add bot.'], 500);
         }
     }
 

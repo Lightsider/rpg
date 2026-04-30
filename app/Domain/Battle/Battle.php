@@ -19,7 +19,7 @@ class Battle implements \JsonSerializable
     private const int STARTING_ROW_DIVISOR = 2;
 
     /**
-     * @param array<int, Character> $participants
+     * @param array<int, Combatant> $participants
      * @param array<int, string> $participantTeams
      * @param array<int, TurnAction> $queuedActions
      * @param array<int> $committedCharacterIds
@@ -43,17 +43,17 @@ class Battle implements \JsonSerializable
     ) {
     }
 
-    public function addParticipant(Character $character): void
+    public function addParticipant(Combatant $participant): void
     {
         if ($this->state !== BattleState::WAITING) {
             throw new Exception('Can only join a battle in WAITING state.');
         }
 
-        if (array_key_exists($character->getId(), $this->participants)) {
+        if (array_key_exists($participant->getId(), $this->participants)) {
             throw new Exception('Character already in battle.');
         }
 
-        $this->participants[$character->getId()] = $character;
+        $this->participants[$participant->getId()] = $participant;
     }
 
     public function assignTeam(int $characterId, string $team): void
@@ -151,7 +151,7 @@ class Battle implements \JsonSerializable
     {
         $aliveParticipants = array_filter(
             $this->participants,
-            fn(Character $c) => $c->getCurrentHp() > 0
+            fn(Combatant $c) => $c->getCurrentHp() > 0
         );
 
         return count($this->committedCharacterIds) === count($aliveParticipants);
@@ -324,7 +324,7 @@ class Battle implements \JsonSerializable
     }
 
     /**
-     * @return array<int, Character>
+     * @return array<int, Combatant>
      */
     public function getVictoryWinners(): array
     {
@@ -332,7 +332,7 @@ class Battle implements \JsonSerializable
         if (!empty($this->winnerIds)) {
             return array_values(array_filter(
                 $this->participants,
-                fn(Character $c) => in_array($c->getId(), $this->winnerIds, false)
+                fn(Combatant $c) => in_array($c->getId(), $this->winnerIds, false)
             ));
         }
 
@@ -347,7 +347,7 @@ class Battle implements \JsonSerializable
 
     /**
      * Internal logic to determine winners based on CURRENT state (HP/Teams).
-     * @return Character[]
+     * @return Combatant[]
      */
     public function calculateWinners(): array
     {
@@ -358,7 +358,7 @@ class Battle implements \JsonSerializable
         if ($winnerTeam !== null) {
             return array_values(array_filter(
                 $this->participants,
-                fn(Character $c) => ($this->participantTeams[$c->getId()] ?? null) === $winnerTeam
+                fn(Combatant $c) => ($this->participantTeams[$c->getId()] ?? null) === $winnerTeam
             ));
         }
 
@@ -388,18 +388,18 @@ class Battle implements \JsonSerializable
     }
 
     /**
-     * @return array<int, Character>
+     * @return array<int, Combatant>
      */
     private function getAliveParticipants(): array
     {
         return array_filter(
             $this->participants,
-            fn(Character $c) => $c->getCurrentHp() > 0
+            fn(Combatant $c) => $c->getCurrentHp() > 0
         );
     }
 
     /**
-     * @param array<int, Character> $aliveParticipants
+     * @param array<int, Combatant> $aliveParticipants
      */
     private function hasSingleSurvivor(array $aliveParticipants): bool
     {
@@ -407,7 +407,7 @@ class Battle implements \JsonSerializable
     }
 
     /**
-     * @param array<int, Character> $aliveParticipants
+     * @param array<int, Combatant> $aliveParticipants
      */
     private function hasSingleTeamStanding(array $aliveParticipants): bool
     {
@@ -415,7 +415,7 @@ class Battle implements \JsonSerializable
     }
 
     /**
-     * @param array<int, Character> $aliveParticipants
+     * @param array<int, Combatant> $aliveParticipants
      */
     private function getWinningTeam(array $aliveParticipants): ?string
     {
@@ -453,14 +453,14 @@ class Battle implements \JsonSerializable
     }
 
     /**
-     * @return array<int, Character>
+     * @return array<int, Combatant>
      */
     public function getParticipants(): array
     {
         return $this->participants;
     }
 
-    public function getParticipantById(int $characterId): ?Character
+    public function getParticipantById(int $characterId): ?Combatant
     {
         foreach ($this->participants as $participant) {
             if ($participant->getId() === $characterId) {
@@ -469,6 +469,28 @@ class Battle implements \JsonSerializable
         }
 
         return null;
+    }
+
+    /**
+     * @return array<int, Combatant>
+     */
+    public function getNpcParticipants(): array
+    {
+        return array_filter(
+            $this->participants,
+            fn(Combatant $c) => $c->isNpc()
+        );
+    }
+
+    /**
+     * @return array<int, Combatant>
+     */
+    public function getPlayerParticipants(): array
+    {
+        return array_filter(
+            $this->participants,
+            fn(Combatant $c) => !$c->isNpc()
+        );
     }
 
     public function getRoundNumber(): int
@@ -542,7 +564,7 @@ class Battle implements \JsonSerializable
         return [
             'id' => $this->getId(),
             'location_id' => $this->getLocationId(),
-            'participants' => array_map(fn(Character $p) => $p->getName(), array_values($this->getParticipants())),
+            'participants' => array_map(fn(Combatant $p) => $p->getName(), array_values($this->getParticipants())),
             'participant_ids' => array_keys($this->getParticipants()),
             'round_number' => $this->getRoundNumber(),
             'state' => $this->getState()->value,

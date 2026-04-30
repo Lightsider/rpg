@@ -6,7 +6,7 @@ namespace App\Domain\Battle\BlockPenetration;
 
 use App\Domain\Battle\Rng\DefaultRandomGenerator;
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
-use App\Domain\Character\Character;
+use App\Domain\Battle\Combatant;
 use App\Domain\Contracts\LoggerInterface;
 use App\Domain\Weapon\Weapon;
 
@@ -31,7 +31,7 @@ class BlockPenetrationService
     /**
      * Effective rating = max(0, attacker.block_break_rating - defender.block_resist_rating).
      */
-    public function calculateEffectiveRating(Character $attacker, Character $defender): int
+    public function calculateEffectiveRating(Combatant $attacker, Combatant $defender): int
     {
         return max(0, $attacker->getWeaponForCombat()->getBlockBreakRating() - $defender->getBlockResistRating());
     }
@@ -40,8 +40,8 @@ class BlockPenetrationService
      * Perform a full block-penetration roll.
      */
     public function checkBlockBreak(
-        Character $attacker,
-        Character $defender,
+        Combatant $attacker,
+        Combatant $defender,
         int $baseDamage,
     ): BlockPenetrationResult {
         $attackRating = $attacker->getWeaponForCombat()->getBlockBreakRating();
@@ -102,7 +102,7 @@ class BlockPenetrationService
     /**
      * Reduce base damage by the weapon's pierce multiplier and the defender's reduction.
      */
-    public function applyPierceDamage(int $baseDamage, Weapon $weapon, ?Character $defender = null): int
+    public function applyPierceDamage(int $baseDamage, Weapon $weapon, ?Combatant $defender = null): int
     {
         $pierceDamage = $baseDamage * $weapon->getPierceMultiplier();
         $reduction = $defender?->getPierceDamageReduction() ?? 0.0;
@@ -113,7 +113,7 @@ class BlockPenetrationService
     /**
      * Reset ALL streaks for a character is handled by Character::resetAllStreaks.
      */
-    public function resetCharacterStreaks(Character $character): void
+    public function resetCharacterStreaks(Combatant $combatant): void
     {
         // Handled by Character model
     }

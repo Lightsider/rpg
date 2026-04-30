@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Battle\MaxDamage;
 
 use App\Domain\Battle\BlockPenetration\RatingConverter;
+use App\Domain\Battle\Combatant;
 use App\Domain\Battle\Rng\DefaultRandomGenerator;
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
-use App\Domain\Character\Character;
 use App\Domain\Contracts\LoggerInterface;
 
 /**
@@ -30,7 +30,7 @@ class MaxDamageService
     /**
      * Perform a max damage proc roll.
      */
-    public function checkMaxDamage(Character $attacker): MaxDamageResult
+    public function checkMaxDamage(Combatant $attacker): MaxDamageResult
     {
         $rating = $attacker->getWeaponForCombat()->getMaxDamageRating();
 

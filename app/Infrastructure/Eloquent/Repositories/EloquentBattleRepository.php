@@ -14,6 +14,8 @@ use App\Domain\Battle\TurnAction;
 use App\Domain\Character\Character;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
+use App\Application\Battle\NpcFactory;
+use App\Domain\Npc\Repositories\NpcTemplateRepositoryInterface;
 use App\Infrastructure\Eloquent\Models\BattleActionModel;
 use App\Infrastructure\Eloquent\Models\BattleModel;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
@@ -29,7 +31,9 @@ class EloquentBattleRepository implements BattleRepositoryInterface
     public function __construct(
         private readonly WeaponHydrator $weaponHydrator,
         private readonly SealHydrator $sealHydrator,
-        private readonly ArmorHydrator $armorHydrator
+        private readonly ArmorHydrator $armorHydrator,
+        private readonly NpcFactory $npcFactory,
+        private readonly NpcTemplateRepositoryInterface $npcTemplateRepository
     ) {
     }
 
@@ -105,18 +109,33 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         // Update character positions and HP (only if ACTIVE or FINISHED)
         if ($battle->getState() !== BattleState::WAITING) {
             foreach ($battle->getParticipants() as $participant) {
-                CharacterModel::where('id', $participant->getId())->update([
-                    'hp' => $participant->getCurrentHp(),
-                    'damage_accumulator' => $participant->getDamageAccumulator(),
-                    'ad_armor_head' => $participant->getAdArmorForZone('head'),
-                    'ad_armor_chest' => $participant->getAdArmorForZone('chest'),
-                    'ad_armor_legs' => $participant->getAdArmorForZone('legs'),
-                    'ad_armor_left_arm' => $participant->getAdArmorForZone('left_arm'),
-                    'ad_armor_right_arm' => $participant->getAdArmorForZone('right_arm'),
-                    'level' => $participant->getLevel(),
-                    'experience' => $participant->getExperience(),
-                    'currency_copper' => $participant->getCurrencyCopper(),
-                ]);
+                if ($participant instanceof Character) {
+                    CharacterModel::where('id', $participant->getId())->update([
+                        'hp' => $participant->getCurrentHp(),
+                        'damage_accumulator' => $participant->getDamageAccumulator(),
+                        'ad_armor_head' => $participant->getAdArmorForZone('head'),
+                        'ad_armor_chest' => $participant->getAdArmorForZone('chest'),
+                        'ad_armor_legs' => $participant->getAdArmorForZone('legs'),
+                        'ad_armor_left_arm' => $participant->getAdArmorForZone('left_arm'),
+                        'ad_armor_right_arm' => $participant->getAdArmorForZone('right_arm'),
+                        'level' => $participant->getLevel(),
+                        'experience' => $participant->getExperience(),
+                        'currency_copper' => $participant->getCurrencyCopper(),
+                    ]);
+                } elseif ($participant instanceof \App\Domain\Npc\NpcCombatant) {
+                    DB::table('battle_participants')
+                        ->where('battle_id', $battle->getId())
+                        ->where('id', $participant->getId())
+                        ->update([
+                            'hp' => $participant->getCurrentHp(),
+                            'damage_accumulator' => $participant->getDamageAccumulator(),
+                            'ad_armor_head' => $participant->getAdArmorForZone('head'),
+                            'ad_armor_chest' => $participant->getAdArmorForZone('chest'),
+                            'ad_armor_legs' => $participant->getAdArmorForZone('legs'),
+                            'ad_armor_left_arm' => $participant->getAdArmorForZone('left_arm'),
+                            'ad_armor_right_arm' => $participant->getAdArmorForZone('right_arm'),
+                        ]);
+                }
             }
         }
 
@@ -235,14 +254,66 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                 $pos->character_id => ['x' => $pos->x, 'y' => $pos->y],
             ])->toArray();
 
-        $participants = $model->participants->map(function (CharacterModel $character) use ($positions) {
-            return $this->mapCharacterToDomain($character, $positions);
-        })->toArray();
+        // Fetch all participants (players and NPCs) directly from pivot table to ensure we get both
+        $participantRecords = DB::table('battle_participants')
+            ->where('battle_id', $model->id)
+            ->get();
 
-        // Key by ID
         $participantsById = [];
-        foreach ($participants as $p) {
-            $participantsById[$p->getId()] = $p;
+        $participantTeams = [];
+
+        // Preload player characters to avoid N+1 if there are many
+        $characterIds = $participantRecords->where('is_npc', false)->pluck('character_id')->filter()->toArray();
+        $characters = count($characterIds) > 0 
+            ? CharacterModel::with(['weaponItem', 'offHand', 'seal1', 'seal2', 'seal3', 'seal4', 'helmet', 'chest', 'legs', 'gloves'])
+                ->whereIn('id', $characterIds)
+                ->get()
+                ->keyBy('id')
+            : collect();
+
+        foreach ($participantRecords as $record) {
+            if ($record->is_npc) {
+                // Use negative ID for NPCs to avoid clashing with Character IDs
+                $combatantId = -(int)$record->id;
+                $participantTeams[$combatantId] = $record->team;
+
+                // Hydrate NPC
+                $template = $this->npcTemplateRepository->findById((int) $record->npc_template_id);
+                if ($template) {
+                    $npc = $this->npcFactory->createFromTemplate($template, $combatantId);
+                    
+                    // Override transient stats if present in pivot table
+                    if ($record->hp !== null) {
+                        $npc->setCurrentHp((int) $record->hp);
+                    }
+                    if ($record->damage_accumulator !== null) {
+                        $npc->setDamageAccumulator((float) $record->damage_accumulator);
+                    }
+                    
+                    $npc->setAdArmorForZone('head', (float) $record->ad_armor_head);
+                    $npc->setAdArmorForZone('chest', (float) $record->ad_armor_chest);
+                    $npc->setAdArmorForZone('legs', (float) $record->ad_armor_legs);
+                    $npc->setAdArmorForZone('left_arm', (float) $record->ad_armor_left_arm);
+                    $npc->setAdArmorForZone('right_arm', (float) $record->ad_armor_right_arm);
+
+                    $npc->setPosition(
+                        $positions[$combatantId]['x'] ?? 0,
+                        $positions[$combatantId]['y'] ?? 0
+                    );
+
+                    $participantsById[$combatantId] = $npc;
+                }
+            } else {
+                // Hydrate Player Character
+                $characterId = (int) $record->character_id;
+                $participantTeams[$characterId] = $record->team;
+
+                if ($characterId && $characters->has($characterId)) {
+                    $characterModel = $characters->get($characterId);
+                    $character = $this->mapCharacterToDomain($characterModel, $positions);
+                    $participantsById[$characterId] = $character;
+                }
+            }
         }
 
         $actions = $model->actions()
@@ -261,13 +332,6 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                     blocks: $actionModel->blocks ?? []
                 );
             })->toArray();
-
-        $participantTeams = [];
-        foreach ($model->participants as $participantModel) {
-            if ($participantModel->pivot?->team) {
-                $participantTeams[$participantModel->id] = $participantModel->pivot->team;
-            }
-        }
 
         return new Battle(
             id: $model->id,

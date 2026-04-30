@@ -45,6 +45,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/fights/{id}', [FightController::class, 'show'])->name('api.fights.show');
         Route::post('/fights/{id}/join', [FightController::class, 'join'])->name('api.fights.join');
         Route::post('/fights/{id}/cancel', [FightController::class, 'cancel'])->name('api.fights.cancel');
+        Route::post('/fights/{id}/add-bot', [FightController::class, 'addBot'])->name('api.fights.add_bot');
         Route::post('/fights/{id}/actions', [FightController::class, 'submitActions'])->name('api.fights.submit_actions');
         Route::get('/fights/{id}/log', [FightController::class, 'log'])->name('api.fights.log');
         Route::get('/battles/recent', [FightController::class, 'recent'])->name('api.fights.recent');

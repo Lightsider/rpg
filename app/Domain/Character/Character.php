@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Character;
 
+use App\Domain\Battle\Combatant;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Seal\Seal;
@@ -21,7 +22,7 @@ use App\Domain\Battle\Rng\RandomGeneratorInterface;
 /**
  * Pure PHP Domain Model for a Character.
  */
-class Character implements \JsonSerializable
+class Character implements Combatant, \JsonSerializable
 {
     public const int DEFAULT_MAX_AP = 3;
 
@@ -78,6 +79,11 @@ class Character implements \JsonSerializable
         $this->adArmorLegs = $this->normalizeAdArmorValue($this->adArmorLegs);
         $this->adArmorLeftArm = $this->normalizeAdArmorValue($this->adArmorLeftArm);
         $this->adArmorRightArm = $this->normalizeAdArmorValue($this->adArmorRightArm);
+    }
+
+    public function isNpc(): bool
+    {
+        return false;
     }
 
     public function getUserId(): int

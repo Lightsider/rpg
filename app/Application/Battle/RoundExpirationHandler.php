@@ -31,7 +31,8 @@ class RoundExpirationHandler
         private readonly MapGenerator $mapGenerator,
         private readonly TransactionInterface $transaction,
         private readonly EventDispatcherInterface $eventDispatcher,
-        private readonly ClockInterface $clock
+        private readonly ClockInterface $clock,
+        private readonly NpcActionService $npcActionService
     ) {
     }
 
@@ -48,6 +49,8 @@ class RoundExpirationHandler
             foreach ($activeBattles as $battle) {
                 if ($battle->getState() === BattleState::ACTIVE && $battle->isRoundExpired()) {
                     $this->battleRepository->lockForUpdate($battle->getId());
+
+                    $this->npcActionService->generateNpcActions($battle);
 
                     $result = $this->roundResolver->resolve($battle);
 

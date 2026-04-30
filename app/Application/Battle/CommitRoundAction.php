@@ -28,7 +28,8 @@ class CommitRoundAction
         private readonly BattleLogRepositoryInterface $battleLogRepository,
         private readonly RoundResolverInterface $roundResolver,
         private readonly TransactionInterface $transaction,
-        private readonly EventDispatcherInterface $eventDispatcher
+        private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly NpcActionService $npcActionService,
     ) {
     }
 
@@ -72,7 +73,10 @@ class CommitRoundAction
             // 5. Mark character as committed
             $battle->commitCharacter($characterId);
 
-            // 6. If ALL alive participants have committed → resolve
+            // 6. Auto-generate NPC actions (if any NPCs haven't committed yet)
+            $this->npcActionService->generateNpcActions($battle);
+
+            // 7. If ALL alive participants have committed → resolve
             if ($battle->areAllCommitted()) {
                 // Double safety against race conditions in transactions
                 if ($battle->getState() === BattleState::ACTIVE) {
@@ -91,7 +95,7 @@ class CommitRoundAction
                 $pendingEvents = [new BattleCommitted($battle, $characterId)];
             }
 
-            // 7. Save battle
+            // 8. Save battle
             $this->battleRepository->save($battle);
         });
 
