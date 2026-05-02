@@ -140,6 +140,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Domain\Npc\Behavior\BehaviorModelRegistry::class, function ($app) {
             $registry = new \App\Domain\Npc\Behavior\BehaviorModelRegistry();
             $registry->register('reach_and_hit', new \App\Domain\Npc\Behavior\ReachAndHitBehavior());
+            $registry->register('aggressive', new \App\Domain\Npc\Behavior\AggressiveBehavior());
+            $registry->register('defensive', new \App\Domain\Npc\Behavior\DefensiveBehavior());
             return $registry;
         });
 
