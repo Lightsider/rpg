@@ -446,4 +446,18 @@ class EloquentBattleRepository implements BattleRepositoryInterface
 
         return $character;
     }
+
+    public function generateNpcCombatantId(int $battleId, int $npcTemplateId, string $team): int
+    {
+        $pivotId = DB::table('battle_participants')->insertGetId([
+            'battle_id' => $battleId,
+            'is_npc' => true,
+            'npc_template_id' => $npcTemplateId,
+            'team' => $team,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return -$pivotId;
+    }
 }

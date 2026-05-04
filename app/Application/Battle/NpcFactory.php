@@ -10,10 +10,7 @@ use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Npc\NpcCombatant;
 use App\Domain\Npc\NpcTemplate;
 use App\Domain\Npc\NpcType;
-use App\Infrastructure\Eloquent\ArmorHydrator;
-use App\Infrastructure\Eloquent\Models\ItemModel;
-use App\Infrastructure\Eloquent\SealHydrator;
-use App\Infrastructure\Eloquent\WeaponHydrator;
+use App\Domain\Item\Repositories\ItemRepositoryInterface;
 
 /**
  * Creates NpcCombatant instances from NpcTemplate definitions.
@@ -22,9 +19,7 @@ use App\Infrastructure\Eloquent\WeaponHydrator;
 class NpcFactory
 {
     public function __construct(
-        private readonly WeaponHydrator $weaponHydrator,
-        private readonly ArmorHydrator $armorHydrator,
-        private readonly SealHydrator $sealHydrator,
+        private readonly ItemRepositoryInterface $itemRepository
     ) {
     }
 
@@ -85,27 +80,11 @@ class NpcFactory
                 continue;
             }
 
-            $itemModel = ItemModel::find($itemId);
-            if (!$itemModel) {
-                continue;
-            }
-
-            $slot = $slotMapping[$slotName];
-            $item = $this->hydrateItem($itemModel, $slot);
+            $item = $this->itemRepository->findById($itemId);
             if ($item) {
-                $equipment->setItem($slot, $item);
+                $equipment->setItem($slotMapping[$slotName], $item);
             }
         }
-    }
-
-    private function hydrateItem(ItemModel $itemModel, EquipmentSlot $slot): ?\App\Domain\Item\Item
-    {
-        return match ($itemModel->type) {
-            'weapon', 'offhand_weapon' => $this->weaponHydrator->fromItem($itemModel),
-            'armor', 'shield' => $this->armorHydrator->fromItem($itemModel),
-            'seal' => $this->sealHydrator->fromItem($itemModel),
-            default => null,
-        };
     }
 
     private function calculateMaxHp(int $constitution): int

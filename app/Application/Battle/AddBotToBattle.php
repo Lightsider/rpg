@@ -11,7 +11,7 @@ use App\Domain\Npc\Repositories\NpcTemplateRepositoryInterface;
 use App\Events\Battle\BattleJoined;
 use App\Application\Contracts\EventDispatcherInterface;
 use App\Application\Contracts\TransactionInterface;
-use Illuminate\Support\Facades\DB;
+
 
 class AddBotToBattle
 {
@@ -51,19 +51,7 @@ class AddBotToBattle
                 throw new DomainException('Fight is full.');
             }
 
-            // Insert into battle_participants first to get the pivot ID
-            // Assign team 'bot' or similar? Let's just use team generation or null.
-            $pivotId = DB::table('battle_participants')->insertGetId([
-                'battle_id' => $battleId,
-                'is_npc' => true,
-                'npc_template_id' => $template->id,
-                'team' => 'team_2', // hardcoded for now, or use logic
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // Now $pivotId is positive. The domain uses negative for NPCs to prevent Character clashing.
-            $combatantId = -$pivotId;
+            $combatantId = $this->battleRepository->generateNpcCombatantId($battleId, $template->id, 'team_2');
             $npc = $this->npcFactory->createFromTemplate($template, $combatantId);
 
             $battle->addParticipant($npc);

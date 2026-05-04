@@ -52,4 +52,6 @@ interface BattleRepositoryInterface
     public function removeParticipant(int $battleId, int $characterId): void;
 
     public function hasParticipant(int $battleId, int $characterId): bool;
+    
+    public function generateNpcCombatantId(int $battleId, int $npcTemplateId, string $team): int;
 }
