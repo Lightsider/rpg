@@ -17,7 +17,8 @@ class GetChatState
         private readonly ChatRepositoryInterface $chatRepository,
         private readonly ChatMessageRepositoryInterface $chatMessageRepository,
         private readonly CharacterRepositoryInterface $characterRepository,
-        private readonly BattleRepositoryInterface $battleRepository
+        private readonly BattleRepositoryInterface $battleRepository,
+        private readonly ChatMessagePresenter $chatMessagePresenter
     ) {
     }
 
@@ -98,7 +99,7 @@ class GetChatState
     private function serializeMessages(int $chatId): array
     {
         return array_values(array_map(
-            fn($message) => $message->jsonSerialize(),
+            fn($message) => $this->chatMessagePresenter->present($message),
             $this->chatMessageRepository->findRecent($chatId, 50)
         ));
     }
@@ -106,7 +107,7 @@ class GetChatState
     private function serializeRecentMessagesAfter(int $chatId, \DateTimeImmutable $since): array
     {
         return array_values(array_map(
-            fn($message) => $message->jsonSerialize(),
+            fn($message) => $this->chatMessagePresenter->present($message),
             $this->chatMessageRepository->findRecentAfter($chatId, $since)
         ));
     }

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Application\Game;
 
 use App\Application\Battle\BattleSummaryPresenter;
+use App\Application\Character\CharacterPresenter;
 use App\Application\Contracts\ClockInterface;
+use App\Application\Location\LocationPresenter;
 use App\Domain\Battle\BattleState;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Character;
@@ -27,7 +29,9 @@ class GetGameState
         private readonly CharacterStatValidator $statValidator,
         private readonly CharacterStatService $statService,
         private readonly ClockInterface $clock,
-        private readonly BattleSummaryPresenter $battleSummaryPresenter
+        private readonly BattleSummaryPresenter $battleSummaryPresenter,
+        private readonly CharacterPresenter $characterPresenter,
+        private readonly LocationPresenter $locationPresenter
     ) {
     }
 
@@ -91,8 +95,8 @@ class GetGameState
         $availableFights = $this->battleRepository->findActiveByLocation($character->getLocationId());
 
         return [
-            'character' => $character,
-            'location' => $location,
+            'character' => $this->characterPresenter->present($character),
+            'location' => $location ? $this->locationPresenter->present($location) : null,
             'availableFights' => $availableFights,
             'currentFight' => $currentFight,
             'canCreateFight' => $currentFight === null,

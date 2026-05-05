@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Application\Chat;
 
 use App\Application\Contracts\EventDispatcherInterface;
+use App\Application\Chat\ChatMessagePresenter;
 use App\Application\Chat\SendMessage;
 use App\Domain\Chat\Chat;
 use App\Domain\Chat\ChatType;
@@ -42,7 +43,8 @@ class SendMessageTest extends TestCase
             $this->characterRepository,
             $this->battleRepository,
             $this->eventDispatcher,
-            $this->logger
+            $this->logger,
+            new ChatMessagePresenter()
         );
     }
 

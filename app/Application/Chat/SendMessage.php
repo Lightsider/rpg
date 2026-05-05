@@ -24,7 +24,8 @@ class SendMessage
         private readonly CharacterRepositoryInterface $characterRepository,
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly EventDispatcherInterface $eventDispatcher,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly ChatMessagePresenter $chatMessagePresenter
     ) {
     }
 
@@ -104,7 +105,7 @@ class SendMessage
             'chat_id' => $chat->getId(),
             'chat_type' => $chatType->value,
             'context_id' => $contextId,
-            'message' => array_merge($message->jsonSerialize(), [
+            'message' => array_merge($this->chatMessagePresenter->present($message), [
                 'sender_name' => $sender->getName(),
             ]),
         ];

@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Application\Contracts\TransactionInterface;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\MovementResolverInterface;
+use App\Domain\Battle\Repositories\FighterPositionRepositoryInterface;
 use App\Domain\Battle\TargetZone;
 use App\Domain\DomainException;
-use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 
 class MovementResolver implements MovementResolverInterface
 {
     public function __construct(
-        private readonly ?TransactionInterface $transaction = null
+        private readonly ?FighterPositionRepositoryInterface $fighterPositionRepository = null
     ) {
     }
 
@@ -138,33 +137,16 @@ class MovementResolver implements MovementResolverInterface
             $resolvedMoves[$winnerId] = $validTargets[$winnerId];
         }
 
-        $work = function () use ($battle, $resolvedMoves): void {
-            foreach ($resolvedMoves as $characterId => $target) {
-                $tempX = -1;
-                $tempY = -1 - $characterId;
-                FighterPositionModel::where('fight_id', $battle->getId())
-                    ->where('character_id', $characterId)
-                    ->update(['x' => $tempX, 'y' => $tempY]);
+        foreach ($resolvedMoves as $characterId => $target) {
+            $participant = $battle->getParticipantById($characterId);
+            if ($participant) {
+                $participant->setPosition($target['x'], $target['y']);
             }
-
-            foreach ($resolvedMoves as $characterId => $target) {
-                $participant = $battle->getParticipantById($characterId);
-                if ($participant) {
-                    $participant->setPosition($target['x'], $target['y']);
-                }
-
-                FighterPositionModel::where('fight_id', $battle->getId())
-                    ->where('character_id', $characterId)
-                    ->update(['x' => $target['x'], 'y' => $target['y']]);
-            }
-        };
-
-        if ($this->transaction) {
-            $this->transaction->run($work);
-            return;
         }
 
-        $work();
+        if ($this->fighterPositionRepository !== null) {
+            $this->fighterPositionRepository->applyResolvedMoves($battle->getId(), $resolvedMoves);
+        }
     }
 
     /**

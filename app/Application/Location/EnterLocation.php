@@ -14,7 +14,8 @@ class EnterLocation
     public function __construct(
         private readonly LocationRepositoryInterface $locationRepository,
         private readonly BattleRepositoryInterface $battleRepository,
-        private readonly CharacterRepositoryInterface $characterRepository
+        private readonly CharacterRepositoryInterface $characterRepository,
+        private readonly LocationPresenter $locationPresenter
     ) {
     }
 
@@ -41,6 +42,6 @@ class EnterLocation
             $this->characterRepository->updateLocation($character->getId(), $location->getId());
         }
 
-        return ['location' => $location];
+        return ['location' => $this->locationPresenter->present($location)];
     }
 }

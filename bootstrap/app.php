@@ -1,5 +1,7 @@
 <?php
 
+use App\Domain\DomainException;
+use App\Infrastructure\Errors\DomainExceptionHttpMapper;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,5 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (DomainException $e) {
+            $status = DomainExceptionHttpMapper::toStatusCode($e->getMessage());
+            return response()->json(['error' => $e->getMessage()], $status);
+        });
     })->create();

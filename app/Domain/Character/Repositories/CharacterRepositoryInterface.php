@@ -14,6 +14,7 @@ interface CharacterRepositoryInterface
     public function updateHp(int $id, int $currentHp): void;
     public function updateCurrency(int $id, int $copper): void;
     public function updateLocation(int $id, int $locationId): void;
+    public function updateBaseStats(int $id, int $strength, int $dexterity, int $constitution, int $wit, int $hp, int $maxHp): void;
 
     /**
      * @return Character[]

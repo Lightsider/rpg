@@ -1039,6 +1039,11 @@ class Character implements Combatant, \JsonSerializable
         $this->xpNextLevel = $xpNextLevel;
     }
 
+    public function getXpNextLevel(): ?int
+    {
+        return $this->xpNextLevel;
+    }
+
     public function jsonSerialize(): array
     {
         return [

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Application\Store\GetStoreItems;
 use App\Application\Store\PurchaseStoreItem;
-use App\Infrastructure\WebSockets\Events\InventoryUpdateEvent;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -38,10 +37,7 @@ class StoreController extends Controller
                 'store_item_id' => 'required|integer',
             ]);
             $userId = $request->user()->id;
-            $characterId = $this->purchaseStoreItem->execute($userId, (int) $request->input('store_item_id'));
-            
-            // Broadcast inventory update so the client app refreshes
-            broadcast(new InventoryUpdateEvent($characterId));
+            $this->purchaseStoreItem->execute($userId, (int) $request->input('store_item_id'));
 
             return response()->json([
                 'status' => 'success',

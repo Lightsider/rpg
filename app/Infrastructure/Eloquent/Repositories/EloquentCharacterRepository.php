@@ -93,6 +93,18 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
         CharacterModel::where('id', $id)->update(['location_id' => $locationId]);
     }
 
+    public function updateBaseStats(int $id, int $strength, int $dexterity, int $constitution, int $wit, int $hp, int $maxHp): void
+    {
+        CharacterModel::where('id', $id)->update([
+            'strength' => $strength,
+            'dexterity' => $dexterity,
+            'constitution' => $constitution,
+            'wit' => $wit,
+            'hp' => $hp,
+            'max_hp' => $maxHp,
+        ]);
+    }
+
     public function findByLocationId(int $locationId): array
     {
         $models = CharacterModel::with([

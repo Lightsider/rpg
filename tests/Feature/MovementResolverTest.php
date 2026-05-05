@@ -14,6 +14,7 @@ use App\Domain\Weapon\Weapon;
 use App\Infrastructure\Eloquent\Models\BattleModel;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Infrastructure\Eloquent\Models\FighterPositionModel;
+use App\Infrastructure\Eloquent\Repositories\EloquentFighterPositionRepository;
 use App\Infrastructure\Eloquent\Models\LocationModel;
 use App\Infrastructure\Eloquent\Models\User;
 use App\Services\MovementResolver;
@@ -138,7 +139,7 @@ class MovementResolverTest extends TestCase
             ]
         );
 
-        $resolver = new MovementResolver();
+        $resolver = new MovementResolver(new EloquentFighterPositionRepository());
         $resolver->resolveMovement($battle);
 
         $this->assertDatabaseHas('fighter_positions', [
@@ -248,7 +249,7 @@ class MovementResolverTest extends TestCase
             ]
         );
 
-        $resolver = new MovementResolver();
+        $resolver = new MovementResolver(new EloquentFighterPositionRepository());
         $resolver->resolveMovement($battle);
 
         $this->assertDatabaseHas('fighter_positions', [

@@ -96,6 +96,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Domain\Battle\Repositories\BattleViewReadRepositoryInterface::class,
             \App\Infrastructure\Eloquent\Repositories\EloquentBattleViewReadRepository::class
         );
+        $this->app->bind(
+            \App\Domain\Battle\Repositories\FighterPositionRepositoryInterface::class,
+            \App\Infrastructure\Eloquent\Repositories\EloquentFighterPositionRepository::class
+        );
 
         $this->app->bind(
             \App\Domain\Location\Repositories\LocationRepositoryInterface::class,
