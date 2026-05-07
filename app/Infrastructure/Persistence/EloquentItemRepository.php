@@ -25,6 +25,16 @@ class EloquentItemRepository implements ItemRepositoryInterface
             return null;
         }
 
+        return $this->mapToDomain($model);
+    }
+
+    public function findAll(): array
+    {
+        return ItemModel::all()->map(fn(ItemModel $model) => $this->mapToDomain($model))->filter()->values()->toArray();
+    }
+
+    private function mapToDomain(ItemModel $model): ?Item
+    {
         return match ($model->type) {
             'weapon', 'offhand_weapon' => $this->weaponHydrator->fromItem($model),
             'armor', 'helmet', 'chest', 'legs', 'gloves', 'shield' => $this->armorHydrator->fromItem($model),

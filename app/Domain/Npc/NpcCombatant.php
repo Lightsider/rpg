@@ -33,10 +33,10 @@ class NpcCombatant implements Combatant, \JsonSerializable
         private readonly int $id,
         private readonly string $name,
         private readonly NpcType $type,
-        private readonly int $strength,
-        private readonly int $agility,
-        private readonly int $constitution,
-        private readonly int $wit,
+        private int $strength,
+        private int $agility,
+        private int $constitution,
+        private int $wit,
         private readonly int $maxHp,
         private int $currentHp,
         public readonly Equipment $equipment,
@@ -294,6 +294,14 @@ class NpcCombatant implements Combatant, \JsonSerializable
     public function getLevel(): int
     {
         return $this->level;
+    }
+
+    public function setStats(int $strength, int $dexterity, int $constitution, int $wit): void
+    {
+        $this->strength = $strength;
+        $this->agility = $dexterity;
+        $this->constitution = $constitution;
+        $this->wit = $wit;
     }
 
     public function calculateDodgeChance(?TargetZone $zone = null): float

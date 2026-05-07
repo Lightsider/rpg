@@ -77,6 +77,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $model->rewards = array_map(fn($r) => $r->jsonSerialize(), $battle->getRewards());
         $model->map_width = $battle->getMap()->getWidth();
         $model->map_height = $battle->getMap()->getHeight();
+        $model->fill_with_bots = $battle->shouldFillWithBots();
         $model->save();
 
         // Sync participants with team info
@@ -348,7 +349,8 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             startTimeoutSeconds: $model->start_timeout_seconds !== null ? (int) $model->start_timeout_seconds : null,
             participantTeams: $participantTeams,
             winnerIds: $model->winner_ids ?? [],
-            rewards: array_map(fn($r) => \App\Domain\Battle\BattleReward::fromArray($r), $model->rewards ?? [])
+            rewards: array_map(fn($r) => \App\Domain\Battle\BattleReward::fromArray($r), $model->rewards ?? []),
+            fillWithBots: (bool) $model->fill_with_bots
         );
     }
 

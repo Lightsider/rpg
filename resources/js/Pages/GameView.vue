@@ -57,6 +57,7 @@ const savingEquipment = ref(false);
 const waitingTimerRemaining = ref(0);
 const createMaxPlayers = ref(null);
 const createWaitMinutes = ref(null);
+const fillWithBots = ref(false);
 const lastLocationId = ref(null);
 
 const loading = ref(true);
@@ -409,8 +410,10 @@ const handleCreateFight = async () => {
         const payload = {
             max_participants: maxParticipants,
             start_timeout_seconds: waitSeconds,
+            fill_with_bots: fillWithBots.value,
         };
         const response = await createFight(payload);
+        fillWithBots.value = false;
         await fetchGameData();
     } catch (e) {
         alert(e.response?.data?.error || 'Failed to create fight');
@@ -1186,7 +1189,19 @@ onUnmounted(() => {
 
                                 <div class="flex justify-between items-center border-b pb-2 mb-4">
                                     <h4 class="font-semibold text-lg text-red-800">Available Fights</h4>
-                                    <button @click="handleCreateFight" :disabled="!gameState.canCreateFight" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow disabled:opacity-50">Create New Fight</button>
+                                    <div class="flex flex-col items-end">
+                                        <div class="mb-4">
+                                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                                <input type="checkbox" v-model="fillWithBots" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                                <span class="text-sm font-medium text-gray-700 group-hover:text-indigo-600 transition-colors">Fill with bots</span>
+                                            </label>
+                                            <p class="mt-1 text-xs text-gray-500 italic">If enabled, empty slots will be populated with NPC bots when the fight starts.</p>
+                                        </div>
+                                        <button @click="handleCreateFight" :disabled="!gameState.canCreateFight" 
+                                                class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow disabled:opacity-50">
+                                            Create New Fight
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="mb-5 p-4 bg-gray-50 border rounded">

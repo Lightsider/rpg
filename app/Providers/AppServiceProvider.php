@@ -188,7 +188,8 @@ class AppServiceProvider extends ServiceProvider
                 levelKoef: (float) config('game.level_koef', 1.5),
                 coinBasePerItem: (int) config('game.rewards.coins.base_per_item', 10),
                 coinMultipliers: config('game.rewards.coins.multipliers', []),
-                teamCoinSplits: config('game.rewards.coins.team_split', [])
+                teamCoinSplits: config('game.rewards.coins.team_split', []),
+                npcRewardMultiplier: (float) config('game.rewards.npc_multiplier', 0.8)
             );
         });
     }

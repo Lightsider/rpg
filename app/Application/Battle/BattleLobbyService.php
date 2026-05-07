@@ -29,14 +29,16 @@ class BattleLobbyService
         private readonly TeamAssigner $teamAssigner,
         private readonly EventDispatcherInterface $eventDispatcher,
         private readonly ClockInterface $clock,
-        private readonly BattleSummaryPresenter $battleSummaryPresenter
+        private readonly BattleSummaryPresenter $battleSummaryPresenter,
+        private readonly BotFillingService $botFillingService
     ) {
     }
 
     public function createBattle(
         Character $character,
         ?int $maxParticipants = null,
-        ?int $startTimeoutSeconds = null
+        ?int $startTimeoutSeconds = null,
+        bool $fillWithBots = false
     ): int
     {
         if ($this->battleRepository->isCharacterInBattle($character->getId())) {
@@ -54,7 +56,8 @@ class BattleLobbyService
             map: Map::default(),
             maxParticipants: $maxParticipants,
             startTimeoutSeconds: $startTimeoutSeconds,
-            state: BattleState::WAITING
+            state: BattleState::WAITING,
+            fillWithBots: $fillWithBots
         );
         $battle->assignTeam($character->getId(), $this->teamAssigner->assign($battle->getParticipantTeams()));
 
@@ -153,7 +156,10 @@ class BattleLobbyService
         }
 
         if ($expired) {
-            if ($count >= 2) {
+            if ($count >= 2 || $battle->shouldFillWithBots()) {
+                if ($battle->shouldFillWithBots()) {
+                    $this->botFillingService->fillBattle($battle);
+                }
                 $battle->startFromLobby();
                 $this->battleRepository->save($battle);
                 return 'started';

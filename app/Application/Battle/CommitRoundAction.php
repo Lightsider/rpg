@@ -73,8 +73,10 @@ class CommitRoundAction
             // 5. Mark character as committed
             $battle->commitCharacter($characterId);
 
-            // 6. Auto-generate NPC actions (if any NPCs haven't committed yet)
-            $this->npcActionService->generateNpcActions($battle);
+            // 6. If ALL alive HUMANS have committed -> generate NPC actions
+            if ($this->areAllHumansCommitted($battle)) {
+                $this->npcActionService->generateNpcActions($battle);
+            }
 
             // 7. If ALL alive participants have committed → resolve
             if ($battle->areAllCommitted()) {
@@ -105,11 +107,24 @@ class CommitRoundAction
         }
     }
 
+    private function areAllHumansCommitted(Battle $battle): bool
+    {
+        foreach ($battle->getParticipants() as $participant) {
+            if ($participant->isNpc()) {
+                continue;
+            }
+            if ($participant->getCurrentHp() <= 0) {
+                continue;
+            }
+            if (!$battle->isCharacterCommitted($participant->getId())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * Build the ordered list of events to broadcast after a round resolves.
-     *
-     * @param BattleLogEntry[] $logs
-     * @return object[]
      */
     private function buildPendingEvents(Battle $battle, array $logs): array
     {

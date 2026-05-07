@@ -16,7 +16,7 @@ class CreateBattle
     ) {
     }
 
-    public function execute(int $userId, ?int $maxParticipants, ?int $startTimeoutSeconds): int
+    public function execute(int $userId, ?int $maxParticipants, ?int $startTimeoutSeconds, bool $fillWithBots = false): int
     {
         $this->roundExpirationHandler->handleExpiredRounds();
 
@@ -28,7 +28,8 @@ class CreateBattle
         return $this->battleLobbyService->createBattle(
             $character,
             $maxParticipants,
-            $startTimeoutSeconds
+            $startTimeoutSeconds,
+            $fillWithBots
         );
     }
 }

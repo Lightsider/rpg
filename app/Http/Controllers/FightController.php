@@ -53,13 +53,15 @@ class FightController extends Controller
         $data = $request->validate([
             'max_participants' => ['nullable', 'integer', 'min:2'],
             'start_timeout_seconds' => ['nullable', 'integer', 'min:1', 'max:600'],
+            'fill_with_bots' => ['nullable', 'boolean'],
         ]);
 
         try {
             $fightId = $this->createBattle->execute(
                 $user->id,
                 $data['max_participants'] ?? null,
-                $data['start_timeout_seconds'] ?? null
+                $data['start_timeout_seconds'] ?? null,
+                (bool) ($data['fill_with_bots'] ?? false)
             );
             return response()->json(['fight_id' => $fightId], 201);
         } catch (DomainException $e) {

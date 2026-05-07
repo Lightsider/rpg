@@ -21,7 +21,8 @@ class BattleRewardsConfig
         public readonly float $levelKoef,
         public readonly int $coinBasePerItem = 10,
         public readonly array $coinMultipliers = [],
-        public readonly array $teamCoinSplits = []
+        public readonly array $teamCoinSplits = [],
+        public readonly float $npcRewardMultiplier = 0.8
     ) {
     }
 }

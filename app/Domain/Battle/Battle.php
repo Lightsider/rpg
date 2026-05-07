@@ -39,7 +39,8 @@ class Battle implements \JsonSerializable
         private ?int $startTimeoutSeconds = null,
         private array $participantTeams = [],
         private array $winnerIds = [],
-        private array $rewards = []
+        private array $rewards = [],
+        private bool $fillWithBots = false
     ) {
     }
 
@@ -528,6 +529,11 @@ class Battle implements \JsonSerializable
         return $this->state;
     }
 
+    public function shouldFillWithBots(): bool
+    {
+        return $this->fillWithBots;
+    }
+
     /**
      * @return array<int, TurnAction>
      */
@@ -575,6 +581,7 @@ class Battle implements \JsonSerializable
             'winner_ids' => $this->getWinnerIds(),
             'rewards' => $this->getRewards(),
             'round_started_at' => $this->getRoundStartedAt()->format(\DateTime::ATOM),
+            'fill_with_bots' => $this->shouldFillWithBots(),
         ];
     }
 

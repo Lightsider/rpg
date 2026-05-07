@@ -7,4 +7,7 @@ use App\Domain\Item\Item;
 interface ItemRepositoryInterface
 {
     public function findById(int $id): ?Item;
+
+    /** @return Item[] */
+    public function findAll(): array;
 }

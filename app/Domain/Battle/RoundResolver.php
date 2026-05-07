@@ -361,21 +361,21 @@ class RoundResolver implements RoundResolverInterface
             $winnerShareTotal = (int) round($totalCoinFund * ($this->effectivenessConfig->teamCoinSplits['winner'] ?? 0.7));
             $loserShareTotal = $totalCoinFund - $winnerShareTotal;
 
-            // Pre-calculate team effectiveness
+            // Pre-calculate team effectiveness (Weighted: Humans 1.0, NPCs npcRewardMultiplier)
             $teamEffectiveness = [];
             foreach ($teams as $teamId => $members) {
-                $teamEffectiveness[$teamId] = array_reduce($members, fn($carry, $m) => $carry + $m->getEffectiveness(), 0.0);
+                $teamEffectiveness[$teamId] = array_reduce($members, function($carry, $m) {
+                    $weight = $m->isNpc() ? $this->effectivenessConfig->npcRewardMultiplier : 1.0;
+                    return $carry + ($m->getEffectiveness() * $weight);
+                }, 0.0);
             }
 
-            // Generate rewards (XP and Coins) — only for player characters
+            // Generate rewards (XP and Coins)
             $rewards = [];
             foreach ($participants as $participant) {
-                if (!($participant instanceof Character)) {
-                    continue;
-                }
-
+                $weight = $participant->isNpc() ? $this->effectivenessConfig->npcRewardMultiplier : 1.0;
                 $eff = $participant->getEffectiveness();
-                $baseXp = max(0, $eff) / 2;
+                $baseXp = (max(0, $eff) / 2) * $weight;
                 
                 $teamId = $battle->getParticipantTeam($participant->getId());
                 $isWinner = $teamId !== null && $teamId === $winnerTeamName;
@@ -387,11 +387,11 @@ class RoundResolver implements RoundResolverInterface
 
                 $finalCoins = 0;
                 if ($totalTeamEff > 0) {
-                    $finalCoins = (int) round($teamShare * ($eff / $totalTeamEff));
+                    $finalCoins = (int) round($teamShare * (($eff * $weight) / $totalTeamEff));
                 } else {
-                    // Equal split if team total effectiveness is 0
-                    $memberCount = count($teams[$teamId] ?? []);
-                    $finalCoins = $memberCount > 0 ? (int) floor($teamShare / $memberCount) : 0;
+                    // Equal split if team total effectiveness is 0 (weighted)
+                    $totalWeight = array_reduce($teams[$teamId] ?? [], fn($c, $m) => $c + ($m->isNpc() ? $this->effectivenessConfig->npcRewardMultiplier : 1.0), 0.0);
+                    $finalCoins = $totalWeight > 0 ? (int) round($teamShare * ($weight / $totalWeight)) : 0;
                 }
                 
                 $rewards[$participant->getId()] = new BattleReward(
@@ -400,15 +400,17 @@ class RoundResolver implements RoundResolverInterface
                     items: []
                 );
 
-                $xpAmount = (int)round($finalXp);
-                $sublevelThresholds = $this->getProgressionThresholds($participant->getLevel());
-                
-                if ($participant->addExperience($xpAmount, $sublevelThresholds)) {
-                    $newThresholds = $this->getProgressionThresholds($participant->getLevel());
-                    $participant->addExperience(0, $newThresholds);
+                if ($participant instanceof Character) {
+                    $xpAmount = (int)round($finalXp);
+                    $sublevelThresholds = $this->getProgressionThresholds($participant->getLevel());
+                    
+                    if ($participant->addExperience($xpAmount, $sublevelThresholds)) {
+                        $newThresholds = $this->getProgressionThresholds($participant->getLevel());
+                        $participant->addExperience(0, $newThresholds);
+                    }
+                    
+                    $participant->addCurrencyCopper($finalCoins);
                 }
-                
-                $participant->addCurrencyCopper($finalCoins);
             }
             $battle->setRewards($rewards);
         }
