@@ -42,21 +42,22 @@ class BotFillingService
             return;
         }
 
-        $templates = $this->npcTemplateRepository->findAll();
-        $humanoidTemplate = collect($templates)->first(fn($t) => $t->type === \App\Domain\Npc\NpcType::HUMANOID);
+        $templates = collect($this->npcTemplateRepository->findAll());
+        $humanoidTemplates = $templates->filter(fn($t) => $t->type === \App\Domain\Npc\NpcType::HUMANOID)->values();
         
-        if (!$humanoidTemplate) {
-            $humanoidTemplate = collect($templates)->first();
+        if ($humanoidTemplates->isEmpty()) {
+            $humanoidTemplates = $templates;
         }
 
-        if (!$humanoidTemplate) {
+        if ($humanoidTemplates->isEmpty()) {
             return;
         }
 
         $allItems = $this->itemRepository->findAll();
 
         for ($i = 0; $i < $needed; $i++) {
-            $this->addBot($battle, $humanoidTemplate, $allItems, $i);
+            $template = $humanoidTemplates->random();
+            $this->addBot($battle, $template, $allItems, $i);
         }
 
         $this->battleRepository->save($battle);
@@ -76,16 +77,25 @@ class BotFillingService
         $battle->addParticipant($bot);
         $battle->assignTeam($bot->getId(), $team);
         
-        // 3 Attack Archetypes: Stable, Crit, Hybrid
-        $attackArch = ['stable', 'crit', 'hybrid'][rand(0, 2)];
-        
-        // 3 Defend Archetypes: Tank, Dodge, Universal
-        $defendArch = ['tank', 'dodge', 'universal'][rand(0, 2)];
+        $nameParts = explode(' ', $template->name);
+        $defPrefix = $nameParts[0] ?? '';
+        $atkPrefix = $nameParts[1] ?? '';
+
+        $defendArch = match ($defPrefix) {
+            'Shadow' => 'dodge',
+            'Balanced' => 'universal',
+            default => 'tank', // Guardian
+        };
+
+        $attackArch = match ($atkPrefix) {
+            'Executioner' => 'crit',
+            'Versatile' => 'hybrid',
+            default => 'stable', // Steadfast
+        };
         
         // 5 Loadout Types
         $loadoutType = rand(1, 5);
 
-        $this->applyStats($bot, $attackArch, $defendArch);
         $this->applyEquipment($bot, $attackArch, $defendArch, $loadoutType, $allItems);
 
         // Verbose name for testing
@@ -98,29 +108,6 @@ class BotFillingService
         $bot->restoreHp();
 
 
-    }
-
-    private function applyStats($bot, string $attackArch, string $defendArch): void
-    {
-        $stats = ['strength' => 0, 'dexterity' => 0, 'constitution' => 0, 'wit' => 0];
-        
-        $reqs = [
-            'stable' => ['strength' => 8],
-            'hybrid' => ['strength' => 6, 'wit' => 2],
-            'crit' => ['strength' => 4, 'wit' => 4],
-            'tank' => ['constitution' => 8],
-            'universal' => ['constitution' => 6, 'dexterity' => 2],
-            'dodge' => ['constitution' => 4, 'dexterity' => 4],
-        ];
-
-        foreach ($reqs[$attackArch] as $stat => $val) {
-            $stats[$stat] += $val;
-        }
-        foreach ($reqs[$defendArch] as $stat => $val) {
-            $stats[$stat] += $val;
-        }
-
-        $bot->setStats($stats['strength'], $stats['dexterity'], $stats['constitution'], $stats['wit']);
     }
 
     private function applyEquipment($bot, string $attackArch, string $defendArch, int $loadoutType, array $allItems): void
@@ -221,6 +208,9 @@ class BotFillingService
         );
         if ($seal) {
             $equipment->setItem(EquipmentSlot::SEAL_1, $seal);
+            $equipment->setItem(EquipmentSlot::SEAL_2, $seal);
+            $equipment->setItem(EquipmentSlot::SEAL_3, $seal);
+            $equipment->setItem(EquipmentSlot::SEAL_4, $seal);
         }
     }
 }
