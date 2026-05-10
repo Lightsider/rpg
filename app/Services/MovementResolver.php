@@ -132,7 +132,16 @@ class MovementResolver implements MovementResolverInterface
         }
 
         foreach ($movesByTarget as $characterIds) {
-            sort($characterIds, SORT_NUMERIC);
+            usort($characterIds, function ($a, $b) use ($battle) {
+                $pA = $battle->getParticipantById($a);
+                $pB = $battle->getParticipantById($b);
+                $aIsNpc = $pA ? $pA->isNpc() : false;
+                $bIsNpc = $pB ? $pB->isNpc() : false;
+                if ($aIsNpc === $bIsNpc) {
+                    return $a <=> $b;
+                }
+                return $aIsNpc ? 1 : -1;
+            });
             $winnerId = $characterIds[0];
             $resolvedMoves[$winnerId] = $validTargets[$winnerId];
         }

@@ -75,6 +75,7 @@ class BotFillingServiceTest extends TestCase
             $npc = Mockery::mock(NpcCombatant::class);
             $npc->shouldReceive('getId')->andReturn($id);
             $npc->shouldReceive('setName');
+            $npc->shouldReceive('setBehaviorModelKey');
             $npc->shouldReceive('getStrength')->andReturn(4);
             $npc->shouldReceive('getAgility')->andReturn(4);
             $npc->shouldReceive('getConstitution')->andReturn(4);

@@ -41,7 +41,7 @@ class NpcCombatant implements Combatant, \JsonSerializable
         private int $currentHp,
         public readonly Equipment $equipment,
         private readonly int $level = 1,
-        private readonly string $behaviorModelKey = 'reach_and_hit',
+        private string $behaviorModelKey = 'reach_and_hit',
         private readonly int $npcTemplateId = 0,
         private float $damageAccumulator = 0.0,
         private readonly int $maxActionPoints = self::DEFAULT_MAX_AP,
@@ -107,6 +107,11 @@ class NpcCombatant implements Combatant, \JsonSerializable
     public function getBehaviorModelKey(): string
     {
         return $this->behaviorModelKey;
+    }
+
+    public function setBehaviorModelKey(string $key): void
+    {
+        $this->behaviorModelKey = $key;
     }
 
     public function getNpcTemplateId(): int

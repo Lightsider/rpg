@@ -98,6 +98,11 @@ class BotFillingService
 
         $this->applyEquipment($bot, $attackArch, $defendArch, $loadoutType, $allItems);
 
+        // Assign behavior based on loadout
+        $bot->setBehaviorModelKey(
+            in_array($loadoutType, [1, 2]) ? 'defensive' : 'aggressive'
+        );
+
         // Verbose name for testing
         $offhand = $bot->getEquipment()->getItem(EquipmentSlot::OFF_HAND);
         $offhandName = $offhand ? $offhand->getName() : ($loadoutType === 5 ? '2H' : 'None');
