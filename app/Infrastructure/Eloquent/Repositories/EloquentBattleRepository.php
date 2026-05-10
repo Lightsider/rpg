@@ -81,13 +81,66 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $model->save();
 
         // Sync participants with team info
-        $participantIds = array_keys($battle->getParticipants());
+        $participants = $battle->getParticipants();
         $teams = $battle->getParticipantTeams();
-        $syncData = [];
-        foreach ($participantIds as $id) {
-            $syncData[$id] = ['team' => $teams[$id] ?? null];
+        
+        $humanSyncData = [];
+        $npcIds = [];
+        
+        foreach ($participants as $id => $p) {
+            if ($id > 0) {
+                $humanSyncData[$id] = ['team' => $teams[$id] ?? null];
+            } else {
+                $npcIds[] = -$id; // Convert back to pivot ID
+
+                $equipmentData = [];
+                foreach ($p->getEquipment()->getAllEquipped() as $slot => $item) {
+                    $equipmentData[$slot] = $item->getId();
+                }
+
+                DB::table('battle_participants')
+                    ->where('id', -$id)
+                    ->update([
+                        'team' => $teams[$id] ?? null,
+                        'hp' => $p->getCurrentHp(),
+                        'damage_accumulator' => $p->getDamageAccumulator(),
+                        'ad_armor_head' => $p->getAdArmorForZone('head'),
+                        'ad_armor_chest' => $p->getAdArmorForZone('chest'),
+                        'ad_armor_legs' => $p->getAdArmorForZone('legs'),
+                        'ad_armor_left_arm' => $p->getAdArmorForZone('left_arm'),
+                        'ad_armor_right_arm' => $p->getAdArmorForZone('right_arm'),
+                        'strength' => $p->getStrength(),
+                        'agility' => $p->getAgility(),
+                        'constitution' => $p->getConstitution(),
+                        'wit' => $p->getWit(),
+                        'name' => $p->getName(),
+                        'equipment' => json_encode($equipmentData),
+                        'updated_at' => now(),
+                    ]);
+            }
         }
-        $model->participants()->sync($syncData);
+        
+        // Sync humans
+        $humanIds = array_keys($humanSyncData);
+        DB::table('battle_participants')
+            ->where('battle_id', $model->id)
+            ->where('is_npc', false)
+            ->whereNotIn('character_id', $humanIds)
+            ->delete();
+
+        foreach ($humanSyncData as $id => $data) {
+            DB::table('battle_participants')->updateOrInsert(
+                ['battle_id' => $model->id, 'character_id' => $id, 'is_npc' => false],
+                array_merge($data, ['updated_at' => now()])
+            );
+        }
+        
+        // Remove NPCs NOT in $npcIds
+        DB::table('battle_participants')
+            ->where('battle_id', $model->id)
+            ->where('is_npc', true)
+            ->whereNotIn('id', $npcIds)
+            ->delete();
 
         // Sync actions for the current round
         $model->actions()->where('round_number', $battle->getRoundNumber())->delete();
@@ -291,6 +344,30 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                         $npc->setDamageAccumulator((float) $record->damage_accumulator);
                     }
                     
+                    if ($record->name !== null) {
+                        $npc->setName($record->name);
+                    }
+
+                    if ($record->strength !== null) {
+                        $npc->setStats(
+                            (int) $record->strength,
+                            (int) $record->agility,
+                            (int) $record->constitution,
+                            (int) $record->wit
+                        );
+                    }
+
+                    if ($record->equipment !== null) {
+                        $equipmentItemIds = json_decode($record->equipment, true);
+                        if (is_array($equipmentItemIds)) {
+                            // Clear default template equipment first
+                            foreach (\App\Domain\Equipment\EquipmentSlot::cases() as $slot) {
+                                $npc->getEquipment()->setItem($slot, null);
+                            }
+                            $this->npcFactory->hydrateEquipment($npc->getEquipment(), $equipmentItemIds);
+                        }
+                    }
+
                     $npc->setAdArmorForZone('head', (float) $record->ad_armor_head);
                     $npc->setAdArmorForZone('chest', (float) $record->ad_armor_chest);
                     $npc->setAdArmorForZone('legs', (float) $record->ad_armor_legs);

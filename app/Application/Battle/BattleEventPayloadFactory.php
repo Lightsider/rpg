@@ -38,7 +38,7 @@ class BattleEventPayloadFactory
             'status' => $battle->getState()->value,
             'events' => array_values($events),
             'players' => array_map(
-                fn(Character $c) => [
+                fn(\App\Domain\Battle\Combatant $c) => [
                     'character_id' => $c->getId(),
                     'hp' => $c->getCurrentHp(),
                     'max_hp' => $c->getMaxHp(),
@@ -56,7 +56,7 @@ class BattleEventPayloadFactory
         $participants = array_values($battle->getParticipants());
 
         $participantsData = array_map(
-            fn(Character $c) => [
+            fn(\App\Domain\Battle\Combatant $c) => [
                 'character_id' => $c->getId(),
                 'name' => $c->getName(),
                 'hp' => $c->getCurrentHp(),
@@ -115,7 +115,7 @@ class BattleEventPayloadFactory
         return [
             'battle_id' => $battle->getId(),
             'winner_id' => $winner?->getId(),
-            'winner_ids' => array_map(fn(Character $c) => $c->getId(), $winners),
+            'winner_ids' => array_map(fn(\App\Domain\Battle\Combatant $c) => $c->getId(), $winners),
             'winner_team' => $battle->getWinningTeamName(),
             'reason' => $winner === null ? 'draw' : 'knockout',
         ];

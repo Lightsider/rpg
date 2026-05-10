@@ -7,6 +7,7 @@ namespace App\Application\Battle;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Character;
+use App\Domain\Battle\Combatant;
 use App\Domain\Location\Repositories\LocationRepositoryInterface;
 
 class ListRecentBattles
@@ -27,7 +28,7 @@ class ListRecentBattles
 
         return array_map(function (Battle $battle) {
             $winners = $battle->getVictoryWinners();
-            $winnerNames = array_map(fn(Character $c) => $c->getName(), $winners);
+            $winnerNames = array_map(fn(Combatant $c) => $c->getName(), $winners);
             $summary = $this->battleSummaryPresenter->present($battle);
             
             $locationName = $this->locationRepository
@@ -37,7 +38,7 @@ class ListRecentBattles
             return [
                 'id' => $battle->getId(),
                 'location_name' => $locationName,
-                'participants' => array_map(fn(Character $c) => $c->getName(), array_values($battle->getParticipants())),
+                'participants' => array_map(fn(Combatant $c) => $c->getName(), array_values($battle->getParticipants())),
                 'winner_names' => $winnerNames,
                 'status' => $battle->getState()->value,
                 'round' => $battle->getRoundNumber(),

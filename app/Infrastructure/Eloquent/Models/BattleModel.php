@@ -34,6 +34,7 @@ class BattleModel extends Model
         'winner_ids',
         'map_width',
         'map_height',
+        'fill_with_bots',
     ];
 
     protected $casts = [
@@ -47,6 +48,7 @@ class BattleModel extends Model
         'start_timeout_seconds' => 'integer',
         'map_width' => 'integer',
         'map_height' => 'integer',
+        'fill_with_bots' => 'boolean',
     ];
 
 

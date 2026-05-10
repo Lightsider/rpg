@@ -18,7 +18,7 @@ class BattleSummaryPresenter
             'id' => $battle->getId(),
             'location_id' => $battle->getLocationId(),
             'participants' => array_map(
-                fn(Character $p) => $p->getName(),
+                fn(\App\Domain\Battle\Combatant $p) => $p->getName(),
                 array_values($battle->getParticipants())
             ),
             'participant_ids' => array_keys($battle->getParticipants()),

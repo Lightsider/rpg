@@ -32,7 +32,8 @@ class RoundExpirationHandler
         private readonly TransactionInterface $transaction,
         private readonly EventDispatcherInterface $eventDispatcher,
         private readonly ClockInterface $clock,
-        private readonly NpcActionService $npcActionService
+        private readonly NpcActionService $npcActionService,
+        private readonly BotFillingService $botFillingService
     ) {
     }
 
@@ -91,10 +92,13 @@ class RoundExpirationHandler
                 }
 
                 $participantCount = count($battle->getParticipants());
-                if ($participantCount >= 2) {
-                    $battle->startFromLobby();
-                    $this->battleRepository->save($battle);
+                if ($participantCount >= 2 || $battle->shouldFillWithBots()) {
+                    if ($battle->shouldFillWithBots()) {
+                        $this->botFillingService->fillBattle($battle);
+                    }
+                    
                     $this->mapGenerator->generateForFight($battle);
+                    $battle->startFromLobby();
                     $this->battleRepository->save($battle);
 
                     $pendingEvents[] = new BattleRemoved($battle->getLocationId(), $battle->getId());

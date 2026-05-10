@@ -17,6 +17,7 @@ interface Combatant
     // --- Identity ---
     public function getId(): int;
     public function getName(): string;
+    public function setName(string $name): void;
     public function isNpc(): bool;
 
     // --- Position ---

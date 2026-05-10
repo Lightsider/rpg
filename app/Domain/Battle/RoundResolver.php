@@ -436,7 +436,7 @@ class RoundResolver implements RoundResolverInterface
         return new RoundResolutionResult($logs);
     }
 
-    private function findOpponent(Battle $battle, int $characterId, array $participants): ?Character
+    private function findOpponent(Battle $battle, int $characterId, array $participants): ?Combatant
     {
         $attackerTeam = $battle->getParticipantTeam($characterId);
         foreach ($participants as $participant) {
@@ -452,7 +452,7 @@ class RoundResolver implements RoundResolverInterface
         return null;
     }
 
-    private function findOpponentInRange(Battle $battle, Character $attacker, array $participants): ?Character
+    private function findOpponentInRange(Battle $battle, Combatant $attacker, array $participants): ?Combatant
     {
         $attackerTeam = $battle->getParticipantTeam($attacker->getId());
         foreach ($participants as $participant) {
@@ -518,7 +518,7 @@ class RoundResolver implements RoundResolverInterface
      */
     private function addAutoBlocks(
         Battle $battle,
-        Character $character,
+        Combatant $character,
         array $defenses,
         string $reason
     ): array {

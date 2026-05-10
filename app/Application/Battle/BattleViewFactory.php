@@ -27,7 +27,7 @@ class BattleViewFactory
             'battle_id' => $battle->getId(),
             'status' => $battle->getState()->value,
             'round' => $battle->getRoundNumber(),
-            'participants' => array_map(fn(Character $p) => [
+            'participants' => array_map(fn(\App\Domain\Battle\Combatant $p) => [
                 'character_id' => $p->getId(),
                 'name' => $p->getName(),
                 'hp' => $p->getCurrentHp(),

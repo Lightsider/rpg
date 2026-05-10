@@ -7,6 +7,7 @@ namespace App\Application\Battle;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Item\Repositories\ItemRepositoryInterface;
+use App\Domain\Item\ItemType;
 use App\Domain\Npc\Repositories\NpcTemplateRepositoryInterface;
 use App\Services\TeamAssigner;
 use App\Domain\Equipment\EquipmentSlot;
@@ -32,10 +33,7 @@ class BotFillingService
             return;
         }
 
-        $max = $battle->getMaxParticipants();
-        if ($max === null) {
-            return;
-        }
+        $max = $battle->getMaxParticipants() ?? 2;
 
         $currentCount = count($battle->getParticipants());
         $needed = $max - $currentCount;
@@ -58,21 +56,25 @@ class BotFillingService
         $allItems = $this->itemRepository->findAll();
 
         for ($i = 0; $i < $needed; $i++) {
-            $this->addBot($battle, $humanoidTemplate, $allItems);
+            $this->addBot($battle, $humanoidTemplate, $allItems, $i);
         }
 
         $this->battleRepository->save($battle);
     }
 
-    private function addBot(Battle $battle, $template, array $allItems): void
+    private function addBot(Battle $battle, $template, array $allItems, int $i): void
     {
+        $team = $this->teamAssigner->assign($battle->getParticipantTeams());
         $combatantId = $this->battleRepository->generateNpcCombatantId(
             $battle->getId(),
             $template->id,
-            $this->teamAssigner->assign($battle->getParticipantTeams())
+            $team
         );
 
         $bot = $this->npcFactory->createFromTemplate($template, $combatantId);
+        
+        $battle->addParticipant($bot);
+        $battle->assignTeam($bot->getId(), $team);
         
         // 3 Attack Archetypes: Stable, Crit, Hybrid
         $attackArch = ['stable', 'crit', 'hybrid'][rand(0, 2)];
@@ -85,45 +87,37 @@ class BotFillingService
 
         $this->applyStats($bot, $attackArch, $defendArch);
         $this->applyEquipment($bot, $attackArch, $defendArch, $loadoutType, $allItems);
+
+        // Verbose name for testing
+        $offhand = $bot->getEquipment()->getItem(EquipmentSlot::OFF_HAND);
+        $offhandName = $offhand ? $offhand->getName() : ($loadoutType === 5 ? '2H' : 'None');
+        $statsStr = "S:{$bot->getStrength()} D:{$bot->getAgility()} C:{$bot->getConstitution()} W:{$bot->getWit()}";
+        $bot->setName("{$template->name} " . ($i + 1) . " [{$statsStr}] [{$offhandName}]");
         
         $bot->initializeAdArmor();
         $bot->restoreHp();
 
-        $battle->addParticipant($bot);
+
     }
 
     private function applyStats($bot, string $attackArch, string $defendArch): void
     {
-        $stats = ['strength' => 4, 'dexterity' => 4, 'constitution' => 4, 'wit' => 4];
+        $stats = ['strength' => 0, 'dexterity' => 0, 'constitution' => 0, 'wit' => 0];
         
         $reqs = [
             'stable' => ['strength' => 8],
-            'crit' => ['wit' => 4, 'strength' => 4],
             'hybrid' => ['strength' => 6, 'wit' => 2],
+            'crit' => ['strength' => 4, 'wit' => 4],
             'tank' => ['constitution' => 8],
-            'dodge' => ['dexterity' => 4, 'constitution' => 4],
             'universal' => ['constitution' => 6, 'dexterity' => 2],
+            'dodge' => ['constitution' => 4, 'dexterity' => 4],
         ];
 
         foreach ($reqs[$attackArch] as $stat => $val) {
-            $stats[$stat] = max($stats[$stat], $val);
+            $stats[$stat] += $val;
         }
         foreach ($reqs[$defendArch] as $stat => $val) {
-            $stats[$stat] = max($stats[$stat], $val);
-        }
-
-        $totalUsed = array_sum($stats);
-        $available = 16; // Base points at level 1
-        
-        if ($totalUsed < $available) {
-            // Put remaining points into primary attack stat
-            $primary = match($attackArch) {
-                'stable' => 'strength',
-                'crit' => 'wit',
-                'hybrid' => 'strength',
-                default => 'strength'
-            };
-            $stats[$primary] += ($available - $totalUsed);
+            $stats[$stat] += $val;
         }
 
         $bot->setStats($stats['strength'], $stats['dexterity'], $stats['constitution'], $stats['wit']);
@@ -174,9 +168,9 @@ class BotFillingService
                 'dodge' => 'Shadow',
                 'universal' => 'Balanced'
             ];
-            $skw = $shieldKeywords[$defendArch];
+            $skw = $shieldKeywords[$defendArch] ?? 'Balanced';
             $offHand = collect($allItems)->first(fn($item) => 
-                $item instanceof Shield && 
+                $item->getItemType() === ItemType::SHIELD && 
                 str_contains($item->getName(), $skw)
             );
             if ($offHand) {
@@ -194,12 +188,12 @@ class BotFillingService
         }
 
         // 3. Armor selection
-        $armorKeywords = [
+        $armorKw = match ($defendArch) {
             'tank' => 'Guardian',
             'dodge' => 'Shadow',
-            'universal' => 'Balanced'
-        ];
-        $akw = $armorKeywords[$defendArch];
+            'universal' => 'Balanced',
+            default => 'Balanced'
+        };
 
         $slots = [
             EquipmentSlot::HELMET->value => 'Helmet',
@@ -212,7 +206,7 @@ class BotFillingService
             $slot = EquipmentSlot::from($slotKey);
             $armor = collect($allItems)->first(fn($item) => 
                 $item instanceof Armor && 
-                str_contains($item->getName(), $akw) && 
+                str_contains($item->getName(), $armorKw) && 
                 str_contains($item->getName(), $suffix)
             );
             if ($armor) {
@@ -222,7 +216,7 @@ class BotFillingService
 
         // 4. Seal selection
         $seal = collect($allItems)->first(fn($item) => 
-            $item->getType()->value === 'seal' && 
+            $item->getItemType()->value === 'seal' && 
             str_contains($item->getName(), $kw)
         );
         if ($seal) {

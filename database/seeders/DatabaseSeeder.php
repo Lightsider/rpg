@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             ItemSeeder::class,
             LocationSeeder::class,
             StoreSeeder::class,
+            NpcSeeder::class,
         ]);
     }
 }

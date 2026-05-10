@@ -31,7 +31,7 @@ class NpcCombatant implements Combatant, \JsonSerializable
 
     public function __construct(
         private readonly int $id,
-        private readonly string $name,
+        private string $name,
         private readonly NpcType $type,
         private int $strength,
         private int $agility,
@@ -87,6 +87,11 @@ class NpcCombatant implements Combatant, \JsonSerializable
     public function getName(): string
     {
         return $this->name;
+    }
+
+    public function setName(string $name): void
+    {
+        $this->name = $name;
     }
 
     public function isNpc(): bool

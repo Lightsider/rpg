@@ -68,11 +68,23 @@ class MapGenerator
                 $this->buildTeamPlacements($participantsByTeam['neutral'], $centerX, $map->height, $map->width, 0, $usedPositions, true)
             );
 
+            // Move ALL participants currently in the DB for this fight to temporary off-map positions first.
+            // This prevents unique constraint violations when re-assigning positions.
+            FighterPositionModel::where('fight_id', $fight->getId())->each(function (FighterPositionModel $pos) {
+                $pos->update(['x' => -1, 'y' => -1 - $pos->character_id]);
+            });
+
             foreach ($placements as $placement) {
                 FighterPositionModel::updateOrCreate(
                     ['fight_id' => $fight->getId(), 'character_id' => $placement['character_id']],
                     ['x' => $placement['x'], 'y' => $placement['y']]
                 );
+                
+                // Update the domain object as well
+                $participant = $fight->getParticipantById($placement['character_id']);
+                if ($participant) {
+                    $participant->setPosition($placement['x'], $placement['y']);
+                }
             }
         });
     }

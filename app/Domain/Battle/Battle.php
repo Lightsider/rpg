@@ -229,7 +229,7 @@ class Battle implements \JsonSerializable
         $this->queuedActions[] = $action;
     }
 
-    private function getOpponent(int $characterId): ?Character
+    private function getOpponent(int $characterId): ?Combatant
     {
         $attackerTeam = $this->participantTeams[$characterId] ?? null;
         foreach ($this->participants as $participant) {

@@ -31,7 +31,8 @@ class GetGameState
         private readonly ClockInterface $clock,
         private readonly BattleSummaryPresenter $battleSummaryPresenter,
         private readonly CharacterPresenter $characterPresenter,
-        private readonly LocationPresenter $locationPresenter
+        private readonly LocationPresenter $locationPresenter,
+        private readonly \App\Application\Battle\RoundExpirationHandler $roundExpirationHandler
     ) {
     }
 
@@ -40,6 +41,7 @@ class GetGameState
      */
     public function execute(int $userId, string $userName): array
     {
+        $this->roundExpirationHandler->handleExpiredRounds();
         $character = $this->characterRepository->findByUserId($userId);
 
         if (!$character) {

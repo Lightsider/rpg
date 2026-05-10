@@ -18,16 +18,31 @@ class EloquentFighterPositionRepository implements FighterPositionRepositoryInte
     public function applyResolvedMoves(int $battleId, array $resolvedMoves): void
     {
         $work = function () use ($battleId, $resolvedMoves): void {
-            foreach ($resolvedMoves as $characterId => $target) {
-                FighterPositionModel::where('fight_id', $battleId)
-                    ->where('character_id', $characterId)
-                    ->update(['x' => -1, 'y' => -1 - $characterId]);
+            // 1. Snapshot current positions and move everyone to temporary off-map spots.
+            // This clears the board so any move (or stay) can be applied without collision.
+            $positions = FighterPositionModel::where('fight_id', $battleId)->get()->keyBy('character_id');
+            
+            // Store original positions before updating to temporary spots
+            $originalPositions = [];
+            foreach ($positions as $charId => $posModel) {
+                $originalPositions[$charId] = [
+                    'x' => $posModel->x,
+                    'y' => $posModel->y
+                ];
+            }
+            
+            foreach ($positions as $charId => $posModel) {
+                $posModel->update(['x' => -1, 'y' => -1 - $charId]);
             }
 
-            foreach ($resolvedMoves as $characterId => $target) {
-                FighterPositionModel::where('fight_id', $battleId)
-                    ->where('character_id', $characterId)
-                    ->update(['x' => $target['x'], 'y' => $target['y']]);
+            // 2. Apply either the new resolved move OR restore the original position.
+            foreach ($positions as $charId => $posModel) {
+                $target = $resolvedMoves[$charId] ?? $originalPositions[$charId];
+                
+                $posModel->update([
+                    'x' => $target['x'],
+                    'y' => $target['y']
+                ]);
             }
         };
 

@@ -60,7 +60,7 @@ class NpcFactory
     /**
      * @param array<string, int> $itemIds  Slot name => item ID mapping
      */
-    private function hydrateEquipment(Equipment $equipment, array $itemIds): void
+    public function hydrateEquipment(Equipment $equipment, array $itemIds): void
     {
         $slotMapping = [
             'main_hand' => EquipmentSlot::MAIN_HAND,

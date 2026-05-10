@@ -610,6 +610,11 @@ class Character implements Combatant, \JsonSerializable
         return $this->name;
     }
 
+    public function setName(string $name): void
+    {
+        // Player names are immutable in battle
+    }
+
     public function getStrength(): int
     {
         return $this->strength;
