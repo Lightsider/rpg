@@ -45,7 +45,12 @@ class BattleViewFactory
                 'width' => $snapshot['width'],
                 'height' => $snapshot['height'],
             ],
-            'positions' => $snapshot['positions'],
+            'positions' => array_map(function ($pos) use ($battle) {
+                $participant = $battle->getParticipantById($pos['character_id']);
+                $pos['team'] = $battle->getParticipantTeam($pos['character_id']);
+                $pos['hp'] = $participant ? $participant->getCurrentHp() : 0;
+                return $pos;
+            }, $snapshot['positions']),
             'actions_submitted' => $battle->getCommittedCharacterIds(),
             'rewards' => $battle->getRewards(),
             'winning_team' => $battle->getWinningTeamName(),

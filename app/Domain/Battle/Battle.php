@@ -218,12 +218,6 @@ class Battle implements \JsonSerializable
                 throw new \App\Domain\DomainException('Cannot attack a teammate.');
             }
 
-            $dx = abs($character->getX() - $opponent->getX());
-            $dy = abs($character->getY() - $opponent->getY());
-
-            if ($dx > 1 || $dy > 1) {
-                throw new \App\Domain\DomainException('Target is not adjacent.');
-            }
         }
 
         $this->queuedActions[] = $action;

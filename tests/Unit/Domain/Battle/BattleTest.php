@@ -215,7 +215,7 @@ class BattleTest extends TestCase
         $this->assertCount(1, $battle->getQueuedActions());
     }
 
-    public function test_cannot_attack_non_adjacent_opponent(): void
+    public function test_can_queue_attack_on_non_adjacent_opponent(): void
     {
         $char1 = $this->createMockCharacter(1, 100, 0, 0);
         $char2 = $this->createMockCharacter(2, 100, 5, 5);
@@ -228,9 +228,8 @@ class BattleTest extends TestCase
             targetId: 2
         );
 
-        $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('Target is not adjacent.');
         $battle->queueAction($action);
+        $this->assertCount(1, $battle->getQueuedActions());
     }
 
     public function test_cannot_attack_dead_opponent(): void
