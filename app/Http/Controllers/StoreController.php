@@ -17,35 +17,27 @@ class StoreController extends Controller
 
     public function open(int $id, Request $request): JsonResponse
     {
-        try {
-            $items = $this->getStoreItems->execute($id);
+        $items = $this->getStoreItems->execute($id);
 
-            return response()->json([
-                'status' => 'success',
-                'items' => $items,
-                'message' => 'Store opened'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
-        }
+        return response()->json([
+            'status' => 'success',
+            'items' => $items,
+            'message' => 'Store opened'
+        ]);
     }
 
     public function buy(Request $request): JsonResponse
     {
-        try {
-            $request->validate([
-                'store_item_id' => 'required|integer',
-            ]);
-            $userId = $request->user()->id;
-            $this->purchaseStoreItem->execute($userId, (int) $request->input('store_item_id'));
+        $request->validate([
+            'store_item_id' => 'required|integer',
+        ]);
+        $userId = $request->user()->id;
+        $this->purchaseStoreItem->execute($userId, (int) $request->input('store_item_id'));
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Item purchased successfully'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
-        }
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Item purchased successfully'
+        ]);
     }
 }
 

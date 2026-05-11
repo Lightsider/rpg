@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Domain\DomainException;
 use App\Http\Requests\EquipBackpackItemRequest;
 use App\Http\Requests\UnequipBackpackItemRequest;
 use App\Application\Character\EquipItem;
@@ -24,12 +23,7 @@ class BackpackController extends Controller
     {
         $user = Auth::user();
         $data = $request->validated();
-
-        try {
-            $payload = $this->equipItem->execute($user->id, (int) $data['item_id'], (string) $data['slot']);
-        } catch (DomainException $e) {
-            return response()->json(['error' => $e->getMessage()], 422);
-        }
+        $payload = $this->equipItem->execute($user->id, (int) $data['item_id'], (string) $data['slot']);
 
         return response()->json([
             'character' => $payload['character'],
@@ -42,12 +36,7 @@ class BackpackController extends Controller
     {
         $user = Auth::user();
         $data = $request->validated();
-
-        try {
-            $payload = $this->unequipItem->execute($user->id, (string) $data['slot']);
-        } catch (DomainException $e) {
-            return response()->json(['error' => $e->getMessage()], 422);
-        }
+        $payload = $this->unequipItem->execute($user->id, (string) $data['slot']);
 
         return response()->json([
             'character' => $payload['character'],
