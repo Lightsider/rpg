@@ -81,66 +81,69 @@ class EloquentBattleRepository implements BattleRepositoryInterface
         $model->save();
 
         // Sync participants with team info
+        // Skip sync for finished battles to preserve archive data
         $participants = $battle->getParticipants();
         $teams = $battle->getParticipantTeams();
         
-        $humanSyncData = [];
-        $npcIds = [];
-        
-        foreach ($participants as $id => $p) {
-            if ($id > 0) {
-                $humanSyncData[$id] = ['team' => $teams[$id] ?? null];
-            } else {
-                $npcIds[] = -$id; // Convert back to pivot ID
+        if ($battle->getState() !== BattleState::FINISHED) {
+            $humanSyncData = [];
+            $npcIds = [];
+            
+            foreach ($participants as $id => $p) {
+                if ($id > 0) {
+                    $humanSyncData[$id] = ['team' => $teams[$id] ?? null];
+                } else {
+                    $npcIds[] = -$id; // Convert back to pivot ID
 
-                $equipmentData = [];
-                foreach ($p->getEquipment()->getAllEquipped() as $slot => $item) {
-                    $equipmentData[$slot] = $item->getId();
+                    $equipmentData = [];
+                    foreach ($p->getEquipment()->getAllEquipped() as $slot => $item) {
+                        $equipmentData[$slot] = $item->getId();
+                    }
+
+                    DB::table('battle_participants')
+                        ->where('id', -$id)
+                        ->update([
+                            'team' => $teams[$id] ?? null,
+                            'hp' => $p->getCurrentHp(),
+                            'damage_accumulator' => $p->getDamageAccumulator(),
+                            'ad_armor_head' => $p->getAdArmorForZone('head'),
+                            'ad_armor_chest' => $p->getAdArmorForZone('chest'),
+                            'ad_armor_legs' => $p->getAdArmorForZone('legs'),
+                            'ad_armor_left_arm' => $p->getAdArmorForZone('left_arm'),
+                            'ad_armor_right_arm' => $p->getAdArmorForZone('right_arm'),
+                            'strength' => $p->getStrength(),
+                            'agility' => $p->getAgility(),
+                            'constitution' => $p->getConstitution(),
+                            'wit' => $p->getWit(),
+                            'name' => $p->getName(),
+                            'equipment' => json_encode($equipmentData),
+                            'updated_at' => now(),
+                        ]);
                 }
-
-                DB::table('battle_participants')
-                    ->where('id', -$id)
-                    ->update([
-                        'team' => $teams[$id] ?? null,
-                        'hp' => $p->getCurrentHp(),
-                        'damage_accumulator' => $p->getDamageAccumulator(),
-                        'ad_armor_head' => $p->getAdArmorForZone('head'),
-                        'ad_armor_chest' => $p->getAdArmorForZone('chest'),
-                        'ad_armor_legs' => $p->getAdArmorForZone('legs'),
-                        'ad_armor_left_arm' => $p->getAdArmorForZone('left_arm'),
-                        'ad_armor_right_arm' => $p->getAdArmorForZone('right_arm'),
-                        'strength' => $p->getStrength(),
-                        'agility' => $p->getAgility(),
-                        'constitution' => $p->getConstitution(),
-                        'wit' => $p->getWit(),
-                        'name' => $p->getName(),
-                        'equipment' => json_encode($equipmentData),
-                        'updated_at' => now(),
-                    ]);
             }
-        }
-        
-        // Sync humans
-        $humanIds = array_keys($humanSyncData);
-        DB::table('battle_participants')
-            ->where('battle_id', $model->id)
-            ->where('is_npc', false)
-            ->whereNotIn('character_id', $humanIds)
-            ->delete();
+            
+            // Sync humans
+            $humanIds = array_keys($humanSyncData);
+            DB::table('battle_participants')
+                ->where('battle_id', $model->id)
+                ->where('is_npc', false)
+                ->whereNotIn('character_id', $humanIds)
+                ->delete();
 
-        foreach ($humanSyncData as $id => $data) {
-            DB::table('battle_participants')->updateOrInsert(
-                ['battle_id' => $model->id, 'character_id' => $id, 'is_npc' => false],
-                array_merge($data, ['updated_at' => now()])
-            );
+            foreach ($humanSyncData as $id => $data) {
+                DB::table('battle_participants')->updateOrInsert(
+                    ['battle_id' => $model->id, 'character_id' => $id, 'is_npc' => false],
+                    array_merge($data, ['updated_at' => now()])
+                );
+            }
+            
+            // Remove NPCs NOT in $npcIds
+            DB::table('battle_participants')
+                ->where('battle_id', $model->id)
+                ->where('is_npc', true)
+                ->whereNotIn('id', $npcIds)
+                ->delete();
         }
-        
-        // Remove NPCs NOT in $npcIds
-        DB::table('battle_participants')
-            ->where('battle_id', $model->id)
-            ->where('is_npc', true)
-            ->whereNotIn('id', $npcIds)
-            ->delete();
 
         // Sync actions for the current round
         $model->actions()->where('round_number', $battle->getRoundNumber())->delete();

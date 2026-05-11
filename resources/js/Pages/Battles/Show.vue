@@ -128,6 +128,15 @@ const getParticipantName = (id) => {
                                             <span class="text-gray-500">Copper</span>
                                             <span class="font-black text-yellow-600">+{{ battle.rewards?.[p.character_id]?.copper || 0 }} GC</span>
                                         </div>
+                                        <div class="border-t border-gray-200 my-1"></div>
+                                        <div class="flex justify-between items-center text-sm">
+                                            <span class="text-gray-500">Damage Dealt</span>
+                                            <span class="font-black text-red-600">{{ battle.damage_summary?.[p.character_id]?.damage_dealt ?? 0 }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-sm">
+                                            <span class="text-gray-500">Damage Taken</span>
+                                            <span class="font-black text-blue-600">{{ battle.damage_summary?.[p.character_id]?.damage_taken ?? 0 }}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

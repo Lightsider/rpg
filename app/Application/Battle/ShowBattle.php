@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Battle;
 
+use App\Domain\Battle\Repositories\BattleLogRepositoryInterface;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
@@ -14,7 +15,8 @@ class ShowBattle
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly CharacterRepositoryInterface $characterRepository,
         private readonly RoundExpirationHandler $roundExpirationHandler,
-        private readonly BattleViewFactory $battleViewFactory
+        private readonly BattleViewFactory $battleViewFactory,
+        private readonly BattleLogRepositoryInterface $battleLogRepository
     ) {
     }
 
@@ -40,6 +42,10 @@ class ShowBattle
         $timerRemaining = $this->calculateTimerRemaining($battle->getRoundStartedAt(), $battle->getRoundDurationSeconds());
         $view = $this->battleViewFactory->build($battle);
         $view['timer_remaining'] = $timerRemaining;
+
+        if ($battle->isFinished()) {
+            $view['damage_summary'] = $this->battleLogRepository->getDamageSummaryByBattleId($battle->getId());
+        }
 
         return $view;
     }

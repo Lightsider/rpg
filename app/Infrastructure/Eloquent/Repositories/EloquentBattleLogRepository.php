@@ -65,4 +65,33 @@ class EloquentBattleLogRepository implements BattleLogRepositoryInterface
 
         return array_values($grouped);
     }
+
+    public function getDamageSummaryByBattleId(int $battleId): array
+    {
+        $dealt = BattleLogModel::where('battle_id', $battleId)
+            ->where('damage', '>', 0)
+            ->selectRaw('actor_id as character_id, SUM(damage) as total')
+            ->groupBy('actor_id')
+            ->pluck('total', 'character_id')
+            ->toArray();
+
+        $taken = BattleLogModel::where('battle_id', $battleId)
+            ->where('damage', '>', 0)
+            ->selectRaw('target_id as character_id, SUM(damage) as total')
+            ->groupBy('target_id')
+            ->pluck('total', 'character_id')
+            ->toArray();
+
+        $allIds = array_unique(array_merge(array_keys($dealt), array_keys($taken)));
+        $summary = [];
+
+        foreach ($allIds as $id) {
+            $summary[(int) $id] = [
+                'damage_dealt' => (int) ($dealt[$id] ?? 0),
+                'damage_taken' => (int) ($taken[$id] ?? 0),
+            ];
+        }
+
+        return $summary;
+    }
 }

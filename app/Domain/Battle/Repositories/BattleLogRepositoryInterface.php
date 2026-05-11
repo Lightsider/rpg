@@ -19,4 +19,10 @@ interface BattleLogRepositoryInterface
      * @return array<int, array> Returns logs grouped by round
      */
     public function findByBattleId(int $battleId): array;
+
+    /**
+     * @param int $battleId
+     * @return array<int, array{damage_dealt: int, damage_taken: int}> Keyed by character_id
+     */
+    public function getDamageSummaryByBattleId(int $battleId): array;
 }
