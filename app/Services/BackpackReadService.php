@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Domain\DomainException;
 use App\Domain\Equipment\EquipmentSlot;
-use App\Infrastructure\Eloquent\Models\CharacterItemModel;
+use App\Domain\Item\Repositories\CharacterItemRepositoryInterface;
+use App\Domain\Item\Repositories\ItemRepositoryInterface;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
-use App\Infrastructure\Eloquent\Models\ItemModel;
 
 class BackpackReadService
 {
     public function __construct(
-        private readonly InventoryPayloadAssembler $payloadAssembler
+        private readonly InventoryPayloadAssembler $payloadAssembler,
+        private readonly CharacterLookupService $characterLookup,
+        private readonly CharacterItemRepositoryInterface $characterItemRepository,
+        private readonly ItemRepositoryInterface $itemRepository
     ) {
     }
 
@@ -22,19 +24,14 @@ class BackpackReadService
      */
     public function getBackpackPayload(CharacterModel $character): array
     {
-        $items = CharacterItemModel::with('item')
-            ->where('character_id', $character->id)
-            ->orderByDesc('id')
-            ->get();
-
-        return $items
-            ->map(function (CharacterItemModel $entry) {
-                $item = $entry->item;
+        return collect($this->characterItemRepository->listByCharacterId((int) $character->id))
+            ->map(function (array $entry) {
+                $item = $this->itemRepository->findById((int) $entry['item_id']);
                 if (!$item) {
                     return null;
                 }
 
-                return $this->payloadAssembler->fromItem($item, (int) $entry->quantity);
+                return $this->payloadAssembler->fromItem($item, (int) $entry['quantity']);
             })
             ->filter()
             ->values()
@@ -46,7 +43,7 @@ class BackpackReadService
      */
     public function getBackpackPayloadByCharacterId(int $characterId): array
     {
-        return $this->getBackpackPayload($this->requireCharacter($characterId));
+        return $this->getBackpackPayload($this->characterLookup->requireById($characterId));
     }
 
     /**
@@ -73,7 +70,7 @@ class BackpackReadService
      */
     public function getEquipmentPayloadByCharacterId(int $characterId): array
     {
-        return $this->getEquipmentPayload($this->requireCharacter($characterId));
+        return $this->getEquipmentPayload($this->characterLookup->requireById($characterId));
     }
 
     private function itemPayloadById(?int $itemId): ?array
@@ -82,18 +79,7 @@ class BackpackReadService
             return null;
         }
 
-        $item = ItemModel::find($itemId);
+        $item = $this->itemRepository->findById($itemId);
         return $item ? $this->payloadAssembler->fromItem($item, 1) : null;
     }
-
-    private function requireCharacter(int $characterId): CharacterModel
-    {
-        $character = CharacterModel::find($characterId);
-        if (!$character) {
-            throw new DomainException('Character not found.');
-        }
-
-        return $character;
-    }
 }
-

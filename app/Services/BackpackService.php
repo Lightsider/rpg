@@ -10,7 +10,8 @@ class BackpackService
 {
     public function __construct(
         private readonly BackpackMutationService $mutationService,
-        private readonly BackpackReadService $readService
+        private readonly BackpackReadService $readService,
+        private readonly CharacterLookupService $characterLookup
     ) {
     }
 
@@ -26,7 +27,7 @@ class BackpackService
 
     public function ensureSeededByUserId(int $userId): void
     {
-        $character = CharacterModel::where('user_id', $userId)->first();
+        $character = $this->characterLookup->findByUserId($userId);
         if (!$character) {
             return;
         }
