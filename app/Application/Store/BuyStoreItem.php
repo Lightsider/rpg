@@ -2,6 +2,7 @@
 
 namespace App\Application\Store;
 
+use App\Domain\DomainException;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\Store\Repositories\StoreItemRepositoryInterface;
 use App\Domain\Item\Repositories\CharacterItemRepositoryInterface;
@@ -30,17 +31,17 @@ class BuyStoreItem
     {
         $character = $this->characterRepository->findById($characterId);
         if (!$character) {
-            throw new \Exception("Character not found");
+            throw new DomainException('Character not found.');
         }
 
         $storeItem = $this->storeItemRepository->findById($storeItemId);
         if (!$storeItem) {
-            throw new \Exception("Store item not found");
+            throw new DomainException('Store item not found.');
         }
 
         $item = $this->itemRepository->findById($storeItem->getItemId());
         if (!$item) {
-            throw new \Exception("Item not found");
+            throw new DomainException('Item not found.');
         }
 
         // MVP: price is always 0.

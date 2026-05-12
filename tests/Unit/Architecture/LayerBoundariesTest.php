@@ -92,6 +92,34 @@ class LayerBoundariesTest extends TestCase
         $this->assertSame([], $violations, implode(PHP_EOL, $violations));
     }
 
+    public function test_api_controllers_do_not_catch_domain_exception_manually(): void
+    {
+        $violations = $this->collectForbiddenContentPatterns(
+            basePath: __DIR__ . '/../../../app/Http/Controllers',
+            forbiddenPatterns: [
+                'catch (DomainException',
+                'catch (\\App\\Domain\\DomainException',
+            ],
+            excludedPaths: ['/Auth/', '/Controllers/Controller.php']
+        );
+
+        $this->assertSame([], $violations, implode(PHP_EOL, $violations));
+    }
+
+    public function test_api_controllers_do_not_catch_broad_exception_types(): void
+    {
+        $violations = $this->collectForbiddenContentPatterns(
+            basePath: __DIR__ . '/../../../app/Http/Controllers',
+            forbiddenPatterns: [
+                'catch (\\Exception',
+                'catch (Exception',
+            ],
+            excludedPaths: ['/Auth/', '/Controllers/Controller.php']
+        );
+
+        $this->assertSame([], $violations, implode(PHP_EOL, $violations));
+    }
+
     /**
      * @param string[] $forbiddenPrefixes
      * @return string[]

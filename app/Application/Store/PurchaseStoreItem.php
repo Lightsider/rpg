@@ -22,7 +22,7 @@ class PurchaseStoreItem
     {
         $character = $this->characterRepository->findByUserId($userId);
         if (!$character) {
-            throw new DomainException('Character not found');
+            throw new DomainException('Character not found.');
         }
 
         $this->buyStoreItem->execute($character->getId(), $storeItemId);

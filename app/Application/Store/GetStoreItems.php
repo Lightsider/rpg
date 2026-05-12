@@ -2,6 +2,7 @@
 
 namespace App\Application\Store;
 
+use App\Domain\DomainException;
 use App\Domain\Store\Repositories\StoreRepositoryInterface;
 use App\Domain\Store\Repositories\StoreItemRepositoryInterface;
 use App\Domain\Item\Repositories\ItemRepositoryInterface;
@@ -30,7 +31,7 @@ class GetStoreItems
     {
         $store = $this->storeRepository->findById($storeId);
         if (!$store) {
-            throw new \Exception("Store not found");
+            throw new DomainException('Store not found.');
         }
 
         $itemsWithDetails = $this->storeItemRepository->getByStoreIdWithItems($storeId);

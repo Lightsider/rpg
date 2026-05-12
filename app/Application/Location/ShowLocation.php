@@ -23,7 +23,7 @@ class ShowLocation
     {
         $location = $this->locationRepository->findById($locationId);
         if (!$location) {
-            throw new DomainException('Location not found');
+            throw new DomainException('Location not found.');
         }
 
         $activeFights = $this->battleRepository->findActiveByLocation($locationId);

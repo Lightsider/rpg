@@ -35,7 +35,7 @@ class EnterLocation
 
         $location = $this->locationRepository->findById($locationId);
         if (!$location) {
-            throw new DomainException('Location not found');
+            throw new DomainException('Location not found.');
         }
 
         if ($character->getLocationId() !== $location->getId()) {

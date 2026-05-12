@@ -47,11 +47,11 @@ class CharacterStatValidator
         }
 
         if ($stats['str'] < $minimumCoreStat) {
-            throw new DomainException('Strength cannot be lower than the minimum allowed value');
+            throw new DomainException('Strength cannot be lower than the minimum allowed value.');
         }
 
         if ($stats['con'] < $minimumCoreStat) {
-            throw new DomainException('Endurance cannot be lower than the minimum allowed value');
+            throw new DomainException('Endurance cannot be lower than the minimum allowed value.');
         }
     }
 }
