@@ -397,6 +397,45 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             }
         }
 
+        // Fallback for older finished battles where participant pivot records were deleted
+        if ($participantRecords->isEmpty() && $model->state === \App\Domain\Battle\BattleState::FINISHED->value && !empty($model->rewards)) {
+            $rewardKeys = array_keys($model->rewards);
+            $missingCharacterIds = array_filter($rewardKeys, fn($id) => $id > 0);
+            
+            $fallbackCharacters = count($missingCharacterIds) > 0 
+                ? CharacterModel::with(['weaponItem', 'offHand', 'seal1', 'seal2', 'seal3', 'seal4', 'helmet', 'chest', 'legs', 'gloves'])
+                    ->whereIn('id', $missingCharacterIds)
+                    ->get()
+                    ->keyBy('id')
+                : collect();
+
+            foreach ($rewardKeys as $combatantId) {
+                if ($combatantId > 0) {
+                    if ($fallbackCharacters->has($combatantId)) {
+                        $characterModel = $fallbackCharacters->get($combatantId);
+                        $character = $this->mapCharacterToDomain($characterModel, $positions);
+                        $character->setCurrentHp(in_array($combatantId, $model->winner_ids ?? []) ? 1 : 0);
+                        $participantsById[$combatantId] = $character;
+                    }
+                } else {
+                    $template = new \App\Domain\Npc\NpcTemplate(
+                        id: 0,
+                        name: 'Unknown NPC',
+                        type: \App\Domain\Npc\NpcType::HUMANOID,
+                        strength: 1,
+                        agility: 1,
+                        constitution: 1,
+                        wit: 1,
+                        level: 1,
+                        behaviorModel: \App\Domain\Npc\Behavior\DefensiveBehavior::class
+                    );
+                    $npc = $this->npcFactory->createFromTemplate($template, $combatantId);
+                    $npc->setCurrentHp(in_array($combatantId, $model->winner_ids ?? []) ? 1 : 0);
+                    $participantsById[$combatantId] = $npc;
+                }
+            }
+        }
+
         $actions = $model->actions()
             ->where('round_number', $model->round_number)
             ->get()
