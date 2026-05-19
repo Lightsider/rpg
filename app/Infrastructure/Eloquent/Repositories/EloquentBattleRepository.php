@@ -177,6 +177,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                         'ad_armor_right_arm' => $participant->getAdArmorForZone('right_arm'),
                         'level' => $participant->getLevel(),
                         'experience' => $participant->getExperience(),
+                        'unallocated_stats' => $participant->getUnallocatedStats(),
                         'currency_copper' => $participant->getCurrencyCopper(),
                     ]);
                 } elseif ($participant instanceof \App\Domain\Npc\NpcCombatant) {

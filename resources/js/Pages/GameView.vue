@@ -42,6 +42,18 @@ const loadoutForm = ref({ strength: 4, dexterity: 4, constitution: 4, wit: 4 });
 const loadoutErrors = ref({});
 const loadoutMessage = ref('');
 const savingLoadout = ref(false);
+
+const totalAllowedStats = computed(() => {
+    if (!gameState.value?.character) return 0;
+    const stats = gameState.value.character.stats;
+    return stats.strength + stats.dexterity + stats.constitution + stats.wit + (gameState.value.character.unallocated_stats || 0);
+});
+
+const unallocatedStatsInForm = computed(() => {
+    if (!loadoutForm.value) return 0;
+    const requested = loadoutForm.value.strength + loadoutForm.value.dexterity + loadoutForm.value.constitution + loadoutForm.value.wit;
+    return totalAllowedStats.value - requested;
+});
 const changingLocation = ref(false);
 const locationError = ref('');
 const showBattleSummary = ref(false);
@@ -815,6 +827,9 @@ onUnmounted(() => {
                                         <div class="font-bold">{{ gameState.character.stats.wit }}</div>
                                     </div>
                                 </div>
+                                <div v-if="gameState.character.unallocated_stats > 0" class="bg-yellow-50 text-yellow-800 p-2 rounded text-center text-sm font-semibold border border-yellow-200">
+                                    {{ gameState.character.unallocated_stats }} Unallocated Stat Points!
+                                </div>
                                 <div>
                                     <span class="text-gray-500 text-sm">Weapon</span>
                                     <div class="capitalize text-gray-700 font-medium">{{ gameState.character.weapon ? (typeof gameState.character.weapon === 'string' ? gameState.character.weapon : gameState.character.weapon?.name) : 'Unarmed' }}</div>
@@ -823,7 +838,12 @@ onUnmounted(() => {
 
                             <!-- Loadout editing only in Lobby -->
                                                         <div v-if="!fightState" class="mt-6 border-t pt-4">
-                                <h4 class="text-sm font-semibold uppercase text-gray-500 mb-2">Edit Loadout</h4>
+                                <h4 class="text-sm font-semibold uppercase text-gray-500 mb-2 flex justify-between items-center">
+                                    Edit Loadout
+                                    <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-200">
+                                        {{ unallocatedStatsInForm }} points available
+                                    </span>
+                                </h4>
                                 <div v-if="!loadout.can_edit" class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3 mb-3">
                                     {{ loadout.blocked_reason || 'Loadout editing is unavailable right now.' }}
                                 </div>
@@ -854,8 +874,8 @@ onUnmounted(() => {
                                         <input v-model.number="loadoutForm.wit" type="number" class="w-full rounded border-gray-300 text-sm" :disabled="!loadout.can_edit || savingLoadout" />
                                         <div v-if="loadoutErrors.wit" class="text-xs text-red-600 mt-1">{{ loadoutErrors.wit[0] }}</div>
                                     </div>
-                                    <button @click="handleSaveLoadout" class="w-full bg-gray-900 hover:bg-gray-800 text-white py-2 rounded text-sm font-semibold disabled:opacity-60" :disabled="!loadout.can_edit || savingLoadout">
-                                        {{ savingLoadout ? 'Saving...' : 'Save Loadout' }}
+                                    <button @click="handleSaveLoadout" class="w-full bg-gray-900 hover:bg-gray-800 text-white py-2 rounded text-sm font-semibold disabled:opacity-60" :disabled="!loadout.can_edit || savingLoadout || unallocatedStatsInForm < 0">
+                                        {{ savingLoadout ? 'Saving...' : (unallocatedStatsInForm < 0 ? 'Not enough stat points' : 'Save Loadout') }}
                                     </button>
                                 </div>
 

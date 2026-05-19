@@ -72,6 +72,7 @@ class Character implements Combatant, \JsonSerializable
         private int $level = 1,
         private int $experience = 0,
         private int $sublevelIndex = 0,
+        private int $unallocatedStats = 0,
         private float $effectiveness = 0.0,
     ) {
         $this->adArmorHead = $this->normalizeAdArmorValue($this->adArmorHead);
@@ -943,6 +944,42 @@ class Character implements Combatant, \JsonSerializable
         return $this->experience;
     }
 
+    public function getUnallocatedStats(): int
+    {
+        return $this->unallocatedStats;
+    }
+
+    public function addUnallocatedStats(int $points): void
+    {
+        $this->unallocatedStats += $points;
+    }
+
+    public function allocateStat(string $statName): void
+    {
+        if ($this->unallocatedStats <= 0) {
+            throw new \DomainException("No unallocated stats available.");
+        }
+
+        switch ($statName) {
+            case 'strength':
+                $this->strength++;
+                break;
+            case 'dexterity':
+                $this->agility++; // stored as agility in domain
+                break;
+            case 'constitution':
+                $this->constitution++;
+                break;
+            case 'wit':
+                $this->wit++;
+                break;
+            default:
+                throw new \DomainException("Invalid stat: $statName");
+        }
+
+        $this->unallocatedStats--;
+    }
+
     public function getSublevelIndex(): int
     {
         return $this->sublevelIndex;
@@ -971,6 +1008,8 @@ class Character implements Combatant, \JsonSerializable
     private function applySublevelThresholds(array $sublevelThresholds): bool
     {
         $leveledUp = false;
+        $s = count($sublevelThresholds);
+        $statsPerSublevel = $s > 0 ? (int) floor(4 / $s) : 0;
 
         while (true) {
             $nextSublevel = $this->sublevelIndex + 1;
@@ -978,17 +1017,19 @@ class Character implements Combatant, \JsonSerializable
             if (isset($sublevelThresholds[$nextSublevel]) && $this->experience >= $sublevelThresholds[$nextSublevel]['xp_threshold']) {
                 $this->sublevelIndex++;
                 $this->addCurrencyCopper($sublevelThresholds[$this->sublevelIndex]['reward_copper']);
+                $this->addUnallocatedStats($statsPerSublevel);
                 
                 // Note: Level up happens when the LAST sublevel of the level is reached.
-                // We assume the caller provides thresholds for the current level.
-                // If we reach the max sublevel for this level, we level up.
                 if (!isset($sublevelThresholds[$this->sublevelIndex + 1])) {
                     $this->level++;
                     $this->sublevelIndex = 0;
                     $leveledUp = true;
-                    // When we level up, we stop processing sublevels for THIS call
-                    // as we don't have the thresholds for the NEW level here.
-                    // The caller should ideally handle multi-level jumps or we should fetch new thresholds.
+                    
+                    // Grant remaining stats for the level up
+                    $remainingStats = 8 - ($statsPerSublevel * $s);
+                    if ($remainingStats > 0) {
+                        $this->addUnallocatedStats($remainingStats);
+                    }
                     break;
                 }
             } else {
@@ -1074,6 +1115,7 @@ class Character implements Combatant, \JsonSerializable
             'weapon' => ($this->getEquippedWeapon()?->getName()),
             'currency_copper' => $this->getCurrencyCopper(),
             'sublevel_index' => $this->getSublevelIndex(),
+            'unallocated_stats' => $this->getUnallocatedStats(),
             'sublevels_count' => $this->level + 2, // Default fallback
             'additional_armor' => [
                 'head' => $this->getAdArmorForZone('head'),

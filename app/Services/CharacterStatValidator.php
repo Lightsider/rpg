@@ -10,8 +10,9 @@ class CharacterStatValidator
 {
     /**
      * @param array<string, mixed> $stats
+     * @param \App\Domain\Character\Character $character
      */
-    public function validateStats(array $stats): void
+    public function validateStats(array $stats, \App\Domain\Character\Character $character): void
     {
         $requiredKeys = ['str', 'con', 'dex', 'wit'];
         foreach ($requiredKeys as $key) {
@@ -30,20 +31,22 @@ class CharacterStatValidator
             }
         }
 
-        $totalPool = config('game.stat_pool_level_1');
         $coreRatio = config('game.core_stat_ratio');
-
-        if (!is_numeric($totalPool) || !is_numeric($coreRatio)) {
+        if (!is_numeric($coreRatio)) {
             throw new DomainException('Stat pool configuration is missing or invalid.');
         }
 
-        $totalPool = (int) $totalPool;
-        $coreRatio = (float) $coreRatio;
-        $minimumCoreStat = (int) floor($totalPool * $coreRatio);
+        // The total allowed points is the sum of currently allocated stats + unallocated stats.
+        $totalAllowed = $character->getStrength() + $character->getAgility() + 
+                        $character->getConstitution() + $character->getWit() + 
+                        $character->getUnallocatedStats();
 
-        $total = array_sum($stats);
-        if ($total !== $totalPool) {
-            throw new DomainException("Total stat points must equal {$totalPool}");
+        $coreRatio = (float) $coreRatio;
+        $minimumCoreStat = (int) floor($totalAllowed * $coreRatio);
+
+        $totalRequested = array_sum($stats);
+        if ($totalRequested > $totalAllowed) {
+            throw new DomainException("Total stat points requested ({$totalRequested}) exceeds total available ({$totalAllowed}).");
         }
 
         if ($stats['str'] < $minimumCoreStat) {
@@ -51,7 +54,7 @@ class CharacterStatValidator
         }
 
         if ($stats['con'] < $minimumCoreStat) {
-            throw new DomainException('Endurance cannot be lower than the minimum allowed value.');
+            throw new DomainException('Constitution cannot be lower than the minimum allowed value.');
         }
     }
 }

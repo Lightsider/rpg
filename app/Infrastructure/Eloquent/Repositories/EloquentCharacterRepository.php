@@ -61,6 +61,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             'level' => $character->getLevel(),
             'experience' => $character->getExperience(),
             'sublevel_index' => $character->getSublevelIndex(),
+            'unallocated_stats' => $character->getUnallocatedStats(),
             'strength' => $character->getStrength(),
             'dexterity' => $character->getAgility(),
             'constitution' => $character->getConstitution(),
@@ -93,13 +94,14 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
         CharacterModel::where('id', $id)->update(['location_id' => $locationId]);
     }
 
-    public function updateBaseStats(int $id, int $strength, int $dexterity, int $constitution, int $wit, int $hp, int $maxHp): void
+    public function updateBaseStats(int $id, int $strength, int $dexterity, int $constitution, int $wit, int $unallocatedStats, int $hp, int $maxHp): void
     {
         CharacterModel::where('id', $id)->update([
             'strength' => $strength,
             'dexterity' => $dexterity,
             'constitution' => $constitution,
             'wit' => $wit,
+            'unallocated_stats' => $unallocatedStats,
             'hp' => $hp,
             'max_hp' => $maxHp,
         ]);
@@ -210,6 +212,7 @@ class EloquentCharacterRepository implements CharacterRepositoryInterface
             level: (int) ($model->level ?? 1),
             experience: (int) ($model->experience ?? 0),
             sublevelIndex: (int) ($model->sublevel_index ?? 0),
+            unallocatedStats: (int) ($model->unallocated_stats ?? 0),
         );
 
         $legacyThresholds = config('game.xp_requirements', []);

@@ -26,6 +26,7 @@ class CharacterModel extends Model
         'level',
         'experience',
         'sublevel_index',
+        'unallocated_stats',
         'strength',
         'dexterity',
         'constitution',

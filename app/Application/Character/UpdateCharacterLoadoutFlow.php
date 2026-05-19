@@ -45,9 +45,15 @@ class UpdateCharacterLoadoutFlow
             'wit' => (int) $stats['wit'],
         ];
 
-        $this->statValidator->validateStats($normalized);
+        $this->statValidator->validateStats($normalized, $character);
 
         $computedHp = $this->statService->calculateHp($normalized['con']);
+        
+        $totalAllowed = $character->getStrength() + $character->getAgility() + 
+                        $character->getConstitution() + $character->getWit() + 
+                        $character->getUnallocatedStats();
+        $totalRequested = array_sum($normalized);
+        $newUnallocated = $totalAllowed - $totalRequested;
 
         $this->characterRepository->updateBaseStats(
             $character->getId(),
@@ -55,6 +61,7 @@ class UpdateCharacterLoadoutFlow
             (int) $stats['dexterity'],
             (int) $stats['constitution'],
             (int) $stats['wit'],
+            $newUnallocated,
             $computedHp,
             $computedHp
         );
