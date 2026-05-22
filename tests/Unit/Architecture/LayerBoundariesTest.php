@@ -120,6 +120,106 @@ class LayerBoundariesTest extends TestCase
         $this->assertSame([], $violations, implode(PHP_EOL, $violations));
     }
 
+    public function test_services_do_not_reference_eloquent_models_without_whitelist(): void
+    {
+        $basePath = __DIR__ . '/../../../app/Services';
+        $allowedFiles = [
+            '/BackpackMutationService.php',
+            '/BackpackReadService.php',
+            '/BackpackSeedService.php',
+            '/CharacterEquipmentSnapshotService.php',
+            '/CharacterEquipmentSlotStateService.php',
+            '/CharacterEquipmentStatSyncService.php',
+            '/CharacterLookupService.php',
+            '/MapGenerator.php',
+            '/WeaponAssigner.php',
+        ];
+
+        $violations = [];
+        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($basePath));
+        foreach ($iterator as $file) {
+            if (!$file->isFile() || $file->getExtension() !== 'php') {
+                continue;
+            }
+
+            $filePath = $file->getPathname();
+            $isAllowed = false;
+            foreach ($allowedFiles as $allowedFile) {
+                if (str_ends_with($filePath, $allowedFile)) {
+                    $isAllowed = true;
+                    break;
+                }
+            }
+
+            if ($isAllowed) {
+                continue;
+            }
+
+            $contents = file_get_contents($filePath);
+            if ($contents === false) {
+                continue;
+            }
+
+            if (str_contains($contents, 'App\\Infrastructure\\Eloquent\\Models\\')) {
+                $violations[] = sprintf(
+                    '%s contains forbidden model dependency without whitelist',
+                    $filePath
+                );
+            }
+        }
+
+        sort($violations);
+        $this->assertSame([], $violations, implode(PHP_EOL, $violations));
+    }
+
+    public function test_services_do_not_use_direct_eloquent_static_calls_without_whitelist(): void
+    {
+        $basePath = __DIR__ . '/../../../app/Services';
+        $allowedFiles = [
+            '/MapGenerator.php',
+        ];
+        $forbiddenStaticCalls = ['::find(', '::where(', '::query(', '::updateOrCreate(', '::create('];
+
+        $violations = [];
+        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($basePath));
+        foreach ($iterator as $file) {
+            if (!$file->isFile() || $file->getExtension() !== 'php') {
+                continue;
+            }
+
+            $filePath = $file->getPathname();
+            $isAllowed = false;
+            foreach ($allowedFiles as $allowedFile) {
+                if (str_ends_with($filePath, $allowedFile)) {
+                    $isAllowed = true;
+                    break;
+                }
+            }
+
+            if ($isAllowed) {
+                continue;
+            }
+
+            $contents = file_get_contents($filePath);
+            if ($contents === false) {
+                continue;
+            }
+
+            foreach ($forbiddenStaticCalls as $call) {
+                if (str_contains($contents, $call)) {
+                    $violations[] = sprintf(
+                        '%s contains forbidden direct Eloquent static call: %s',
+                        $filePath,
+                        $call
+                    );
+                }
+            }
+        }
+
+        sort($violations);
+        $this->assertSame([], $violations, implode(PHP_EOL, $violations));
+    }
+
     /**
      * @param string[] $forbiddenPrefixes
      * @return string[]

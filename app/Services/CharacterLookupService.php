@@ -6,12 +6,18 @@ namespace App\Services;
 
 use App\Domain\DomainException;
 use App\Infrastructure\Eloquent\Models\CharacterModel;
+use App\Infrastructure\Eloquent\Repositories\EloquentCharacterModelLookupRepository;
 
 class CharacterLookupService
 {
+    public function __construct(
+        private readonly EloquentCharacterModelLookupRepository $lookupRepository
+    ) {
+    }
+
     public function requireById(int $characterId): CharacterModel
     {
-        $character = CharacterModel::find($characterId);
+        $character = $this->lookupRepository->findById($characterId);
         if (!$character) {
             throw new DomainException('Character not found.');
         }
@@ -21,7 +27,6 @@ class CharacterLookupService
 
     public function findByUserId(int $userId): ?CharacterModel
     {
-        return CharacterModel::where('user_id', $userId)->first();
+        return $this->lookupRepository->findByUserId($userId);
     }
 }
-
