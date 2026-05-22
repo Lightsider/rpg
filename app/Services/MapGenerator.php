@@ -7,8 +7,7 @@ namespace App\Services;
 use App\Application\Contracts\TransactionInterface;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\Map;
-use App\Infrastructure\Eloquent\Models\FighterPositionModel;
-use App\Infrastructure\Eloquent\Models\FightMapModel;
+use App\Infrastructure\Eloquent\Repositories\MapGenerationStateRepository;
 
 class MapGenerator
 {
@@ -18,7 +17,8 @@ class MapGenerator
     private const int TEAM_SIDE_PADDING = 1;
 
     public function __construct(
-        private readonly TransactionInterface $transaction
+        private readonly TransactionInterface $transaction,
+        private readonly MapGenerationStateRepository $mapStateRepository
     ) {
     }
 
@@ -32,16 +32,11 @@ class MapGenerator
 
             $targetHeight = Map::DEFAULT_HEIGHT + max(0, count($participants) - 2);
 
-            $map = FightMapModel::firstOrCreate(
-                ['fight_id' => $fight->getId()],
-                ['width' => Map::DEFAULT_WIDTH, 'height' => Map::DEFAULT_HEIGHT]
+            $map = $this->mapStateRepository->ensureMap(
+                $fight->getId(),
+                Map::DEFAULT_WIDTH,
+                $targetHeight
             );
-
-            if ($map->width !== Map::DEFAULT_WIDTH || $map->height !== $targetHeight) {
-                $map->width = Map::DEFAULT_WIDTH;
-                $map->height = $targetHeight;
-                $map->save();
-            }
 
             // Map generation creates a rectangular map and assigns starting tiles to current fighters.
             $startY = intdiv($map->height, self::STARTING_ROW_DIVISOR);
@@ -70,14 +65,14 @@ class MapGenerator
 
             // Move ALL participants currently in the DB for this fight to temporary off-map positions first.
             // This prevents unique constraint violations when re-assigning positions.
-            FighterPositionModel::where('fight_id', $fight->getId())->each(function (FighterPositionModel $pos) {
-                $pos->update(['x' => -1, 'y' => -1 - $pos->character_id]);
-            });
+            $this->mapStateRepository->moveAllPositionsOffMap($fight->getId());
 
             foreach ($placements as $placement) {
-                FighterPositionModel::updateOrCreate(
-                    ['fight_id' => $fight->getId(), 'character_id' => $placement['character_id']],
-                    ['x' => $placement['x'], 'y' => $placement['y']]
+                $this->mapStateRepository->upsertPosition(
+                    $fight->getId(),
+                    $placement['character_id'],
+                    $placement['x'],
+                    $placement['y']
                 );
                 
                 // Update the domain object as well

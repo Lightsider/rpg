@@ -4,33 +4,31 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Infrastructure\Eloquent\Models\CharacterModel;
+use App\Infrastructure\Eloquent\Repositories\CharacterStateReadWriteRepository;
 
 class BackpackSeedService
 {
     public function __construct(
-        private readonly CharacterLookupService $characterLookup
+        private readonly CharacterStateReadWriteRepository $characterStateRepository
     ) {
     }
 
-    public function ensureSeeded(CharacterModel $character): void
+    public function ensureSeededByCharacterId(int $characterId): void
     {
-        if ($character->backpack_seeded) {
+        if ($this->characterStateRepository->isBackpackSeeded($characterId)) {
             return;
         }
 
-        $character->backpack_seeded = true;
-        $character->save();
+        $this->characterStateRepository->markBackpackSeeded($characterId);
     }
 
     public function ensureSeededByUserId(int $userId): void
     {
-        $character = $this->characterLookup->findByUserId($userId);
-        if (!$character) {
+        $characterId = $this->characterStateRepository->findCharacterIdByUserId($userId);
+        if ($characterId === null) {
             return;
         }
 
-        $this->ensureSeeded($character);
+        $this->ensureSeededByCharacterId($characterId);
     }
 }
-

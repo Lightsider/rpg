@@ -125,14 +125,10 @@ class LayerBoundariesTest extends TestCase
         $basePath = __DIR__ . '/../../../app/Services';
         $allowedFiles = [
             '/BackpackMutationService.php',
-            '/BackpackReadService.php',
-            '/BackpackSeedService.php',
             '/CharacterEquipmentSnapshotService.php',
             '/CharacterEquipmentSlotStateService.php',
             '/CharacterEquipmentStatSyncService.php',
             '/CharacterLookupService.php',
-            '/MapGenerator.php',
-            '/WeaponAssigner.php',
         ];
 
         $violations = [];
@@ -175,9 +171,7 @@ class LayerBoundariesTest extends TestCase
     public function test_services_do_not_use_direct_eloquent_static_calls_without_whitelist(): void
     {
         $basePath = __DIR__ . '/../../../app/Services';
-        $allowedFiles = [
-            '/MapGenerator.php',
-        ];
+        $allowedFiles = [];
         $forbiddenStaticCalls = ['::find(', '::where(', '::query(', '::updateOrCreate(', '::create('];
 
         $violations = [];

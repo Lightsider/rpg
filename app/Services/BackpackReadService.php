@@ -7,24 +7,24 @@ namespace App\Services;
 use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Item\Repositories\CharacterItemRepositoryInterface;
 use App\Domain\Item\Repositories\ItemRepositoryInterface;
-use App\Infrastructure\Eloquent\Models\CharacterModel;
+use App\Infrastructure\Eloquent\Repositories\CharacterStateReadWriteRepository;
 
 class BackpackReadService
 {
     public function __construct(
         private readonly InventoryPayloadAssembler $payloadAssembler,
-        private readonly CharacterLookupService $characterLookup,
         private readonly CharacterItemRepositoryInterface $characterItemRepository,
-        private readonly ItemRepositoryInterface $itemRepository
+        private readonly ItemRepositoryInterface $itemRepository,
+        private readonly CharacterStateReadWriteRepository $characterStateRepository
     ) {
     }
 
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function getBackpackPayload(CharacterModel $character): array
+    public function getBackpackPayloadByCharacterId(int $characterId): array
     {
-        return collect($this->characterItemRepository->listByCharacterId((int) $character->id))
+        return collect($this->characterItemRepository->listByCharacterId($characterId))
             ->map(function (array $entry) {
                 $item = $this->itemRepository->findById((int) $entry['item_id']);
                 if (!$item) {
@@ -39,38 +39,24 @@ class BackpackReadService
     }
 
     /**
-     * @return array<int, array<string, mixed>>
-     */
-    public function getBackpackPayloadByCharacterId(int $characterId): array
-    {
-        return $this->getBackpackPayload($this->characterLookup->requireById($characterId));
-    }
-
-    /**
-     * @return array<string, array<string, mixed>|null>
-     */
-    public function getEquipmentPayload(CharacterModel $character): array
-    {
-        return [
-            EquipmentSlot::MAIN_HAND->value => $this->itemPayloadById($character->weapon_id),
-            EquipmentSlot::OFF_HAND->value => $this->itemPayloadById($character->off_hand_id),
-            EquipmentSlot::SEAL_1->value => $this->itemPayloadById($character->seal_1_id),
-            EquipmentSlot::SEAL_2->value => $this->itemPayloadById($character->seal_2_id),
-            EquipmentSlot::SEAL_3->value => $this->itemPayloadById($character->seal_3_id),
-            EquipmentSlot::SEAL_4->value => $this->itemPayloadById($character->seal_4_id),
-            EquipmentSlot::HELMET->value => $this->itemPayloadById($character->helmet_id),
-            EquipmentSlot::CHEST->value => $this->itemPayloadById($character->chest_id),
-            EquipmentSlot::LEGS->value => $this->itemPayloadById($character->legs_id),
-            EquipmentSlot::GLOVES->value => $this->itemPayloadById($character->gloves_id),
-        ];
-    }
-
-    /**
      * @return array<string, array<string, mixed>|null>
      */
     public function getEquipmentPayloadByCharacterId(int $characterId): array
     {
-        return $this->getEquipmentPayload($this->characterLookup->requireById($characterId));
+        $itemIds = $this->characterStateRepository->getEquipmentItemIds($characterId);
+
+        return [
+            EquipmentSlot::MAIN_HAND->value => $this->itemPayloadById($itemIds[EquipmentSlot::MAIN_HAND->value]),
+            EquipmentSlot::OFF_HAND->value => $this->itemPayloadById($itemIds[EquipmentSlot::OFF_HAND->value]),
+            EquipmentSlot::SEAL_1->value => $this->itemPayloadById($itemIds[EquipmentSlot::SEAL_1->value]),
+            EquipmentSlot::SEAL_2->value => $this->itemPayloadById($itemIds[EquipmentSlot::SEAL_2->value]),
+            EquipmentSlot::SEAL_3->value => $this->itemPayloadById($itemIds[EquipmentSlot::SEAL_3->value]),
+            EquipmentSlot::SEAL_4->value => $this->itemPayloadById($itemIds[EquipmentSlot::SEAL_4->value]),
+            EquipmentSlot::HELMET->value => $this->itemPayloadById($itemIds[EquipmentSlot::HELMET->value]),
+            EquipmentSlot::CHEST->value => $this->itemPayloadById($itemIds[EquipmentSlot::CHEST->value]),
+            EquipmentSlot::LEGS->value => $this->itemPayloadById($itemIds[EquipmentSlot::LEGS->value]),
+            EquipmentSlot::GLOVES->value => $this->itemPayloadById($itemIds[EquipmentSlot::GLOVES->value]),
+        ];
     }
 
     private function itemPayloadById(?int $itemId): ?array
