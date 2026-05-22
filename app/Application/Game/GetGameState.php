@@ -15,7 +15,7 @@ use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Location\Repositories\LocationRepositoryInterface;
-use App\Services\BackpackService;
+use App\Services\BackpackSeedService;
 use App\Services\CharacterStatService;
 use App\Services\CharacterStatValidator;
 
@@ -25,7 +25,7 @@ class GetGameState
         private readonly CharacterRepositoryInterface $characterRepository,
         private readonly LocationRepositoryInterface $locationRepository,
         private readonly BattleRepositoryInterface $battleRepository,
-        private readonly BackpackService $backpackService,
+        private readonly BackpackSeedService $backpackSeedService,
         private readonly CharacterStatValidator $statValidator,
         private readonly CharacterStatService $statService,
         private readonly ClockInterface $clock,
@@ -74,7 +74,7 @@ class GetGameState
             $character = $this->characterRepository->create($newCharacter);
         }
 
-        $this->backpackService->ensureSeededByUserId($userId);
+        $this->backpackSeedService->ensureSeededByUserId($userId);
         $character = $this->characterRepository->findByUserId($userId) ?? $character;
 
         $location = $this->locationRepository->findById($character->getLocationId());

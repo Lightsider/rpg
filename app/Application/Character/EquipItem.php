@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Application\Character;
 
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
-use App\Services\BackpackService;
+use App\Services\BackpackReadService;
 
 class EquipItem
 {
     public function __construct(
         private readonly CharacterRepositoryInterface $characterRepository,
         private readonly EquipItemFlow $equipItemFlow,
-        private readonly BackpackService $backpackService,
+        private readonly BackpackReadService $backpackReadService,
         private readonly CharacterPresenter $characterPresenter
     ) {
     }
@@ -27,8 +27,8 @@ class EquipItem
 
         return [
             'character' => $updatedCharacter ? $this->characterPresenter->present($updatedCharacter) : null,
-            'equipment' => $this->backpackService->getEquipmentPayloadByCharacterId($characterId),
-            'backpack' => $this->backpackService->getBackpackPayloadByCharacterId($characterId),
+            'equipment' => $this->backpackReadService->getEquipmentPayloadByCharacterId($characterId),
+            'backpack' => $this->backpackReadService->getBackpackPayloadByCharacterId($characterId),
         ];
     }
 }

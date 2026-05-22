@@ -77,6 +77,14 @@ class CharacterEquipmentSnapshotService
         );
     }
 
+
+    public function getMainHandWeapon(CharacterModel $character): ?Weapon
+    {
+        $item = $this->itemRepository->findById((int) ($character->weapon_id ?? 0));
+        return $item instanceof Weapon ? $item : null;
+    }
+
+
     /**
      * @return array<int, Item>
      */

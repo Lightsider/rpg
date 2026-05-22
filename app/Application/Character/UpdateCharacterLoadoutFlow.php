@@ -7,7 +7,7 @@ namespace App\Application\Character;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
-use App\Services\BackpackService;
+use App\Services\BackpackMutationService;
 use App\Services\CharacterStatService;
 use App\Services\CharacterStatValidator;
 
@@ -18,7 +18,7 @@ class UpdateCharacterLoadoutFlow
         private readonly BattleRepositoryInterface $battleRepository,
         private readonly CharacterStatValidator $statValidator,
         private readonly CharacterStatService $statService,
-        private readonly BackpackService $backpackService
+        private readonly BackpackMutationService $backpackMutationService
     ) {
     }
 
@@ -66,7 +66,7 @@ class UpdateCharacterLoadoutFlow
             $computedHp
         );
 
-        $unequipped = $this->backpackService->validateEquippedItemsByCharacterId($character->getId());
+        $unequipped = $this->backpackMutationService->validateEquippedItemsByCharacterId($character->getId());
 
         return [
             'character_id' => $character->getId(),
@@ -74,4 +74,3 @@ class UpdateCharacterLoadoutFlow
         ];
     }
 }
-

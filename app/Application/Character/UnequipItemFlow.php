@@ -7,14 +7,14 @@ namespace App\Application\Character;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
-use App\Services\BackpackService;
+use App\Services\BackpackMutationService;
 
 class UnequipItemFlow
 {
     public function __construct(
         private readonly CharacterRepositoryInterface $characterRepository,
         private readonly BattleRepositoryInterface $battleRepository,
-        private readonly BackpackService $backpackService,
+        private readonly BackpackMutationService $backpackMutationService,
     ) {
     }
 
@@ -30,9 +30,8 @@ class UnequipItemFlow
             throw new DomainException('Cannot edit loadout during an active fight.');
         }
 
-        $this->backpackService->unequipItemByCharacterId($character->getId(), $slot);
+        $this->backpackMutationService->unequipItemByCharacterId($character->getId(), $slot);
 
         return $character->getId();
     }
 }
-

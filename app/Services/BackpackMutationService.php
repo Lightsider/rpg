@@ -20,39 +20,16 @@ use App\Infrastructure\Eloquent\Models\CharacterModel;
 
 class BackpackMutationService
 {
-    /** @var array<string, string> */
-    private const SEAL_SLOT_FIELDS = [
-        EquipmentSlot::SEAL_1->value => 'seal_1_id',
-        EquipmentSlot::SEAL_2->value => 'seal_2_id',
-        EquipmentSlot::SEAL_3->value => 'seal_3_id',
-        EquipmentSlot::SEAL_4->value => 'seal_4_id',
-    ];
-
-    /** @var array<string, string> */
-    private const ARMOR_SLOT_FIELDS = [
-        EquipmentSlot::HELMET->value => 'helmet_id',
-        EquipmentSlot::CHEST->value => 'chest_id',
-        EquipmentSlot::LEGS->value => 'legs_id',
-        EquipmentSlot::GLOVES->value => 'gloves_id',
-    ];
-
-    /** @var array<string, string> */
-    private const ARMOR_VALUE_FIELDS = [
-        EquipmentSlot::HELMET->value => 'ad_armor_head',
-        EquipmentSlot::CHEST->value => 'ad_armor_chest',
-        EquipmentSlot::LEGS->value => 'ad_armor_legs',
-        EquipmentSlot::GLOVES->value => 'ad_armor_hands',
-    ];
-
     public function __construct(
         private readonly EquipmentService $equipmentService,
         private readonly EquipmentRules $equipmentRules,
-        private readonly CharacterStatService $statService,
         private readonly TransactionInterface $transaction,
         private readonly CharacterLookupService $characterLookup,
         private readonly CharacterItemRepositoryInterface $characterItemRepository,
         private readonly ItemRepositoryInterface $itemRepository,
-        private readonly CharacterEquipmentSnapshotService $snapshotService
+        private readonly CharacterEquipmentSnapshotService $snapshotService,
+        private readonly CharacterEquipmentStatSyncService $statSyncService,
+        private readonly CharacterEquipmentSlotStateService $slotStateService
     ) {
     }
 
@@ -165,7 +142,7 @@ class BackpackMutationService
 
     private function equipMainHand(CharacterModel $character, int $itemId, Item $item): void
     {
-        $oldMultiplier = $this->getMaxHpMultiplier($character);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
         if (!$item instanceof Weapon) {
             throw new DomainException('Item cannot be equipped in that slot.');
         }
@@ -197,18 +174,18 @@ class BackpackMutationService
 
             $character->weapon_id = $itemId;
             $character->weapon = $this->resolveLegacyWeaponName($itemId);
-            $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
             $character->save();
         });
     }
 
     private function equipOffHand(CharacterModel $character, int $itemId, Item $item, EquipmentSlot $slotEnum): void
     {
-        $oldMultiplier = $this->getMaxHpMultiplier($character);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
 
         if ($character->weapon_id) {
-            $mainHandItem = $this->itemRepository->findById((int) $character->weapon_id);
-            if ($mainHandItem instanceof Weapon && $mainHandItem->isTwoHanded()) {
+            $mainHandItem = $this->snapshotService->getMainHandWeapon($character);
+            if ($mainHandItem && $mainHandItem->isTwoHanded()) {
                 throw new DomainException('Cannot equip offhand item when a 2-handed weapon is equipped.');
             }
         }
@@ -235,7 +212,7 @@ class BackpackMutationService
                 $this->removeFromBackpack($character, $itemId, 1);
 
                 $character->off_hand_id = $itemId;
-                $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+                $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
                 $character->save();
             });
 
@@ -263,14 +240,14 @@ class BackpackMutationService
             $this->removeFromBackpack($character, $itemId, 1);
 
             $character->off_hand_id = $itemId;
-            $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
             $character->save();
         });
     }
 
     private function equipSeal(CharacterModel $character, int $itemId, Item $item, EquipmentSlot $slotEnum): void
     {
-        $oldMultiplier = $this->getMaxHpMultiplier($character);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
         if (!$item instanceof Seal) {
             throw new DomainException('Item cannot be equipped in that slot.');
         }
@@ -285,22 +262,22 @@ class BackpackMutationService
         }
 
         $this->transaction->run(function () use ($character, $itemId, $slotEnum, $oldMultiplier) {
-            $currentSealId = $this->getSealSlotId($character, $slotEnum);
+            $currentSealId = $this->slotStateService->getSealSlotId($character, $slotEnum);
             if ($currentSealId && $currentSealId !== $itemId) {
                 $this->addToBackpack($character, $currentSealId, 1);
             }
 
             $this->removeFromBackpack($character, $itemId, 1);
 
-            $this->setSealSlotId($character, $slotEnum, $itemId);
-            $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+            $this->slotStateService->setSealSlotId($character, $slotEnum, $itemId);
+            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
             $character->save();
         });
     }
 
     private function equipArmor(CharacterModel $character, int $itemId, Item $item, EquipmentSlot $slotEnum): void
     {
-        $oldMultiplier = $this->getMaxHpMultiplier($character);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
         if (!$item instanceof Armor) {
             throw new DomainException('Item cannot be equipped in that slot.');
         }
@@ -319,26 +296,26 @@ class BackpackMutationService
         }
 
         $this->transaction->run(function () use ($character, $itemId, $slotEnum, $item, $oldMultiplier) {
-            $currentArmorId = $this->getArmorSlotId($character, $slotEnum);
+            $currentArmorId = $this->slotStateService->getArmorSlotId($character, $slotEnum);
             if ($currentArmorId && $currentArmorId !== $itemId) {
                 $this->addToBackpack($character, $currentArmorId, 1);
             }
 
             $this->removeFromBackpack($character, $itemId, 1);
 
-            $this->setArmorSlotId($character, $slotEnum, $itemId);
-            $this->setArmorValueForSlot($character, $slotEnum, $item->getAdArmor());
+            $this->slotStateService->setArmorSlotId($character, $slotEnum, $itemId);
+            $this->slotStateService->setArmorValueForSlot($character, $slotEnum, $item->getAdArmor());
             if (in_array($slotEnum, [EquipmentSlot::CHEST, EquipmentSlot::GLOVES], true)) {
-                $this->recalculateArmArmor($character);
+                $this->statSyncService->recalculateArmArmor($character);
             }
-            $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
             $character->save();
         });
     }
 
     private function unequipMainHand(CharacterModel $character): void
     {
-        $oldMultiplier = $this->getMaxHpMultiplier($character);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
         if (!$character->weapon_id) {
             throw new DomainException('No item equipped in that slot.');
         }
@@ -347,14 +324,14 @@ class BackpackMutationService
             $this->addToBackpack($character, (int) $character->weapon_id, 1);
             $character->weapon_id = null;
             $character->weapon = null;
-            $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
             $character->save();
         });
     }
 
     private function unequipOffHand(CharacterModel $character): void
     {
-        $oldMultiplier = $this->getMaxHpMultiplier($character);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
         if (!$character->off_hand_id) {
             throw new DomainException('No item equipped in that slot.');
         }
@@ -362,43 +339,43 @@ class BackpackMutationService
         $this->transaction->run(function () use ($character, $oldMultiplier) {
             $this->addToBackpack($character, (int) $character->off_hand_id, 1);
             $character->off_hand_id = null;
-            $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
             $character->save();
         });
     }
 
     private function unequipSeal(CharacterModel $character, EquipmentSlot $slotEnum): void
     {
-        $oldMultiplier = $this->getMaxHpMultiplier($character);
-        $currentSealId = $this->getSealSlotId($character, $slotEnum);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
+        $currentSealId = $this->slotStateService->getSealSlotId($character, $slotEnum);
         if (!$currentSealId) {
             throw new DomainException('No item equipped in that slot.');
         }
 
         $this->transaction->run(function () use ($character, $slotEnum, $currentSealId, $oldMultiplier) {
             $this->addToBackpack($character, $currentSealId, 1);
-            $this->setSealSlotId($character, $slotEnum, null);
-            $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+            $this->slotStateService->setSealSlotId($character, $slotEnum, null);
+            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
             $character->save();
         });
     }
 
     private function unequipArmor(CharacterModel $character, EquipmentSlot $slotEnum): void
     {
-        $oldMultiplier = $this->getMaxHpMultiplier($character);
-        $currentArmorId = $this->getArmorSlotId($character, $slotEnum);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
+        $currentArmorId = $this->slotStateService->getArmorSlotId($character, $slotEnum);
         if (!$currentArmorId) {
             throw new DomainException('No item equipped in that slot.');
         }
 
         $this->transaction->run(function () use ($character, $slotEnum, $currentArmorId, $oldMultiplier) {
             $this->addToBackpack($character, $currentArmorId, 1);
-            $this->setArmorSlotId($character, $slotEnum, null);
-            $this->setArmorValueForSlot($character, $slotEnum, 0.0);
+            $this->slotStateService->setArmorSlotId($character, $slotEnum, null);
+            $this->slotStateService->setArmorValueForSlot($character, $slotEnum, 0.0);
             if (in_array($slotEnum, [EquipmentSlot::CHEST, EquipmentSlot::GLOVES], true)) {
-                $this->recalculateArmArmor($character);
+                $this->statSyncService->recalculateArmArmor($character);
             }
-            $this->recalculateHpOnEquipmentChange($character, $oldMultiplier);
+            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
             $character->save();
         });
     }
@@ -416,126 +393,8 @@ class BackpackMutationService
         }
     }
 
-    private function getSealSlotId(CharacterModel $character, EquipmentSlot $slot): ?int
-    {
-        return $this->getSlotItemId($character, self::SEAL_SLOT_FIELDS, $slot);
-    }
-
-    private function setSealSlotId(CharacterModel $character, EquipmentSlot $slot, ?int $itemId): void
-    {
-        $this->setSlotItemId($character, self::SEAL_SLOT_FIELDS, $slot, $itemId);
-    }
-
-    private function getArmorSlotId(CharacterModel $character, EquipmentSlot $slot): ?int
-    {
-        return $this->getSlotItemId($character, self::ARMOR_SLOT_FIELDS, $slot);
-    }
-
-    private function setArmorSlotId(CharacterModel $character, EquipmentSlot $slot, ?int $itemId): void
-    {
-        $this->setSlotItemId($character, self::ARMOR_SLOT_FIELDS, $slot, $itemId);
-    }
-
-    private function setArmorValueForSlot(CharacterModel $character, EquipmentSlot $slot, float $value): void
-    {
-        $value = (float) max(0, (int) round($value));
-        $slotField = self::ARMOR_VALUE_FIELDS[$slot->value] ?? null;
-        if ($slotField === null) {
-            return;
-        }
-
-        $character->{$slotField} = $value;
-    }
-
-    /**
-     * @param array<string, string> $slotFields
-     */
-    private function getSlotItemId(CharacterModel $character, array $slotFields, EquipmentSlot $slot): ?int
-    {
-        $field = $slotFields[$slot->value] ?? null;
-        if ($field === null) {
-            return null;
-        }
-
-        $value = $character->{$field};
-        return $value ? (int) $value : null;
-    }
-
-    /**
-     * @param array<string, string> $slotFields
-     */
-    private function setSlotItemId(CharacterModel $character, array $slotFields, EquipmentSlot $slot, ?int $itemId): void
-    {
-        $field = $slotFields[$slot->value] ?? null;
-        if ($field === null) {
-            return;
-        }
-
-        $character->{$field} = $itemId;
-    }
-
-    private function recalculateArmArmor(CharacterModel $character): void
-    {
-        $chestArmor = $this->getArmorValueById($character->chest_id);
-        $glovesArmor = $this->getArmorValueById($character->gloves_id);
-        $armValue = ($chestArmor * 0.5) + ($glovesArmor * 0.5);
-        $armValue = (float) max(0, (int) round($armValue));
-        $character->ad_armor_left_arm = $armValue;
-        $character->ad_armor_right_arm = $armValue;
-    }
-
-    private function getArmorValueById(?int $itemId): float
-    {
-        if (!$itemId) {
-            return 0.0;
-        }
-
-        $item = $this->itemRepository->findById($itemId);
-        return $item instanceof Armor ? (float) $item->getAdArmor() : 0.0;
-    }
-
     private function resolveLegacyWeaponName(int $weaponId): ?string
     {
-        $weapon = $this->itemRepository->findById($weaponId);
-        if (!$weapon instanceof Weapon) {
-            return null;
-        }
-
-        $name = strtolower((string) $weapon->getName());
-        return match ($name) {
-            'sword' => 'sword',
-            'axe' => 'axe',
-            default => null,
-        };
-    }
-
-    private function recalculateHpOnEquipmentChange(CharacterModel $character, float $oldMultiplier): void
-    {
-        $baseHp = $this->statService->calculateHp((int) ($character->constitution ?? 0));
-        $newMultiplier = $this->getMaxHpMultiplier($character);
-
-        $oldMax = (int) ceil($baseHp * (1.0 + $oldMultiplier));
-        $newMax = (int) ceil($baseHp * (1.0 + $newMultiplier));
-
-        $current = (int) ($character->hp ?? $baseHp);
-        $newCurrent = $oldMax > 0
-            ? (int) round(($current / $oldMax) * $newMax)
-            : $newMax;
-
-        $character->max_hp = $baseHp;
-        $character->hp = (int) max(0, min($newMax, $newCurrent));
-    }
-
-    private function getMaxHpMultiplier(CharacterModel $character): float
-    {
-        $multiplier = 0.0;
-        foreach ($this->snapshotService->getEquippedItems($character) as $item) {
-            if (method_exists($item, 'getMaxHpMultiplier')) {
-                $multiplier += $item->getMaxHpMultiplier();
-            }
-        }
-
-        return $multiplier;
+        return $this->statSyncService->resolveLegacyWeaponName($weaponId);
     }
 }
-

@@ -7,14 +7,14 @@ namespace App\Application\Character;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
-use App\Services\BackpackService;
+use App\Services\BackpackReadService;
 
 class GetCharacterLoadout
 {
     public function __construct(
         private readonly CharacterRepositoryInterface $characterRepository,
         private readonly BattleRepositoryInterface $battleRepository,
-        private readonly BackpackService $backpackService
+        private readonly BackpackReadService $backpackReadService
     ) {
     }
 
@@ -48,11 +48,10 @@ class GetCharacterLoadout
             ],
             'level' => (int) $character->getLevel(),
             'experience' => (int) $character->getExperience(),
-            'equipment' => $this->backpackService->getEquipmentPayloadByCharacterId($character->getId()),
-            'backpack' => $this->backpackService->getBackpackPayloadByCharacterId($character->getId()),
+            'equipment' => $this->backpackReadService->getEquipmentPayloadByCharacterId($character->getId()),
+            'backpack' => $this->backpackReadService->getBackpackPayloadByCharacterId($character->getId()),
             'can_edit' => $canEdit,
             'blocked_reason' => $canEdit ? null : 'Cannot edit loadout while you are in a fight.',
         ];
     }
 }
-
