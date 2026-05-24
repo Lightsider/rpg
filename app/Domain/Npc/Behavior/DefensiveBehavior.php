@@ -109,17 +109,20 @@ class DefensiveBehavior extends BaseHeuristicBehavior
         return $actions;
     }
 
-    protected function allocateActionPoints(Combatant $npc, Combatant $target, Battle $battle): array
+    protected function allocateActionPoints(Combatant $npc, Combatant $target, Battle $battle, bool $hasMoved = false): array
     {
         $actions = [];
         // AP pool calculation
-        $baseAp = $npc->getCurrentActionPoints(); // This usually drops to 2 if we moved
+        $baseAp = $npc->getCurrentActionPoints();
+        if ($hasMoved) {
+            $baseAp = max(0, $baseAp - 1);
+        }
         $bonusDefensiveAp = $npc->getBonusDefensiveAP();
         
         $map = $battle->getMap();
         
-        if (!$map->isAdjacent($npc->getX(), $npc->getY(), $target->getX(), $target->getY())) {
-            // Cannot attack, just dump all into blocks
+        if ($hasMoved || !$map->isAdjacent($npc->getX(), $npc->getY(), $target->getX(), $target->getY())) {
+            // Cannot/should not attack, just dump all into blocks
             $totalApForBlocks = $baseAp + $bonusDefensiveAp;
             return $this->createBlockActions($npc, $totalApForBlocks);
         }

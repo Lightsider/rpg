@@ -31,6 +31,7 @@ class ReachAndHitBehavior implements BehaviorModelInterface
         }
 
         $isAdjacent = $this->isAdjacent($npc, $target);
+        $moved = false;
 
         // If not adjacent, move toward the target first
         if (!$isAdjacent && $apRemaining > 0) {
@@ -45,6 +46,7 @@ class ReachAndHitBehavior implements BehaviorModelInterface
                     toY: $moveTarget['y'],
                 );
                 $apRemaining--;
+                $moved = true;
 
                 // Re-check adjacency after the planned move
                 $dx = abs($moveTarget['x'] - $target->getX());
@@ -54,7 +56,7 @@ class ReachAndHitBehavior implements BehaviorModelInterface
         }
 
         // Attack the target if adjacent
-        if ($isAdjacent) {
+        if ($isAdjacent && !$moved) {
             $zones = TargetZone::cases();
             while ($apRemaining > 0 && $attacksUsed < $maxAttacks) {
                 $zone = $zones[array_rand($zones)];

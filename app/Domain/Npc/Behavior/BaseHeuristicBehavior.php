@@ -31,6 +31,7 @@ abstract class BaseHeuristicBehavior implements BehaviorModelInterface
 
         // 2. Evaluate map and pathfind to the optimal position
         $moveActions = $this->evaluateMap($npc, $target, $battle);
+        $hasMoved = !empty($moveActions);
         foreach ($moveActions as $move) {
             $actions[] = $move;
             // Update NPC position internally so the next steps know where it is
@@ -38,7 +39,7 @@ abstract class BaseHeuristicBehavior implements BehaviorModelInterface
         }
 
         // 3. Allocate remaining Action Points (attacks / blocks)
-        $combatActions = $this->allocateActionPoints($npc, $target, $battle);
+        $combatActions = $this->allocateActionPoints($npc, $target, $battle, $hasMoved);
         foreach ($combatActions as $combatAct) {
             $actions[] = $combatAct;
         }
@@ -124,5 +125,5 @@ abstract class BaseHeuristicBehavior implements BehaviorModelInterface
      * Define how the NPC allocates its AP between attacks and blocks.
      * @return TurnAction[]
      */
-    abstract protected function allocateActionPoints(Combatant $npc, Combatant $target, Battle $battle): array;
+    abstract protected function allocateActionPoints(Combatant $npc, Combatant $target, Battle $battle, bool $hasMoved = false): array;
 }

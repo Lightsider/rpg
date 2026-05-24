@@ -92,16 +92,21 @@ class AggressiveBehavior extends BaseHeuristicBehavior
         return $actions;
     }
 
-    protected function allocateActionPoints(Combatant $npc, Combatant $target, Battle $battle): array
+    protected function allocateActionPoints(Combatant $npc, Combatant $target, Battle $battle, bool $hasMoved = false): array
     {
         $actions = [];
         $baseAp = $npc->getCurrentActionPoints();
+        if ($hasMoved) {
+            $baseAp = max(0, $baseAp - 1);
+        }
         $bonusOffhandAp = $npc->getBonusOffhandAP();
         $map = $battle->getMap();
 
-        if (!$map->isAdjacent($npc->getX(), $npc->getY(), $target->getX(), $target->getY())) {
-            // Cannot attack, dump into blocks
-            return $this->createBlockActions($npc, $baseAp + $bonusOffhandAp);
+        if ($hasMoved || !$map->isAdjacent($npc->getX(), $npc->getY(), $target->getX(), $target->getY())) {
+            // Cannot attack, dump into blocks.
+            // If we moved, we only have remaining baseAp. If we didn't move, we have baseAp + bonusOffhandAp.
+            $blocksCount = $hasMoved ? $baseAp : ($baseAp + $bonusOffhandAp);
+            return $this->createBlockActions($npc, $blocksCount);
         }
 
         $expectedIncoming = $this->calculateExpectedIncomingDamage($npc, $battle, 1);

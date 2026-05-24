@@ -38,6 +38,14 @@ class MapGenerator
                 $targetHeight
             );
 
+            // Sync the actual map dimensions to the battles table so that
+            // Battle::queueAction validates coordinates against the real map size.
+            \App\Infrastructure\Eloquent\Models\BattleModel::where('id', $fight->getId())
+                ->update([
+                    'map_width' => $map->width,
+                    'map_height' => $map->height,
+                ]);
+
             // Map generation creates a rectangular map and assigns starting tiles to current fighters.
             $startY = intdiv($map->height, self::STARTING_ROW_DIVISOR);
             $leftX = self::STARTING_LEFT_X;

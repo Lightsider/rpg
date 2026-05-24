@@ -164,4 +164,52 @@ class AggressiveBehaviorTest extends TestCase
 
         $this->assertNull($moveAction, "NPC should NOT move back when a teammate is nearby.");
     }
+
+    public function test_aggressive_behavior_does_not_attack_after_movement(): void
+    {
+        // NPC is at (3,3) (not adjacent to target at (1,1) -> will move).
+        $npc = $this->createMockCombatant(-1, 3, 3, 100, 100, 2, true);
+        $npc->method('getCurrentActionPoints')->willReturn(3);
+        $npc->method('getBonusOffhandAP')->willReturn(1); // Has dagger
+        $npc->method('getMaxAttacks')->willReturn(2);
+
+        $enemy = $this->createMockCombatant(1, 1, 1, 100, 100, 1);
+
+        $map = new Map(5, 5);
+        $battle = $this->createMock(Battle::class);
+        $battle->method('getMap')->willReturn($map);
+        $battle->method('getParticipants')->willReturn([$npc, $enemy]);
+        
+        $battle->method('getParticipantTeam')->willReturnMap([
+            [-1, '2'],
+            [1, '1'],
+        ]);
+
+        $actions = $this->behavior->decide($npc, $battle);
+
+        $hasMove = false;
+        $attackCount = 0;
+        $offhandCount = 0;
+        $blockCount = 0;
+
+        foreach ($actions as $action) {
+            if ($action->getType() === ActionType::MOVE) {
+                $hasMove = true;
+            } elseif ($action->getType() === ActionType::ATTACK) {
+                $attackCount++;
+            } elseif ($action->getType() === ActionType::ATTACK_OFFHAND) {
+                $offhandCount++;
+            } elseif ($action->getType() === ActionType::DEFEND) {
+                $blockCount++;
+            }
+        }
+
+        $this->assertTrue($hasMove, "NPC should move to get closer to the target.");
+        $this->assertEquals(0, $attackCount, "NPC should NOT perform main attack after moving.");
+        $this->assertEquals(0, $offhandCount, "NPC should NOT perform offhand attack after moving.");
+        // Base AP is 3. Moving takes 1 AP, leaving 2 base AP.
+        // Dagger bonus AP is for offhand attack only, and cannot be used for blocks since we moved.
+        // So exactly 2 blocks should be performed.
+        $this->assertEquals(2, $blockCount, "NPC should allocate remaining base AP (2) to blocks.");
+    }
 }
