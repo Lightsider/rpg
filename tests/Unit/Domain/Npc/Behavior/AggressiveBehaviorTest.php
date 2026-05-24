@@ -126,4 +126,42 @@ class AggressiveBehaviorTest extends TestCase
         $this->assertEquals(1, $offhandCount);
         $this->assertEquals(3, $blockCount);
     }
+
+    public function test_aggressive_behavior_does_not_flee_1v2_if_teammate_nearby(): void
+    {
+        // NPC is at (1,1). Enemies are at (1,0) and (0,1).
+        // Teammate is nearby at (1,2) (distance = 1).
+        // Attacker NPC should fight and NOT move.
+        $npc = $this->createMockCombatant(-1, 1, 1, 100, 100, 2, true);
+        $npc->method('getCurrentActionPoints')->willReturn(3);
+        $npc->method('getMaxAttacks')->willReturn(2);
+        
+        $enemy1 = $this->createMockCombatant(1, 1, 0, 100, 100, 1);
+        $enemy2 = $this->createMockCombatant(2, 0, 1, 100, 100, 1);
+        $teammate = $this->createMockCombatant(3, 1, 2, 100, 100, 2);
+
+        $map = new Map(5, 5);
+        $battle = $this->createMock(Battle::class);
+        $battle->method('getMap')->willReturn($map);
+        $battle->method('getParticipants')->willReturn([$npc, $enemy1, $enemy2, $teammate]);
+        
+        $battle->method('getParticipantTeam')->willReturnMap([
+            [-1, '2'],
+            [1, '1'],
+            [2, '1'],
+            [3, '2'],
+        ]);
+
+        $actions = $this->behavior->decide($npc, $battle);
+
+        $moveAction = null;
+        foreach ($actions as $action) {
+            if ($action->getType() === ActionType::MOVE) {
+                $moveAction = $action;
+                break;
+            }
+        }
+
+        $this->assertNull($moveAction, "NPC should NOT move back when a teammate is nearby.");
+    }
 }

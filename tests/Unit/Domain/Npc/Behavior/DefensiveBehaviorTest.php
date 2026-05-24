@@ -30,6 +30,7 @@ class DefensiveBehaviorTest extends TestCase
         $mock->method('getY')->willReturn($y);
         $mock->method('getCurrentHp')->willReturn($hp);
         $mock->method('isNpc')->willReturn($isNpc);
+        $mock->method('getMaxHp')->willReturn(100);
         
         // Needed for heuristics calculation to not crash
         $weaponMock = $this->createMock(\App\Domain\Weapon\Weapon::class);
@@ -118,5 +119,42 @@ class DefensiveBehaviorTest extends TestCase
         // Expected: 2 attacks, 2 blocks (AP = 3 base, minus 2 attacks = 1 base leftover + 1 bonus = 2 blocks)
         $this->assertEquals(2, $attackCount);
         $this->assertEquals(2, $blockCount);
+    }
+
+    public function test_defensive_behavior_moves_back_when_hp_is_low(): void
+    {
+        // NPC is at (1,1) with low HP (10 / 100). Target is at (1,0).
+        $npc = $this->createMockCombatant(-1, 1, 1, 10, 2, true);
+        $npc->method('getCurrentActionPoints')->willReturn(3);
+        $npc->method('getBonusDefensiveAP')->willReturn(1);
+        $npc->method('getMaxAttacks')->willReturn(2);
+
+        $enemy = $this->createMockCombatant(1, 1, 0, 100, 1);
+
+        $map = new Map(5, 5);
+        $battle = $this->createMock(Battle::class);
+        $battle->method('getMap')->willReturn($map);
+        $battle->method('getParticipants')->willReturn([$npc, $enemy]);
+        
+        $battle->method('getParticipantTeam')->willReturnMap([
+            [-1, '2'],
+            [1, '1'],
+        ]);
+
+        $actions = $this->behavior->decide($npc, $battle);
+
+        $moveAction = null;
+        foreach ($actions as $action) {
+            if ($action->getType() === ActionType::MOVE) {
+                $moveAction = $action;
+                break;
+            }
+        }
+
+        $this->assertNotNull($moveAction, "NPC should move back when HP is low.");
+        $this->assertEquals(1, $moveAction->getFromX());
+        $this->assertEquals(1, $moveAction->getFromY());
+        // Cell should be non-adjacent to the target (1,0). E.g. (1,2) or (2,2)
+        $this->assertFalse($map->isAdjacent($moveAction->getToX(), $moveAction->getToY(), 1, 0));
     }
 }

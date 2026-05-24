@@ -18,13 +18,59 @@ class DefensiveBehavior extends BaseHeuristicBehavior
         $apRemaining = $npc->getCurrentActionPoints();
         $map = $battle->getMap();
 
-        // If already adjacent, no need to move
-        if ($map->isAdjacent($npc->getX(), $npc->getY(), $target->getX(), $target->getY())) {
+        if ($apRemaining <= 0) {
             return [];
         }
 
-        if ($apRemaining <= 0) {
-            return [];
+        $isAdjacent = $map->isAdjacent($npc->getX(), $npc->getY(), $target->getX(), $target->getY());
+
+        if ($isAdjacent) {
+            $isLowHp = $npc->getCurrentHp() < $npc->getMaxHp() * 0.3;
+            if (!$isLowHp) {
+                return [];
+            }
+
+            // Low HP and adjacent -> try to move back (retreat)
+            $bestCell = null;
+            $bestScore = PHP_INT_MAX;
+
+            for ($dx = -1; $dx <= 1; $dx++) {
+                for ($dy = -1; $dy <= 1; $dy++) {
+                    if ($dx === 0 && $dy === 0) continue;
+
+                    $nx = $npc->getX() + $dx;
+                    $ny = $npc->getY() + $dy;
+
+                    if (!$map->isWithinBounds($nx, $ny)) continue;
+                    if ($this->isCellOccupied($nx, $ny, $npc->getId(), $battle)) continue;
+
+                    // Must NOT be adjacent to the target
+                    if ($map->isAdjacent($nx, $ny, $target->getX(), $target->getY())) continue;
+
+                    $dist = abs($nx - $target->getX()) + abs($ny - $target->getY());
+                    $enemiesAdjacent = $this->getAdjacentEnemiesCount($nx, $ny, $npc, $battle);
+
+                    $score = ($enemiesAdjacent * 10) + $dist;
+
+                    if ($score < $bestScore) {
+                        $bestScore = $score;
+                        $bestCell = ['x' => $nx, 'y' => $ny];
+                    }
+                }
+            }
+
+            if ($bestCell !== null) {
+                $actions[] = new TurnAction(
+                    characterId: $npc->getId(),
+                    type: ActionType::MOVE,
+                    fromX: $npc->getX(),
+                    fromY: $npc->getY(),
+                    toX: $bestCell['x'],
+                    toY: $bestCell['y']
+                );
+            }
+
+            return $actions;
         }
 
         $bestCell = null;

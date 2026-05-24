@@ -27,8 +27,9 @@ class AggressiveBehavior extends BaseHeuristicBehavior
 
         // Fear mechanic: If we are adjacent to the target but surrounded by >= 2 enemies, 
         // we might want to step away into a 1v1 tile if it still keeps us adjacent to the target.
-        if ($isAdjacent && $currentAdjacencyCount < 2) {
-            return []; // Safe and adjacent, stay here.
+        // However, if we have a teammate nearby, we fight and do not retreat.
+        if ($isAdjacent && ($currentAdjacencyCount < 2 || $this->hasTeammateNearby($npc, $battle))) {
+            return []; // Safe/adjacent, or has teammate nearby -> stay and fight.
         }
 
         $bestCell = null;
@@ -167,6 +168,27 @@ class AggressiveBehavior extends BaseHeuristicBehavior
                 continue;
             }
             if ($participant->getX() === $x && $participant->getY() === $y) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function hasTeammateNearby(Combatant $npc, Battle $battle): bool
+    {
+        $myTeam = $battle->getParticipantTeam($npc->getId());
+        foreach ($battle->getParticipants() as $participant) {
+            if ($participant->getId() === $npc->getId() || $participant->getCurrentHp() <= 0) {
+                continue;
+            }
+            if ($battle->getParticipantTeam($participant->getId()) !== $myTeam) {
+                continue;
+            }
+
+            $distX = abs($npc->getX() - $participant->getX());
+            $distY = abs($npc->getY() - $participant->getY());
+            $dist = max($distX, $distY);
+            if ($dist <= 2) {
                 return true;
             }
         }
