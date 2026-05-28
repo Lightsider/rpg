@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Eloquent\Repositories;
 
-use App\Domain\Battle\Map;
+use App\Infrastructure\Eloquent\Models\BattleModel;
 use App\Infrastructure\Eloquent\Models\FightMapModel;
 use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 
 class MapGenerationStateRepository
 {
-    public function ensureMap(int $fightId, int $width, int $height): FightMapModel
+    /**
+     * @return array{width:int, height:int}
+     */
+    public function ensureMap(int $fightId, int $width, int $height): array
     {
         $map = FightMapModel::firstOrCreate(
             ['fight_id' => $fightId],
@@ -23,7 +26,18 @@ class MapGenerationStateRepository
             $map->save();
         }
 
-        return $map;
+        return [
+            'width' => (int) $map->width,
+            'height' => (int) $map->height,
+        ];
+    }
+
+    public function syncBattleMapDimensions(int $fightId, int $width, int $height): void
+    {
+        BattleModel::where('id', $fightId)->update([
+            'map_width' => $width,
+            'map_height' => $height,
+        ]);
     }
 
     public function moveAllPositionsOffMap(int $fightId): void
@@ -41,4 +55,3 @@ class MapGenerationStateRepository
         );
     }
 }
-

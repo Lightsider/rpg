@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Application\Contracts\CharacterStateRepositoryInterface;
 use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Item\Repositories\CharacterItemRepositoryInterface;
 use App\Domain\Item\Repositories\ItemRepositoryInterface;
-use App\Infrastructure\Eloquent\Repositories\CharacterStateReadWriteRepository;
 
 class BackpackReadService
 {
@@ -15,7 +15,7 @@ class BackpackReadService
         private readonly InventoryPayloadAssembler $payloadAssembler,
         private readonly CharacterItemRepositoryInterface $characterItemRepository,
         private readonly ItemRepositoryInterface $itemRepository,
-        private readonly CharacterStateReadWriteRepository $characterStateRepository
+        private readonly CharacterStateRepositoryInterface $characterStateRepository
     ) {
     }
 

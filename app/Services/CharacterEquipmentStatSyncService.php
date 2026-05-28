@@ -4,24 +4,27 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Application\Contracts\CharacterStateRepositoryInterface;
 use App\Domain\Armor\Armor;
+use App\Domain\DomainException;
+use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Item\Repositories\ItemRepositoryInterface;
 use App\Domain\Weapon\Weapon;
-use App\Infrastructure\Eloquent\Models\CharacterModel;
 
 class CharacterEquipmentStatSyncService
 {
     public function __construct(
         private readonly CharacterStatService $statService,
         private readonly ItemRepositoryInterface $itemRepository,
-        private readonly CharacterEquipmentSnapshotService $snapshotService
+        private readonly CharacterEquipmentSnapshotService $snapshotService,
+        private readonly CharacterStateRepositoryInterface $characterStateRepository
     ) {
     }
 
-    public function getMaxHpMultiplier(CharacterModel $character): float
+    public function getMaxHpMultiplier(int $characterId): float
     {
         $multiplier = 0.0;
-        foreach ($this->snapshotService->getEquippedItems($character) as $item) {
+        foreach ($this->snapshotService->getEquippedItems($characterId) as $item) {
             if (method_exists($item, 'getMaxHpMultiplier')) {
                 $multiplier += $item->getMaxHpMultiplier();
             }
@@ -30,31 +33,38 @@ class CharacterEquipmentStatSyncService
         return $multiplier;
     }
 
-    public function recalculateHpOnEquipmentChange(CharacterModel $character, float $oldMultiplier): void
+    public function recalculateHpOnEquipmentChange(int $characterId, float $oldMultiplier): void
     {
-        $baseHp = $this->statService->calculateHp((int) ($character->constitution ?? 0));
-        $newMultiplier = $this->getMaxHpMultiplier($character);
+        $hpState = $this->characterStateRepository->getHpState($characterId);
+        if ($hpState === null) {
+            throw new DomainException('Character not found.');
+        }
+
+        $baseHp = $this->statService->calculateHp($hpState['constitution']);
+        $newMultiplier = $this->getMaxHpMultiplier($characterId);
 
         $oldMax = (int) ceil($baseHp * (1.0 + $oldMultiplier));
         $newMax = (int) ceil($baseHp * (1.0 + $newMultiplier));
 
-        $current = (int) ($character->hp ?? $baseHp);
+        $current = $hpState['hp'];
         $newCurrent = $oldMax > 0
             ? (int) round(($current / $oldMax) * $newMax)
             : $newMax;
 
-        $character->max_hp = $baseHp;
-        $character->hp = (int) max(0, min($newMax, $newCurrent));
+        $this->characterStateRepository->updateHpState(
+            $characterId,
+            (int) max(0, min($newMax, $newCurrent)),
+            $baseHp
+        );
     }
 
-    public function recalculateArmArmor(CharacterModel $character): void
+    public function recalculateArmArmor(int $characterId): void
     {
-        $chestArmor = $this->getArmorValueById($character->chest_id);
-        $glovesArmor = $this->getArmorValueById($character->gloves_id);
+        $itemIds = $this->characterStateRepository->getEquipmentItemIds($characterId);
+        $chestArmor = $this->getArmorValueById($itemIds[EquipmentSlot::CHEST->value]);
+        $glovesArmor = $this->getArmorValueById($itemIds[EquipmentSlot::GLOVES->value]);
         $armValue = ($chestArmor * 0.5) + ($glovesArmor * 0.5);
-        $armValue = (float) max(0, (int) round($armValue));
-        $character->ad_armor_left_arm = $armValue;
-        $character->ad_armor_right_arm = $armValue;
+        $this->characterStateRepository->setArmArmorValues($characterId, $armValue, $armValue);
     }
 
     public function resolveLegacyWeaponName(int $weaponId): ?string
@@ -82,4 +92,3 @@ class CharacterEquipmentStatSyncService
         return $item instanceof Armor ? (float) $item->getAdArmor() : 0.0;
     }
 }
-

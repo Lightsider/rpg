@@ -4,113 +4,106 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Application\Contracts\CharacterStateRepositoryInterface;
 use App\Domain\Armor\Armor;
+use App\Domain\DomainException;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Item\Item;
 use App\Domain\Item\Repositories\ItemRepositoryInterface;
 use App\Domain\Seal\Seal;
 use App\Domain\Weapon\Weapon;
-use App\Infrastructure\Eloquent\Models\CharacterModel;
 
 class CharacterEquipmentSnapshotService
 {
     public function __construct(
-        private readonly ItemRepositoryInterface $itemRepository
+        private readonly ItemRepositoryInterface $itemRepository,
+        private readonly CharacterStateRepositoryInterface $characterStateRepository
     ) {
     }
 
-    public function buildCharacterDomain(CharacterModel $model): \App\Domain\Character\Character
+    public function buildCharacterDomain(int $characterId): \App\Domain\Character\Character
     {
-        $equipment = new Equipment();
+        $snapshot = $this->characterStateRepository->getCharacterEquipmentSnapshot($characterId);
+        if ($snapshot === null) {
+            throw new DomainException('Character not found.');
+        }
 
-        $mainHand = $this->itemRepository->findById((int) ($model->weapon_id ?? 0));
+        $equipment = new Equipment();
+        $itemIds = $snapshot['equipment'];
+
+        $mainHand = $this->findItem($itemIds[EquipmentSlot::MAIN_HAND->value]);
         if ($mainHand instanceof Weapon) {
             $equipment->setItem(EquipmentSlot::MAIN_HAND, $mainHand);
         }
 
-        $offHand = $this->itemRepository->findById((int) ($model->off_hand_id ?? 0));
+        $offHand = $this->findItem($itemIds[EquipmentSlot::OFF_HAND->value]);
         if ($offHand instanceof Armor || $offHand instanceof Weapon) {
             $equipment->setItem(EquipmentSlot::OFF_HAND, $offHand);
         }
 
         foreach ([1, 2, 3, 4] as $i) {
-            $idField = "seal_{$i}_id";
-            if ($model->{$idField}) {
-                $item = $this->itemRepository->findById((int) $model->{$idField});
-                if ($item instanceof Seal) {
-                    $slot = constant("App\\Domain\\Equipment\\EquipmentSlot::SEAL_{$i}");
-                    $equipment->setItem($slot, $item);
-                }
+            $slot = constant("App\\Domain\\Equipment\\EquipmentSlot::SEAL_{$i}");
+            $item = $this->findItem($itemIds[$slot->value]);
+            if ($item instanceof Seal) {
+                $equipment->setItem($slot, $item);
             }
         }
 
-        $armorFields = [
-'helmet_id' => EquipmentSlot::HELMET,
-'chest_id' => EquipmentSlot::CHEST,
-'legs_id' => EquipmentSlot::LEGS,
-'gloves_id' => EquipmentSlot::GLOVES,
-        ];
-
-        foreach ($armorFields as $field => $slot) {
-            if ($model->{$field}) {
-                $item = $this->itemRepository->findById((int) $model->{$field});
-                if ($item instanceof Armor) {
-                    $equipment->setItem($slot, $item);
-                }
+        foreach ([EquipmentSlot::HELMET, EquipmentSlot::CHEST, EquipmentSlot::LEGS, EquipmentSlot::GLOVES] as $slot) {
+            $item = $this->findItem($itemIds[$slot->value]);
+            if ($item instanceof Armor) {
+                $equipment->setItem($slot, $item);
             }
         }
 
         return new \App\Domain\Character\Character(
-            id: $model->id,
-            userId: $model->user_id,
-            name: $model->name,
-            strength: (int) $model->strength,
-            agility: (int) $model->dexterity,
-            constitution: (int) $model->constitution,
-            wit: (int) $model->wit,
-            maxHp: (int) $model->max_hp,
-            currentHp: (int) $model->hp,
+            id: $snapshot['id'],
+            userId: $snapshot['user_id'],
+            name: $snapshot['name'],
+            strength: $snapshot['strength'],
+            agility: $snapshot['dexterity'],
+            constitution: $snapshot['constitution'],
+            wit: $snapshot['wit'],
+            maxHp: $snapshot['max_hp'],
+            currentHp: $snapshot['hp'],
             equipment: $equipment,
-            locationId: (int) $model->location_id,
-            level: (int) ($model->level ?? 1),
+            locationId: $snapshot['location_id'],
+            level: $snapshot['level'],
         );
     }
 
-
-    public function getMainHandWeapon(CharacterModel $character): ?Weapon
+    public function getMainHandWeapon(int $characterId): ?Weapon
     {
-        $item = $this->itemRepository->findById((int) ($character->weapon_id ?? 0));
+        $itemIds = $this->characterStateRepository->getEquipmentItemIds($characterId);
+        $item = $this->findItem($itemIds[EquipmentSlot::MAIN_HAND->value]);
+
         return $item instanceof Weapon ? $item : null;
     }
-
 
     /**
      * @return array<int, Item>
      */
-    public function getEquippedItems(CharacterModel $character): array
+    public function getEquippedItems(int $characterId): array
     {
-        $ids = array_filter([
-            $character->weapon_id,
-            $character->off_hand_id,
-            $character->seal_1_id,
-            $character->seal_2_id,
-            $character->seal_3_id,
-            $character->seal_4_id,
-            $character->helmet_id,
-            $character->chest_id,
-            $character->legs_id,
-            $character->gloves_id,
-        ], static fn ($id) => $id !== null);
+        $ids = array_filter(
+            $this->characterStateRepository->getEquipmentItemIds($characterId),
+            static fn (?int $id) => $id !== null
+        );
 
         $items = [];
         foreach (array_unique($ids) as $id) {
-            $item = $this->itemRepository->findById((int) $id);
+            $item = $this->findItem($id);
             if ($item) {
                 $items[] = $item;
             }
         }
 
         return $items;
+    }
+
+    private function findItem(?int $itemId): ?Item
+    {
+        return $itemId === null ? null : $this->itemRepository->findById($itemId);
     }
 }

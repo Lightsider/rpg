@@ -4,91 +4,44 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Application\Contracts\CharacterStateRepositoryInterface;
 use App\Domain\Equipment\EquipmentSlot;
-use App\Infrastructure\Eloquent\Models\CharacterModel;
 
 class CharacterEquipmentSlotStateService
 {
-    /** @var array<string, string> */
-    private const SEAL_SLOT_FIELDS = [
-        EquipmentSlot::SEAL_1->value => 'seal_1_id',
-        EquipmentSlot::SEAL_2->value => 'seal_2_id',
-        EquipmentSlot::SEAL_3->value => 'seal_3_id',
-        EquipmentSlot::SEAL_4->value => 'seal_4_id',
-    ];
-
-    /** @var array<string, string> */
-    private const ARMOR_SLOT_FIELDS = [
-        EquipmentSlot::HELMET->value => 'helmet_id',
-        EquipmentSlot::CHEST->value => 'chest_id',
-        EquipmentSlot::LEGS->value => 'legs_id',
-        EquipmentSlot::GLOVES->value => 'gloves_id',
-    ];
-
-    /** @var array<string, string> */
-    private const ARMOR_VALUE_FIELDS = [
-        EquipmentSlot::HELMET->value => 'ad_armor_head',
-        EquipmentSlot::CHEST->value => 'ad_armor_chest',
-        EquipmentSlot::LEGS->value => 'ad_armor_legs',
-        EquipmentSlot::GLOVES->value => 'ad_armor_hands',
-    ];
-
-    public function getSealSlotId(CharacterModel $character, EquipmentSlot $slot): ?int
-    {
-        return $this->getSlotItemId($character, self::SEAL_SLOT_FIELDS, $slot);
+    public function __construct(
+        private readonly CharacterStateRepositoryInterface $characterStateRepository
+    ) {
     }
 
-    public function setSealSlotId(CharacterModel $character, EquipmentSlot $slot, ?int $itemId): void
+    public function getSealSlotId(int $characterId, EquipmentSlot $slot): ?int
     {
-        $this->setSlotItemId($character, self::SEAL_SLOT_FIELDS, $slot, $itemId);
+        return $this->getSlotItemId($characterId, $slot);
     }
 
-    public function getArmorSlotId(CharacterModel $character, EquipmentSlot $slot): ?int
+    public function setSealSlotId(int $characterId, EquipmentSlot $slot, ?int $itemId): void
     {
-        return $this->getSlotItemId($character, self::ARMOR_SLOT_FIELDS, $slot);
+        $this->characterStateRepository->setEquipmentSlotItemId($characterId, $slot, $itemId);
     }
 
-    public function setArmorSlotId(CharacterModel $character, EquipmentSlot $slot, ?int $itemId): void
+    public function getArmorSlotId(int $characterId, EquipmentSlot $slot): ?int
     {
-        $this->setSlotItemId($character, self::ARMOR_SLOT_FIELDS, $slot, $itemId);
+        return $this->getSlotItemId($characterId, $slot);
     }
 
-    public function setArmorValueForSlot(CharacterModel $character, EquipmentSlot $slot, float $value): void
+    public function setArmorSlotId(int $characterId, EquipmentSlot $slot, ?int $itemId): void
     {
-        $value = (float) max(0, (int) round($value));
-        $slotField = self::ARMOR_VALUE_FIELDS[$slot->value] ?? null;
-        if ($slotField === null) {
-            return;
-        }
-
-        $character->{$slotField} = $value;
+        $this->characterStateRepository->setEquipmentSlotItemId($characterId, $slot, $itemId);
     }
 
-    /**
-     * @param array<string, string> $slotFields
-     */
-    private function getSlotItemId(CharacterModel $character, array $slotFields, EquipmentSlot $slot): ?int
+    public function setArmorValueForSlot(int $characterId, EquipmentSlot $slot, float $value): void
     {
-        $field = $slotFields[$slot->value] ?? null;
-        if ($field === null) {
-            return null;
-        }
-
-        $value = $character->{$field};
-        return $value ? (int) $value : null;
+        $this->characterStateRepository->setArmorValueForSlot($characterId, $slot, $value);
     }
 
-    /**
-     * @param array<string, string> $slotFields
-     */
-    private function setSlotItemId(CharacterModel $character, array $slotFields, EquipmentSlot $slot, ?int $itemId): void
+    private function getSlotItemId(int $characterId, EquipmentSlot $slot): ?int
     {
-        $field = $slotFields[$slot->value] ?? null;
-        if ($field === null) {
-            return;
-        }
-
-        $character->{$field} = $itemId;
+        $itemIds = $this->characterStateRepository->getEquipmentItemIds($characterId);
+        return $itemIds[$slot->value] ?? null;
     }
 }
-

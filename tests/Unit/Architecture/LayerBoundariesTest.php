@@ -123,13 +123,7 @@ class LayerBoundariesTest extends TestCase
     public function test_services_do_not_reference_eloquent_models_without_whitelist(): void
     {
         $basePath = __DIR__ . '/../../../app/Services';
-        $allowedFiles = [
-            '/BackpackMutationService.php',
-            '/CharacterEquipmentSnapshotService.php',
-            '/CharacterEquipmentSlotStateService.php',
-            '/CharacterEquipmentStatSyncService.php',
-            '/CharacterLookupService.php',
-        ];
+        $allowedFiles = [];
 
         $violations = [];
         $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($basePath));

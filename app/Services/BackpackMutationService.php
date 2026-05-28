@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Application\Contracts\CharacterStateRepositoryInterface;
 use App\Application\Contracts\TransactionInterface;
 use App\Domain\Armor\Armor;
 use App\Domain\DomainException;
@@ -16,7 +17,6 @@ use App\Domain\Item\Repositories\CharacterItemRepositoryInterface;
 use App\Domain\Item\Repositories\ItemRepositoryInterface;
 use App\Domain\Seal\Seal;
 use App\Domain\Weapon\Weapon;
-use App\Infrastructure\Eloquent\Models\CharacterModel;
 
 class BackpackMutationService
 {
@@ -24,23 +24,23 @@ class BackpackMutationService
         private readonly EquipmentService $equipmentService,
         private readonly EquipmentRules $equipmentRules,
         private readonly TransactionInterface $transaction,
-        private readonly CharacterLookupService $characterLookup,
         private readonly CharacterItemRepositoryInterface $characterItemRepository,
         private readonly ItemRepositoryInterface $itemRepository,
+        private readonly CharacterStateRepositoryInterface $characterStateRepository,
         private readonly CharacterEquipmentSnapshotService $snapshotService,
         private readonly CharacterEquipmentStatSyncService $statSyncService,
         private readonly CharacterEquipmentSlotStateService $slotStateService
     ) {
     }
 
-    public function equipItem(CharacterModel $character, int $itemId, string $slot): void
+    public function equipItemByCharacterId(int $characterId, int $itemId, string $slot): void
     {
         $slotEnum = EquipmentSlot::tryFrom($slot);
         if (!$slotEnum) {
             throw new DomainException('Invalid equipment slot.');
         }
 
-        if ($this->characterItemRepository->getQuantity((int) $character->id, $itemId) < 1) {
+        if ($this->characterItemRepository->getQuantity($characterId, $itemId) < 1) {
             throw new DomainException('Item is not in backpack.');
         }
 
@@ -50,57 +50,22 @@ class BackpackMutationService
         }
 
         if ($slotEnum === EquipmentSlot::MAIN_HAND) {
-            $this->equipMainHand($character, $itemId, $item);
+            $this->equipMainHand($characterId, $itemId, $item);
             return;
         }
 
         if ($slotEnum === EquipmentSlot::OFF_HAND) {
-            $this->equipOffHand($character, $itemId, $item, $slotEnum);
+            $this->equipOffHand($characterId, $itemId, $item, $slotEnum);
             return;
         }
 
         if ($this->equipmentRules->isSealSlot($slotEnum)) {
-            $this->equipSeal($character, $itemId, $item, $slotEnum);
+            $this->equipSeal($characterId, $itemId, $item, $slotEnum);
             return;
         }
 
         if ($this->equipmentRules->isArmorSlot($slotEnum)) {
-            $this->equipArmor($character, $itemId, $item, $slotEnum);
-            return;
-        }
-
-        throw new DomainException('Invalid equipment slot.');
-    }
-
-    public function equipItemByCharacterId(int $characterId, int $itemId, string $slot): void
-    {
-        $this->equipItem($this->characterLookup->requireById($characterId), $itemId, $slot);
-    }
-
-    public function unequipItem(CharacterModel $character, string $slot): void
-    {
-        $slotEnum = EquipmentSlot::tryFrom($slot);
-        if (!$slotEnum) {
-            throw new DomainException('Invalid equipment slot.');
-        }
-
-        if ($slotEnum === EquipmentSlot::MAIN_HAND) {
-            $this->unequipMainHand($character);
-            return;
-        }
-
-        if ($slotEnum === EquipmentSlot::OFF_HAND) {
-            $this->unequipOffHand($character);
-            return;
-        }
-
-        if ($this->equipmentRules->isSealSlot($slotEnum)) {
-            $this->unequipSeal($character, $slotEnum);
-            return;
-        }
-
-        if ($this->equipmentRules->isArmorSlot($slotEnum)) {
-            $this->unequipArmor($character, $slotEnum);
+            $this->equipArmor($characterId, $itemId, $item, $slotEnum);
             return;
         }
 
@@ -109,19 +74,44 @@ class BackpackMutationService
 
     public function unequipItemByCharacterId(int $characterId, string $slot): void
     {
-        $this->unequipItem($this->characterLookup->requireById($characterId), $slot);
+        $slotEnum = EquipmentSlot::tryFrom($slot);
+        if (!$slotEnum) {
+            throw new DomainException('Invalid equipment slot.');
+        }
+
+        if ($slotEnum === EquipmentSlot::MAIN_HAND) {
+            $this->unequipMainHand($characterId);
+            return;
+        }
+
+        if ($slotEnum === EquipmentSlot::OFF_HAND) {
+            $this->unequipOffHand($characterId);
+            return;
+        }
+
+        if ($this->equipmentRules->isSealSlot($slotEnum)) {
+            $this->unequipSeal($characterId, $slotEnum);
+            return;
+        }
+
+        if ($this->equipmentRules->isArmorSlot($slotEnum)) {
+            $this->unequipArmor($characterId, $slotEnum);
+            return;
+        }
+
+        throw new DomainException('Invalid equipment slot.');
     }
 
-    public function validateEquippedItems(CharacterModel $character): array
+    public function validateEquippedItemsByCharacterId(int $characterId): array
     {
-        $charDomain = $this->snapshotService->buildCharacterDomain($character);
+        $charDomain = $this->snapshotService->buildCharacterDomain($characterId);
         $unequipped = [];
 
         foreach (EquipmentSlot::cases() as $slot) {
             $item = $charDomain->getEquipment()->getItem($slot);
             if ($item && !$charDomain->canEquip($item)) {
                 $unequipped[] = $item->getName();
-                $this->unequipItem($character, $slot->value);
+                $this->unequipItemByCharacterId($characterId, $slot->value);
             }
         }
 
@@ -129,20 +119,15 @@ class BackpackMutationService
         $offHand = $charDomain->getEquipment()->getItem(EquipmentSlot::OFF_HAND);
         if ($mainHand instanceof Weapon && $mainHand->isTwoHanded() && $offHand) {
             $unequipped[] = $offHand->getName();
-            $this->unequipItem($character, EquipmentSlot::OFF_HAND->value);
+            $this->unequipItemByCharacterId($characterId, EquipmentSlot::OFF_HAND->value);
         }
 
         return $unequipped;
     }
 
-    public function validateEquippedItemsByCharacterId(int $characterId): array
+    private function equipMainHand(int $characterId, int $itemId, Item $item): void
     {
-        return $this->validateEquippedItems($this->characterLookup->requireById($characterId));
-    }
-
-    private function equipMainHand(CharacterModel $character, int $itemId, Item $item): void
-    {
-        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($characterId);
         if (!$item instanceof Weapon) {
             throw new DomainException('Item cannot be equipped in that slot.');
         }
@@ -151,40 +136,40 @@ class BackpackMutationService
             throw new DomainException('Item cannot be equipped in that slot.');
         }
 
-        $charDomain = $this->snapshotService->buildCharacterDomain($character);
+        $charDomain = $this->snapshotService->buildCharacterDomain($characterId);
         if (!$charDomain->canEquip($item)) {
             throw new DomainException('You do not meet the requirements for this weapon.');
         }
 
-        $this->transaction->run(function () use ($character, $itemId, $oldMultiplier, $item) {
+        $this->transaction->run(function () use ($characterId, $itemId, $oldMultiplier, $item) {
+            $offHandId = $this->characterStateRepository->getEquipmentSlotItemId($characterId, EquipmentSlot::OFF_HAND);
+            $mainHandId = $this->characterStateRepository->getEquipmentSlotItemId($characterId, EquipmentSlot::MAIN_HAND);
             if ($item->isTwoHanded()) {
-                if ($character->off_hand_id !== null) {
+                if ($offHandId !== null) {
                     throw new DomainException('Offhand must be empty to equip a 2-handed weapon.');
                 }
-                if ($character->weapon_id !== null) {
+                if ($mainHandId !== null) {
                     throw new DomainException('Main hand must be empty to equip a 2-handed weapon.');
                 }
             }
 
-            if ($character->weapon_id && (int) $character->weapon_id !== $itemId) {
-                $this->addToBackpack($character, (int) $character->weapon_id, 1);
+            if ($mainHandId && $mainHandId !== $itemId) {
+                $this->addToBackpack($characterId, $mainHandId, 1);
             }
 
-            $this->removeFromBackpack($character, $itemId, 1);
+            $this->removeFromBackpack($characterId, $itemId, 1);
 
-            $character->weapon_id = $itemId;
-            $character->weapon = $this->resolveLegacyWeaponName($itemId);
-            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
-            $character->save();
+            $this->characterStateRepository->setMainHandWeapon($characterId, $itemId, $this->resolveLegacyWeaponName($itemId));
+            $this->statSyncService->recalculateHpOnEquipmentChange($characterId, $oldMultiplier);
         });
     }
 
-    private function equipOffHand(CharacterModel $character, int $itemId, Item $item, EquipmentSlot $slotEnum): void
+    private function equipOffHand(int $characterId, int $itemId, Item $item, EquipmentSlot $slotEnum): void
     {
-        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($characterId);
 
-        if ($character->weapon_id) {
-            $mainHandItem = $this->snapshotService->getMainHandWeapon($character);
+        if ($this->characterStateRepository->getEquipmentSlotItemId($characterId, EquipmentSlot::MAIN_HAND)) {
+            $mainHandItem = $this->snapshotService->getMainHandWeapon($characterId);
             if ($mainHandItem && $mainHandItem->isTwoHanded()) {
                 throw new DomainException('Cannot equip offhand item when a 2-handed weapon is equipped.');
             }
@@ -199,21 +184,21 @@ class BackpackMutationService
                 throw new DomainException('Item cannot be equipped in that slot.');
             }
 
-            $charDomain = $this->snapshotService->buildCharacterDomain($character);
+            $charDomain = $this->snapshotService->buildCharacterDomain($characterId);
             if (!$charDomain->canEquip($item)) {
                 throw new DomainException('You do not meet the requirements for this weapon.');
             }
 
-            $this->transaction->run(function () use ($character, $itemId, $oldMultiplier) {
-                if ($character->off_hand_id && (int) $character->off_hand_id !== $itemId) {
-                    $this->addToBackpack($character, (int) $character->off_hand_id, 1);
+            $this->transaction->run(function () use ($characterId, $itemId, $oldMultiplier) {
+                $offHandId = $this->characterStateRepository->getEquipmentSlotItemId($characterId, EquipmentSlot::OFF_HAND);
+                if ($offHandId && $offHandId !== $itemId) {
+                    $this->addToBackpack($characterId, $offHandId, 1);
                 }
 
-                $this->removeFromBackpack($character, $itemId, 1);
+                $this->removeFromBackpack($characterId, $itemId, 1);
 
-                $character->off_hand_id = $itemId;
-                $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
-                $character->save();
+                $this->characterStateRepository->setEquipmentSlotItemId($characterId, EquipmentSlot::OFF_HAND, $itemId);
+                $this->statSyncService->recalculateHpOnEquipmentChange($characterId, $oldMultiplier);
             });
 
             return;
@@ -227,27 +212,27 @@ class BackpackMutationService
             throw new DomainException('Item cannot be equipped in that slot.');
         }
 
-        $charDomain = $this->snapshotService->buildCharacterDomain($character);
+        $charDomain = $this->snapshotService->buildCharacterDomain($characterId);
         if (!$charDomain->canEquip($item)) {
             throw new DomainException('You do not meet the requirements for this shield.');
         }
 
-        $this->transaction->run(function () use ($character, $itemId, $oldMultiplier) {
-            if ($character->off_hand_id && (int) $character->off_hand_id !== $itemId) {
-                $this->addToBackpack($character, (int) $character->off_hand_id, 1);
+        $this->transaction->run(function () use ($characterId, $itemId, $oldMultiplier) {
+            $offHandId = $this->characterStateRepository->getEquipmentSlotItemId($characterId, EquipmentSlot::OFF_HAND);
+            if ($offHandId && $offHandId !== $itemId) {
+                $this->addToBackpack($characterId, $offHandId, 1);
             }
 
-            $this->removeFromBackpack($character, $itemId, 1);
+            $this->removeFromBackpack($characterId, $itemId, 1);
 
-            $character->off_hand_id = $itemId;
-            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
-            $character->save();
+            $this->characterStateRepository->setEquipmentSlotItemId($characterId, EquipmentSlot::OFF_HAND, $itemId);
+            $this->statSyncService->recalculateHpOnEquipmentChange($characterId, $oldMultiplier);
         });
     }
 
-    private function equipSeal(CharacterModel $character, int $itemId, Item $item, EquipmentSlot $slotEnum): void
+    private function equipSeal(int $characterId, int $itemId, Item $item, EquipmentSlot $slotEnum): void
     {
-        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($characterId);
         if (!$item instanceof Seal) {
             throw new DomainException('Item cannot be equipped in that slot.');
         }
@@ -256,28 +241,27 @@ class BackpackMutationService
             throw new DomainException('Item cannot be equipped in that slot.');
         }
 
-        $charDomain = $this->snapshotService->buildCharacterDomain($character);
+        $charDomain = $this->snapshotService->buildCharacterDomain($characterId);
         if (!$charDomain->canEquip($item)) {
             throw new DomainException('You do not meet the requirements for this seal.');
         }
 
-        $this->transaction->run(function () use ($character, $itemId, $slotEnum, $oldMultiplier) {
-            $currentSealId = $this->slotStateService->getSealSlotId($character, $slotEnum);
+        $this->transaction->run(function () use ($characterId, $itemId, $slotEnum, $oldMultiplier) {
+            $currentSealId = $this->slotStateService->getSealSlotId($characterId, $slotEnum);
             if ($currentSealId && $currentSealId !== $itemId) {
-                $this->addToBackpack($character, $currentSealId, 1);
+                $this->addToBackpack($characterId, $currentSealId, 1);
             }
 
-            $this->removeFromBackpack($character, $itemId, 1);
+            $this->removeFromBackpack($characterId, $itemId, 1);
 
-            $this->slotStateService->setSealSlotId($character, $slotEnum, $itemId);
-            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
-            $character->save();
+            $this->slotStateService->setSealSlotId($characterId, $slotEnum, $itemId);
+            $this->statSyncService->recalculateHpOnEquipmentChange($characterId, $oldMultiplier);
         });
     }
 
-    private function equipArmor(CharacterModel $character, int $itemId, Item $item, EquipmentSlot $slotEnum): void
+    private function equipArmor(int $characterId, int $itemId, Item $item, EquipmentSlot $slotEnum): void
     {
-        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($characterId);
         if (!$item instanceof Armor) {
             throw new DomainException('Item cannot be equipped in that slot.');
         }
@@ -290,104 +274,100 @@ class BackpackMutationService
             throw new DomainException('Item cannot be equipped in that slot.');
         }
 
-        $charDomain = $this->snapshotService->buildCharacterDomain($character);
+        $charDomain = $this->snapshotService->buildCharacterDomain($characterId);
         if (!$charDomain->canEquip($item)) {
             throw new DomainException('You do not meet the requirements for this armor.');
         }
 
-        $this->transaction->run(function () use ($character, $itemId, $slotEnum, $item, $oldMultiplier) {
-            $currentArmorId = $this->slotStateService->getArmorSlotId($character, $slotEnum);
+        $this->transaction->run(function () use ($characterId, $itemId, $slotEnum, $item, $oldMultiplier) {
+            $currentArmorId = $this->slotStateService->getArmorSlotId($characterId, $slotEnum);
             if ($currentArmorId && $currentArmorId !== $itemId) {
-                $this->addToBackpack($character, $currentArmorId, 1);
+                $this->addToBackpack($characterId, $currentArmorId, 1);
             }
 
-            $this->removeFromBackpack($character, $itemId, 1);
+            $this->removeFromBackpack($characterId, $itemId, 1);
 
-            $this->slotStateService->setArmorSlotId($character, $slotEnum, $itemId);
-            $this->slotStateService->setArmorValueForSlot($character, $slotEnum, $item->getAdArmor());
+            $this->slotStateService->setArmorSlotId($characterId, $slotEnum, $itemId);
+            $this->slotStateService->setArmorValueForSlot($characterId, $slotEnum, $item->getAdArmor());
             if (in_array($slotEnum, [EquipmentSlot::CHEST, EquipmentSlot::GLOVES], true)) {
-                $this->statSyncService->recalculateArmArmor($character);
+                $this->statSyncService->recalculateArmArmor($characterId);
             }
-            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
-            $character->save();
+            $this->statSyncService->recalculateHpOnEquipmentChange($characterId, $oldMultiplier);
         });
     }
 
-    private function unequipMainHand(CharacterModel $character): void
+    private function unequipMainHand(int $characterId): void
     {
-        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
-        if (!$character->weapon_id) {
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($characterId);
+        $mainHandId = $this->characterStateRepository->getEquipmentSlotItemId($characterId, EquipmentSlot::MAIN_HAND);
+        if (!$mainHandId) {
             throw new DomainException('No item equipped in that slot.');
         }
 
-        $this->transaction->run(function () use ($character, $oldMultiplier) {
-            $this->addToBackpack($character, (int) $character->weapon_id, 1);
-            $character->weapon_id = null;
-            $character->weapon = null;
-            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
-            $character->save();
+        $this->transaction->run(function () use ($characterId, $mainHandId, $oldMultiplier) {
+            $this->addToBackpack($characterId, $mainHandId, 1);
+            $this->characterStateRepository->setMainHandWeapon($characterId, null, null);
+            $this->statSyncService->recalculateHpOnEquipmentChange($characterId, $oldMultiplier);
         });
     }
 
-    private function unequipOffHand(CharacterModel $character): void
+    private function unequipOffHand(int $characterId): void
     {
-        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
-        if (!$character->off_hand_id) {
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($characterId);
+        $offHandId = $this->characterStateRepository->getEquipmentSlotItemId($characterId, EquipmentSlot::OFF_HAND);
+        if (!$offHandId) {
             throw new DomainException('No item equipped in that slot.');
         }
 
-        $this->transaction->run(function () use ($character, $oldMultiplier) {
-            $this->addToBackpack($character, (int) $character->off_hand_id, 1);
-            $character->off_hand_id = null;
-            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
-            $character->save();
+        $this->transaction->run(function () use ($characterId, $offHandId, $oldMultiplier) {
+            $this->addToBackpack($characterId, $offHandId, 1);
+            $this->characterStateRepository->setEquipmentSlotItemId($characterId, EquipmentSlot::OFF_HAND, null);
+            $this->statSyncService->recalculateHpOnEquipmentChange($characterId, $oldMultiplier);
         });
     }
 
-    private function unequipSeal(CharacterModel $character, EquipmentSlot $slotEnum): void
+    private function unequipSeal(int $characterId, EquipmentSlot $slotEnum): void
     {
-        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
-        $currentSealId = $this->slotStateService->getSealSlotId($character, $slotEnum);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($characterId);
+        $currentSealId = $this->slotStateService->getSealSlotId($characterId, $slotEnum);
         if (!$currentSealId) {
             throw new DomainException('No item equipped in that slot.');
         }
 
-        $this->transaction->run(function () use ($character, $slotEnum, $currentSealId, $oldMultiplier) {
-            $this->addToBackpack($character, $currentSealId, 1);
-            $this->slotStateService->setSealSlotId($character, $slotEnum, null);
-            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
-            $character->save();
+        $this->transaction->run(function () use ($characterId, $slotEnum, $currentSealId, $oldMultiplier) {
+            $this->addToBackpack($characterId, $currentSealId, 1);
+            $this->slotStateService->setSealSlotId($characterId, $slotEnum, null);
+            $this->statSyncService->recalculateHpOnEquipmentChange($characterId, $oldMultiplier);
         });
     }
 
-    private function unequipArmor(CharacterModel $character, EquipmentSlot $slotEnum): void
+    private function unequipArmor(int $characterId, EquipmentSlot $slotEnum): void
     {
-        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($character);
-        $currentArmorId = $this->slotStateService->getArmorSlotId($character, $slotEnum);
+        $oldMultiplier = $this->statSyncService->getMaxHpMultiplier($characterId);
+        $currentArmorId = $this->slotStateService->getArmorSlotId($characterId, $slotEnum);
         if (!$currentArmorId) {
             throw new DomainException('No item equipped in that slot.');
         }
 
-        $this->transaction->run(function () use ($character, $slotEnum, $currentArmorId, $oldMultiplier) {
-            $this->addToBackpack($character, $currentArmorId, 1);
-            $this->slotStateService->setArmorSlotId($character, $slotEnum, null);
-            $this->slotStateService->setArmorValueForSlot($character, $slotEnum, 0.0);
+        $this->transaction->run(function () use ($characterId, $slotEnum, $currentArmorId, $oldMultiplier) {
+            $this->addToBackpack($characterId, $currentArmorId, 1);
+            $this->slotStateService->setArmorSlotId($characterId, $slotEnum, null);
+            $this->slotStateService->setArmorValueForSlot($characterId, $slotEnum, 0.0);
             if (in_array($slotEnum, [EquipmentSlot::CHEST, EquipmentSlot::GLOVES], true)) {
-                $this->statSyncService->recalculateArmArmor($character);
+                $this->statSyncService->recalculateArmArmor($characterId);
             }
-            $this->statSyncService->recalculateHpOnEquipmentChange($character, $oldMultiplier);
-            $character->save();
+            $this->statSyncService->recalculateHpOnEquipmentChange($characterId, $oldMultiplier);
         });
     }
 
-    private function addToBackpack(CharacterModel $character, int $itemId, int $quantity): void
+    private function addToBackpack(int $characterId, int $itemId, int $quantity): void
     {
-        $this->characterItemRepository->addToBackpack((int) $character->id, $itemId, $quantity);
+        $this->characterItemRepository->addToBackpack($characterId, $itemId, $quantity);
     }
 
-    private function removeFromBackpack(CharacterModel $character, int $itemId, int $quantity): void
+    private function removeFromBackpack(int $characterId, int $itemId, int $quantity): void
     {
-        $removed = $this->characterItemRepository->removeFromBackpack((int) $character->id, $itemId, $quantity);
+        $removed = $this->characterItemRepository->removeFromBackpack($characterId, $itemId, $quantity);
         if (!$removed) {
             throw new DomainException('Not enough items in backpack.');
         }

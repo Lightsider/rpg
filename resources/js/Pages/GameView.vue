@@ -256,6 +256,7 @@ const initWebSocket = (battleId) => {
                 status: 'active',
                 actions_submitted: []
             });
+            fetchFightState(fightState.value.id);
         }
         clearSelection();
         if (actionPanelRef.value) actionPanelRef.value.clearQueue();
@@ -352,6 +353,10 @@ const initLocationWebSocket = (locationId) => {
             console.log('[Echo] Battle Removed:', payload);
             const data = payload?.payload ?? payload;
             fights.value = fights.value.filter(f => f.id !== data.battle_id);
+            if (fightState.value?.id === data.battle_id && fightState.value?.status === 'waiting') {
+                alert('The battle was cancelled because there were not enough participants.');
+                handleReturnToLobby();
+            }
         });
 };
 

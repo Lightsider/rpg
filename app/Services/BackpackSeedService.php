@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Infrastructure\Eloquent\Repositories\CharacterStateReadWriteRepository;
+use App\Application\Contracts\CharacterStateRepositoryInterface;
 
 class BackpackSeedService
 {
     public function __construct(
-        private readonly CharacterStateReadWriteRepository $characterStateRepository
+        private readonly CharacterStateRepositoryInterface $characterStateRepository
     ) {
     }
 

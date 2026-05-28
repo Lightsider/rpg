@@ -32,7 +32,7 @@ class MapGenerator
 
             $targetHeight = Map::DEFAULT_HEIGHT + max(0, count($participants) - 2);
 
-            $map = $this->mapStateRepository->ensureMap(
+            $mapDimensions = $this->mapStateRepository->ensureMap(
                 $fight->getId(),
                 Map::DEFAULT_WIDTH,
                 $targetHeight
@@ -40,17 +40,17 @@ class MapGenerator
 
             // Sync the actual map dimensions to the battles table so that
             // Battle::queueAction validates coordinates against the real map size.
-            \App\Infrastructure\Eloquent\Models\BattleModel::where('id', $fight->getId())
-                ->update([
-                    'map_width' => $map->width,
-                    'map_height' => $map->height,
-                ]);
+            $this->mapStateRepository->syncBattleMapDimensions(
+                $fight->getId(),
+                $mapDimensions['width'],
+                $mapDimensions['height']
+            );
 
             // Map generation creates a rectangular map and assigns starting tiles to current fighters.
-            $startY = intdiv($map->height, self::STARTING_ROW_DIVISOR);
+            $startY = intdiv($mapDimensions['height'], self::STARTING_ROW_DIVISOR);
             $leftX = self::STARTING_LEFT_X;
-            $rightX = $map->width - self::STARTING_RIGHT_OFFSET;
-            $centerX = intdiv($map->width - 1, 2);
+            $rightX = $mapDimensions['width'] - self::STARTING_RIGHT_OFFSET;
+            $centerX = intdiv($mapDimensions['width'] - 1, 2);
 
             $teams = $fight->getParticipantTeams();
             $participantsByTeam = [
@@ -66,9 +66,9 @@ class MapGenerator
 
             $usedPositions = [];
             $placements = array_merge(
-                $this->buildTeamPlacements($participantsByTeam['blue'], $leftX, $map->height, $map->width, 1, $usedPositions),
-                $this->buildTeamPlacements($participantsByTeam['red'], $rightX, $map->height, $map->width, -1, $usedPositions),
-                $this->buildTeamPlacements($participantsByTeam['neutral'], $centerX, $map->height, $map->width, 0, $usedPositions, true)
+                $this->buildTeamPlacements($participantsByTeam['blue'], $leftX, $mapDimensions['height'], $mapDimensions['width'], 1, $usedPositions),
+                $this->buildTeamPlacements($participantsByTeam['red'], $rightX, $mapDimensions['height'], $mapDimensions['width'], -1, $usedPositions),
+                $this->buildTeamPlacements($participantsByTeam['neutral'], $centerX, $mapDimensions['height'], $mapDimensions['width'], 0, $usedPositions, true)
             );
 
             // Move ALL participants currently in the DB for this fight to temporary off-map positions first.
