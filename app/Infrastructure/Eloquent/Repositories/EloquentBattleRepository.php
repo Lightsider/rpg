@@ -194,6 +194,12 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                             'ad_armor_right_arm' => $participant->getAdArmorForZone('right_arm'),
                         ]);
                 }
+
+                if ($participant->getCurrentHp() <= 0) {
+                    FighterPositionModel::where('fight_id', $battle->getId())
+                        ->where('character_id', $participant->getId())
+                        ->update(['x' => -1, 'y' => -1 - $participant->getId()]);
+                }
             }
         }
 

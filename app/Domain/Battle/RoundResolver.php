@@ -320,6 +320,7 @@ class RoundResolver implements RoundResolverInterface
                     type: BattleLogType::DEATH,
                     actorId: $participant->getId()
                 );
+                $participant->setPosition(-1, -1 - $participant->getId());
             }
         }
 
