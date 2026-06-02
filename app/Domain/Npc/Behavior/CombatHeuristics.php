@@ -93,6 +93,11 @@ trait CombatHeuristics
             // Final score: High kill potential is good, long distance is bad
             $score = ($killPotential * 10) - $distancePenalty;
 
+            if ($distance <= 1) {
+                // Highly prefer targets we are already adjacent to
+                $score += 10000;
+            }
+
             $scored[] = ['enemy' => $enemy, 'score' => $score];
         }
 
