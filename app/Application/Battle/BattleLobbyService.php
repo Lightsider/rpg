@@ -16,8 +16,8 @@ use App\Events\Battle\BattleJoined;
 use App\Events\Battle\RoundStarted;
 use App\Events\Location\BattleCreated;
 use App\Events\Location\BattleRemoved;
-use App\Services\MapGenerator;
-use App\Services\TeamAssigner;
+use App\Application\Battle\MapGenerator;
+use App\Domain\Battle\TeamAssigner;
 
 class BattleLobbyService
 {

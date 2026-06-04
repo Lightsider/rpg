@@ -20,6 +20,17 @@ class LayerBoundariesTest extends TestCase
         $this->assertSame([], $violations, implode(PHP_EOL, $violations));
     }
 
+    public function test_domain_randomness_goes_through_rng_abstraction(): void
+    {
+        $violations = $this->collectForbiddenContentPatterns(
+            basePath: __DIR__ . '/../../../app/Domain',
+            forbiddenPatterns: ['mt_rand(', 'mt_getrandmax('],
+            excludedPaths: ['/Battle/Rng/']
+        );
+
+        $this->assertSame([], $violations, implode(PHP_EOL, $violations));
+    }
+
     public function test_application_layer_does_not_depend_on_infrastructure_or_facades(): void
     {
         $violations = $this->collectForbiddenImports(
@@ -30,20 +41,11 @@ class LayerBoundariesTest extends TestCase
         $this->assertSame([], $violations, implode(PHP_EOL, $violations));
     }
 
-    public function test_domain_like_services_do_not_depend_on_framework_or_infrastructure(): void
+    public function test_legacy_services_directory_stays_empty(): void
     {
-        $files = [
-            __DIR__ . '/../../../app/Services/CharacterStatService.php',
-            __DIR__ . '/../../../app/Services/CharacterStatValidator.php',
-            __DIR__ . '/../../../app/Services/TeamAssigner.php',
-        ];
+        $files = glob(__DIR__ . '/../../../app/Services/*.php') ?: [];
 
-        $violations = $this->collectForbiddenImportsInFiles(
-            files: $files,
-            forbiddenPrefixes: ['Illuminate\\', 'App\\Infrastructure\\']
-        );
-
-        $this->assertSame([], $violations, implode(PHP_EOL, $violations));
+        $this->assertSame([], $files, implode(PHP_EOL, $files));
     }
 
     public function test_controllers_do_not_reference_infrastructure_models_or_repositories(): void
@@ -77,7 +79,7 @@ class LayerBoundariesTest extends TestCase
     public function test_critical_modules_avoid_direct_infrastructure_model_access(): void
     {
         $files = [
-            __DIR__ . '/../../../app/Services/MovementResolver.php',
+            __DIR__ . '/../../../app/Application/Battle/MovementResolver.php',
             __DIR__ . '/../../../app/Http/Controllers/StoreController.php',
         ];
 
@@ -115,6 +117,19 @@ class LayerBoundariesTest extends TestCase
                 'catch (Exception',
             ],
             excludedPaths: ['/Auth/', '/Controllers/Controller.php']
+        );
+
+        $this->assertSame([], $violations, implode(PHP_EOL, $violations));
+    }
+
+    public function test_services_do_not_reference_infrastructure_or_framework(): void
+    {
+        $violations = $this->collectForbiddenContentPatterns(
+            basePath: __DIR__ . '/../../../app/Services',
+            forbiddenPatterns: [
+                'App\\Infrastructure\\',
+                'Illuminate\\',
+            ]
         );
 
         $this->assertSame([], $violations, implode(PHP_EOL, $violations));

@@ -17,7 +17,7 @@ use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 use App\Infrastructure\Eloquent\Repositories\EloquentFighterPositionRepository;
 use App\Infrastructure\Eloquent\Models\LocationModel;
 use App\Infrastructure\Eloquent\Models\User;
-use App\Services\MovementResolver;
+use App\Application\Battle\MovementResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

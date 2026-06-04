@@ -9,7 +9,7 @@ use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Item\Repositories\ItemRepositoryInterface;
 use App\Domain\Item\ItemType;
 use App\Domain\Npc\Repositories\NpcTemplateRepositoryInterface;
-use App\Services\TeamAssigner;
+use App\Domain\Battle\TeamAssigner;
 use App\Domain\Equipment\EquipmentSlot;
 use App\Domain\Weapon\Weapon;
 use App\Domain\Armor\Armor;

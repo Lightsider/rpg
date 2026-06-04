@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Application\Battle;
 
 use App\Application\Contracts\TransactionInterface;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\Map;
-use App\Infrastructure\Eloquent\Repositories\MapGenerationStateRepository;
+use App\Application\Contracts\MapGenerationStateRepositoryInterface;
 
 class MapGenerator
 {
@@ -18,7 +18,7 @@ class MapGenerator
 
     public function __construct(
         private readonly TransactionInterface $transaction,
-        private readonly MapGenerationStateRepository $mapStateRepository
+        private readonly MapGenerationStateRepositoryInterface $mapStateRepository
     ) {
     }
 

@@ -91,7 +91,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             
             foreach ($participants as $id => $p) {
                 if ($id > 0) {
-                    $humanSyncData[$id] = ['team' => $teams[$id] ?? null];
+                    $humanSyncData[$id] = ['team' => $teams[$id] ?? null, 'effectiveness' => $p->getEffectiveness()];
                 } else {
                     $npcIds[] = -$id; // Convert back to pivot ID
 
@@ -106,6 +106,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                             'team' => $teams[$id] ?? null,
                             'hp' => $p->getCurrentHp(),
                             'damage_accumulator' => $p->getDamageAccumulator(),
+                            'effectiveness' => $p->getEffectiveness(),
                             'ad_armor_head' => $p->getAdArmorForZone('head'),
                             'ad_armor_chest' => $p->getAdArmorForZone('chest'),
                             'ad_armor_legs' => $p->getAdArmorForZone('legs'),
@@ -170,6 +171,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                     CharacterModel::where('id', $participant->getId())->update([
                         'hp' => $participant->getCurrentHp(),
                         'damage_accumulator' => $participant->getDamageAccumulator(),
+                        'effectiveness' => $participant->getEffectiveness(),
                         'ad_armor_head' => $participant->getAdArmorForZone('head'),
                         'ad_armor_chest' => $participant->getAdArmorForZone('chest'),
                         'ad_armor_legs' => $participant->getAdArmorForZone('legs'),
@@ -187,6 +189,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                         ->update([
                             'hp' => $participant->getCurrentHp(),
                             'damage_accumulator' => $participant->getDamageAccumulator(),
+                            'effectiveness' => $participant->getEffectiveness(),
                             'ad_armor_head' => $participant->getAdArmorForZone('head'),
                             'ad_armor_chest' => $participant->getAdArmorForZone('chest'),
                             'ad_armor_legs' => $participant->getAdArmorForZone('legs'),
@@ -352,6 +355,9 @@ class EloquentBattleRepository implements BattleRepositoryInterface
                     }
                     if ($record->damage_accumulator !== null) {
                         $npc->setDamageAccumulator((float) $record->damage_accumulator);
+                    }
+                    if (isset($record->effectiveness) && $record->effectiveness !== null) {
+                        $npc->addEffectiveness((float) $record->effectiveness);
                     }
                     
                     if ($record->name !== null) {
@@ -565,6 +571,7 @@ class EloquentBattleRepository implements BattleRepositoryInterface
             adArmorRightArm: $rightArm,
             level: (int) ($characterModel->level ?? 1),
             experience: (int) ($characterModel->experience ?? 0),
+            effectiveness: (float) ($characterModel->effectiveness ?? 0.0),
         );
 
         $legacyThresholds = config('game.xp_requirements', []);

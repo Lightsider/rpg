@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Domain\Battle;
 
 class TeamAssigner
 {
@@ -26,7 +26,7 @@ class TeamAssigner
         }
 
         if ($counts[self::TEAM_BLUE] === $counts[self::TEAM_RED]) {
-            return (mt_rand(0, 1) === 0) ? self::TEAM_BLUE : self::TEAM_RED;
+            return self::TEAM_BLUE;
         }
 
         return $counts[self::TEAM_BLUE] < $counts[self::TEAM_RED]

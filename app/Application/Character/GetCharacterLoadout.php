@@ -7,7 +7,7 @@ namespace App\Application\Character;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
-use App\Services\BackpackReadService;
+use App\Application\Character\BackpackReadService;
 
 class GetCharacterLoadout
 {

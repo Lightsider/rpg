@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Character;
 
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
-use App\Services\BackpackReadService;
+use App\Application\Character\BackpackReadService;
 
 class UnequipItem
 {

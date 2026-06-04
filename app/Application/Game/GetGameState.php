@@ -15,9 +15,9 @@ use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Location\Repositories\LocationRepositoryInterface;
-use App\Services\BackpackSeedService;
-use App\Services\CharacterStatService;
-use App\Services\CharacterStatValidator;
+use App\Application\Character\BackpackSeedService;
+use App\Application\Character\CharacterStatService;
+use App\Application\Character\CharacterStatValidator;
 
 class GetGameState
 {

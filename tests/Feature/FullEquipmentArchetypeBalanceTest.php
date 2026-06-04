@@ -19,7 +19,7 @@ use App\Domain\Battle\BlockPenetration\BlockPenetrationConfig;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageConfig;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
-use App\Services\MovementResolver;
+use App\Application\Battle\MovementResolver;
 use App\Domain\Character\Character;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;

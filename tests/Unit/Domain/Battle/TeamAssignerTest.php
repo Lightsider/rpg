@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Services;
+namespace Tests\Unit\Domain\Battle;
 
-use App\Services\TeamAssigner;
+use App\Domain\Battle\TeamAssigner;
 use PHPUnit\Framework\TestCase;
 
 class TeamAssignerTest extends TestCase
@@ -22,7 +22,7 @@ class TeamAssignerTest extends TestCase
         $this->assertSame('red', $team);
     }
 
-    public function test_assign_random_when_balanced(): void
+    public function test_assign_uses_deterministic_blue_tie_break_when_balanced(): void
     {
         $assigner = new TeamAssigner();
 
@@ -31,6 +31,6 @@ class TeamAssignerTest extends TestCase
             2 => 'red',
         ]);
 
-        $this->assertContains($team, ['blue', 'red']);
+        $this->assertSame('blue', $team);
     }
 }

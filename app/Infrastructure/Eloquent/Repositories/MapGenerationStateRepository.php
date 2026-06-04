@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Eloquent\Repositories;
 
+use App\Application\Contracts\MapGenerationStateRepositoryInterface;
 use App\Infrastructure\Eloquent\Models\BattleModel;
 use App\Infrastructure\Eloquent\Models\FightMapModel;
 use App\Infrastructure\Eloquent\Models\FighterPositionModel;
 
-class MapGenerationStateRepository
+class MapGenerationStateRepository implements MapGenerationStateRepositoryInterface
 {
     /**
      * @return array{width:int, height:int}

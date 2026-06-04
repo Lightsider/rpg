@@ -11,14 +11,16 @@ use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\MovementResolverInterface;
 use App\Domain\Battle\Rewards\BattleRewardsConfig;
 use App\Application\Contracts\EventDispatcherInterface;
+use App\Application\Contracts\MapGenerationStateRepositoryInterface;
 use App\Application\Contracts\CharacterStateRepositoryInterface;
 use App\Application\Contracts\PasswordHasherInterface;
 use App\Application\Contracts\TransactionInterface;
 use App\Infrastructure\Eloquent\Repositories\CharacterStateReadWriteRepository;
+use App\Infrastructure\Eloquent\Repositories\MapGenerationStateRepository;
 use App\Infrastructure\Events\LaravelEventDispatcher;
 use App\Infrastructure\Persistence\LaravelTransactionManager;
 use App\Infrastructure\Security\LaravelPasswordHasher;
-use App\Services\MovementResolver;
+use App\Application\Battle\MovementResolver;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -72,6 +74,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             CharacterStateRepositoryInterface::class,
             CharacterStateReadWriteRepository::class
+        );
+
+        $this->app->bind(
+            MapGenerationStateRepositoryInterface::class,
+            MapGenerationStateRepository::class
         );
 
         $this->app->bind(

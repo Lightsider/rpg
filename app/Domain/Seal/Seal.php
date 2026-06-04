@@ -8,6 +8,7 @@ use App\Domain\Item\Item;
 use App\Domain\Item\ItemType;
 use App\Domain\Weapon\WeaponArchetype;
 
+use App\Domain\Battle\Rng\DefaultRandomGenerator;
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
 
 class Seal extends Item
@@ -33,13 +34,9 @@ class Seal extends Item
             return $this->minDamage;
         }
 
-        if ($rng) {
-            return $this->minDamage + $rng->nextFloat() * ($this->maxDamage - $this->minDamage);
-        }
+        $rng ??= new DefaultRandomGenerator();
 
-        // Maintaining precision for the roll
-        $random = mt_rand() / mt_getrandmax();
-        return $this->minDamage + $random * ($this->maxDamage - $this->minDamage);
+        return $this->minDamage + $rng->nextFloat() * ($this->maxDamage - $this->minDamage);
     }
 
     public function getMinDamage(): float { return $this->minDamage; }

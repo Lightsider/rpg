@@ -14,7 +14,7 @@ use App\Infrastructure\Eloquent\Models\CharacterModel;
 use App\Infrastructure\Eloquent\Models\FightMapModel;
 use App\Infrastructure\Eloquent\Models\LocationModel;
 use App\Infrastructure\Eloquent\Models\User;
-use App\Services\MapGenerator;
+use App\Application\Battle\MapGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

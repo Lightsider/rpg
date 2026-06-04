@@ -42,6 +42,7 @@ class CharacterModel extends Model
         'y',
         'currency_copper',
         'damage_accumulator',
+        'effectiveness',
         'seal_1_id',
         'seal_2_id',
         'seal_3_id',

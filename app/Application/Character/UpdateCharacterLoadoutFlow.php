@@ -7,9 +7,9 @@ namespace App\Application\Character;
 use App\Domain\Battle\Repositories\BattleRepositoryInterface;
 use App\Domain\Character\Repositories\CharacterRepositoryInterface;
 use App\Domain\DomainException;
-use App\Services\BackpackMutationService;
-use App\Services\CharacterStatService;
-use App\Services\CharacterStatValidator;
+use App\Application\Character\BackpackMutationService;
+use App\Application\Character\CharacterStatService;
+use App\Application\Character\CharacterStatValidator;
 
 class UpdateCharacterLoadoutFlow
 {

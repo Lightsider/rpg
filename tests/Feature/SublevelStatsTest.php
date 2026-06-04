@@ -11,7 +11,7 @@ class SublevelStatsTest extends TestCase
 {
     public function test_sublevel_stats_distribution_with_4_sublevels(): void
     {
-        $character = new Character(id: 1, userId: 1, name: 'Test', strength: 4, agility: 4, constitution: 4, wit: 4, maxHp: 55, currentHp: 55);
+        $character = new Character(id: 1, userId: 1, name: 'Test', strength: 4, agility: 4, constitution: 4, wit: 4, maxHp: 55, currentHp: 55, equipment: new \App\Domain\Equipment\Equipment());
 
         // Simulated thresholds for level 1 (4 sublevels)
         $thresholds = [
@@ -52,7 +52,7 @@ class SublevelStatsTest extends TestCase
 
     public function test_sublevel_stats_distribution_with_3_sublevels(): void
     {
-        $character = new Character(id: 1, userId: 1, name: 'Test', strength: 4, agility: 4, constitution: 4, wit: 4, maxHp: 55, currentHp: 55);
+        $character = new Character(id: 1, userId: 1, name: 'Test', strength: 4, agility: 4, constitution: 4, wit: 4, maxHp: 55, currentHp: 55, equipment: new \App\Domain\Equipment\Equipment());
 
         // Simulated thresholds for level 1 (3 sublevels)
         $thresholds = [
@@ -78,7 +78,7 @@ class SublevelStatsTest extends TestCase
 
     public function test_sublevel_stats_distribution_with_2_sublevels(): void
     {
-        $character = new Character(id: 1, userId: 1, name: 'Test', strength: 4, agility: 4, constitution: 4, wit: 4, maxHp: 55, currentHp: 55);
+        $character = new Character(id: 1, userId: 1, name: 'Test', strength: 4, agility: 4, constitution: 4, wit: 4, maxHp: 55, currentHp: 55, equipment: new \App\Domain\Equipment\Equipment());
 
         $thresholds = [
             1 => ['xp_threshold' => 10, 'reward_copper' => 0],
@@ -98,7 +98,7 @@ class SublevelStatsTest extends TestCase
 
     public function test_multi_level_jump_stats(): void
     {
-        $character = new Character(id: 1, userId: 1, name: 'Test', strength: 4, agility: 4, constitution: 4, wit: 4, maxHp: 55, currentHp: 55);
+        $character = new Character(id: 1, userId: 1, name: 'Test', strength: 4, agility: 4, constitution: 4, wit: 4, maxHp: 55, currentHp: 55, equipment: new \App\Domain\Equipment\Equipment());
 
         $thresholds = [
             1 => ['xp_threshold' => 10, 'reward_copper' => 0],

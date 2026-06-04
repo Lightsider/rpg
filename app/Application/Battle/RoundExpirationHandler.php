@@ -17,7 +17,7 @@ use App\Events\Battle\BattleUpdated;
 use App\Events\Battle\RoundStarted;
 use App\Events\Location\BattleRemoved;
 use App\Application\Contracts\TransactionInterface;
-use App\Services\MapGenerator;
+use App\Application\Battle\MapGenerator;
 
 /**
  * Service tasked with detecting and resolving battles where the round time has run out.

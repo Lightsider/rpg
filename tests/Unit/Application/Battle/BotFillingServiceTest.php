@@ -13,7 +13,7 @@ use App\Domain\Npc\Repositories\NpcTemplateRepositoryInterface;
 use App\Domain\Npc\NpcCombatant;
 use App\Domain\Npc\NpcTemplate;
 use App\Domain\Npc\NpcType;
-use App\Services\TeamAssigner;
+use App\Domain\Battle\TeamAssigner;
 use PHPUnit\Framework\TestCase;
 use Mockery;
 

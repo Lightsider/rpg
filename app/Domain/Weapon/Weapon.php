@@ -7,6 +7,7 @@ namespace App\Domain\Weapon;
 use App\Domain\Item\Item;
 use App\Domain\Item\ItemType;
 
+use App\Domain\Battle\Rng\DefaultRandomGenerator;
 use App\Domain\Battle\Rng\RandomGeneratorInterface;
 
 /**
@@ -41,10 +42,9 @@ class Weapon extends Item
      */
     public function rollBaseDamage(?RandomGeneratorInterface $rng = null): float
     {
-        if ($rng) {
-            return $this->minDamage + $rng->nextFloat() * ($this->maxDamage - $this->minDamage);
-        }
-        return (float) mt_rand((int) round($this->minDamage * 100), (int) round($this->maxDamage * 100)) / 100;
+        $rng ??= new DefaultRandomGenerator();
+
+        return $this->minDamage + $rng->nextFloat() * ($this->maxDamage - $this->minDamage);
     }
 
     public function getMinDamage(): float

@@ -16,7 +16,7 @@ use App\Domain\Battle\TurnAction;
 use App\Domain\Battle\BlockPenetration\BlockPenetrationService;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\Rewards\BattleRewardsConfig;
-use App\Services\MovementResolver;
+use App\Application\Battle\MovementResolver;
 use App\Domain\Character\Character;
 use App\Domain\Weapon\DamageType;
 use App\Domain\Weapon\Weapon;

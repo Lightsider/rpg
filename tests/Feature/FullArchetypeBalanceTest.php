@@ -21,7 +21,7 @@ use App\Domain\Battle\MaxDamage\MaxDamageConfig;
 use App\Domain\Battle\MaxDamage\MaxDamageService;
 use App\Domain\Battle\PseudoRandom\PseudoRandomConfig;
 use App\Domain\Battle\PseudoRandom\PseudoRandomService;
-use App\Services\MovementResolver;
+use App\Application\Battle\MovementResolver;
 use App\Domain\Character\Character;
 use App\Domain\Equipment\Equipment;
 use App\Domain\Equipment\EquipmentSlot;
