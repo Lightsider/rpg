@@ -604,6 +604,44 @@ class Battle implements \JsonSerializable
     {
         $this->rewards = $rewards;
     }
+
+    public function isCellOccupied(int $x, int $y, ?int $excludeId = null): bool
+    {
+        // Check if any alive participant is currently at (x, y) and isn't moving away
+        foreach ($this->participants as $participant) {
+            if ($participant->getId() === $excludeId || $participant->getCurrentHp() <= 0) {
+                continue;
+            }
+            if ($participant->getX() === $x && $participant->getY() === $y) {
+                $isMovingAway = false;
+                foreach ($this->queuedActions as $action) {
+                    if ($action->getCharacterId() === $participant->getId() && $action->getType()->value === 'move') {
+                        if ($action->getToX() !== $x || $action->getToY() !== $y) {
+                            $isMovingAway = true;
+                            break;
+                        }
+                    }
+                }
+                if (!$isMovingAway) {
+                    return true;
+                }
+            }
+        }
+
+        // Check if anyone has queued a move TO this cell
+        foreach ($this->queuedActions as $action) {
+            if ($action->getCharacterId() === $excludeId) {
+                continue;
+            }
+            if ($action->getType()->value === 'move') {
+                if ($action->getToX() === $x && $action->getToY() === $y) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }
 
 

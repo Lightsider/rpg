@@ -28,7 +28,7 @@ class AggressiveBehavior extends BaseHeuristicBehavior
         // Fear mechanic: If we are adjacent to the target but surrounded by >= 2 enemies, 
         // we might want to step away into a 1v1 tile if it still keeps us adjacent to the target.
         // However, if we have a teammate nearby, we fight and do not retreat.
-        if ($isAdjacent && ($currentAdjacencyCount < 2 || $this->hasTeammateNearby($npc, $battle))) {
+        if ($isAdjacent && ($currentAdjacencyCount < 2 || $this->hasTeammateEngagingSameEnemies($npc, $battle, $npc->getX(), $npc->getY()))) {
             return []; // Safe/adjacent, or has teammate nearby -> stay and fight.
         }
 
@@ -44,7 +44,7 @@ class AggressiveBehavior extends BaseHeuristicBehavior
                 $ny = $npc->getY() + $dy;
 
                 if (!$map->isWithinBounds($nx, $ny)) continue;
-                if ($this->isCellOccupied($nx, $ny, $npc->getId(), $battle)) continue;
+                if ($battle->isCellOccupied($nx, $ny, $npc->getId())) continue;
 
                 $dist = abs($nx - $target->getX()) + abs($ny - $target->getY());
                 $enemiesAdjacent = $this->getAdjacentEnemiesCount($nx, $ny, $npc, $battle);
@@ -55,6 +55,15 @@ class AggressiveBehavior extends BaseHeuristicBehavior
                 $fearPenalty = max(0, $enemiesAdjacent - 1) * 10;
                 
                 $score = $dist + $fearPenalty;
+
+                // REWARD: if moving here makes us adjacent to the target,
+                // and a teammate is ALSO adjacent to the target, we heavily prefer this cell!
+                // This satisfies "like 2 mates vs 1 enemy positions"
+                if ($dist <= 1) {
+                    if ($this->hasTeammateEngagingSameEnemies($npc, $battle, $nx, $ny)) {
+                        $score -= 15; // massive bonus for 2v1 positioning
+                    }
+                }
 
                 if ($score < $bestScore) {
                     $bestScore = $score;
@@ -67,6 +76,12 @@ class AggressiveBehavior extends BaseHeuristicBehavior
         // If we are currently at distance 1, our current score is 1 + max(0, current-1)*10.
         $currentDist = abs($npc->getX() - $target->getX()) + abs($npc->getY() - $target->getY());
         $currentScore = $currentDist + (max(0, $currentAdjacencyCount - 1) * 10);
+        
+        if ($currentDist <= 1) {
+            if ($this->hasTeammateEngagingSameEnemies($npc, $battle, $npc->getX(), $npc->getY())) {
+                $currentScore -= 15;
+            }
+        }
 
         if ($bestCell !== null && $bestScore < $currentScore) {
             $actions[] = new TurnAction(
@@ -166,37 +181,4 @@ class AggressiveBehavior extends BaseHeuristicBehavior
         return $actions;
     }
 
-    private function isCellOccupied(int $x, int $y, int $excludeId, Battle $battle): bool
-    {
-        foreach ($battle->getParticipants() as $participant) {
-            if ($participant->getId() === $excludeId || $participant->getCurrentHp() <= 0) {
-                continue;
-            }
-            if ($participant->getX() === $x && $participant->getY() === $y) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private function hasTeammateNearby(Combatant $npc, Battle $battle): bool
-    {
-        $myTeam = $battle->getParticipantTeam($npc->getId());
-        foreach ($battle->getParticipants() as $participant) {
-            if ($participant->getId() === $npc->getId() || $participant->getCurrentHp() <= 0) {
-                continue;
-            }
-            if ($battle->getParticipantTeam($participant->getId()) !== $myTeam) {
-                continue;
-            }
-
-            $distX = abs($npc->getX() - $participant->getX());
-            $distY = abs($npc->getY() - $participant->getY());
-            $dist = max($distX, $distY);
-            if ($dist <= 2) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

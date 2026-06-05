@@ -16,6 +16,7 @@ use App\Domain\Battle\TurnAction;
  */
 class ReachAndHitBehavior implements BehaviorModelInterface
 {
+    use CombatHeuristics;
     public function decide(Combatant $npc, Battle $battle): array
     {
         $actions = [];
@@ -123,7 +124,7 @@ class ReachAndHitBehavior implements BehaviorModelInterface
     {
         $map = $battle->getMap();
         $bestCell = null;
-        $bestDist = abs($npc->getX() - $target->getX()) + abs($npc->getY() - $target->getY());
+        $bestScore = PHP_INT_MAX;
 
         // Check all adjacent cells
         for ($dx = -1; $dx <= 1; $dx++) {
@@ -139,36 +140,31 @@ class ReachAndHitBehavior implements BehaviorModelInterface
                     continue;
                 }
 
-                // Check if occupied by another combatant
-                if ($this->isCellOccupied($nx, $ny, $npc->getId(), $battle)) {
+                // Check if occupied
+                if ($battle->isCellOccupied($nx, $ny, $npc->getId())) {
                     continue;
                 }
 
                 $dist = abs($nx - $target->getX()) + abs($ny - $target->getY());
-                if ($dist < $bestDist) {
-                    $bestDist = $dist;
+                $score = $dist * 10;
+
+                // REWARD: if moving here makes us adjacent to the target,
+                // and a teammate is ALSO adjacent to the target, we heavily prefer this cell!
+                // This satisfies "like 2 mates vs 1 enemy positions"
+                if ($dist <= 1) {
+                    if ($this->hasTeammateEngagingSameEnemies($npc, $battle, $nx, $ny)) {
+                        $score -= 15; // Massive bonus for 2v1 positioning
+                    }
+                }
+
+                if ($score < $bestScore) {
+                    $bestScore = $score;
                     $bestCell = ['x' => $nx, 'y' => $ny];
                 }
             }
         }
 
         return $bestCell;
-    }
-
-    private function isCellOccupied(int $x, int $y, int $excludeId, Battle $battle): bool
-    {
-        foreach ($battle->getParticipants() as $participant) {
-            if ($participant->getId() === $excludeId) {
-                continue;
-            }
-            if ($participant->getCurrentHp() <= 0) {
-                continue;
-            }
-            if ($participant->getX() === $x && $participant->getY() === $y) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

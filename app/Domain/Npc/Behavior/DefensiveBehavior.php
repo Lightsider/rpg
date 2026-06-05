@@ -42,7 +42,7 @@ class DefensiveBehavior extends BaseHeuristicBehavior
                     $ny = $npc->getY() + $dy;
 
                     if (!$map->isWithinBounds($nx, $ny)) continue;
-                    if ($this->isCellOccupied($nx, $ny, $npc->getId(), $battle)) continue;
+                    if ($battle->isCellOccupied($nx, $ny, $npc->getId())) continue;
 
                     // Must NOT be adjacent to the target
                     if ($map->isAdjacent($nx, $ny, $target->getX(), $target->getY())) continue;
@@ -84,7 +84,7 @@ class DefensiveBehavior extends BaseHeuristicBehavior
                 $ny = $npc->getY() + $dy;
 
                 if (!$map->isWithinBounds($nx, $ny)) continue;
-                if ($this->isCellOccupied($nx, $ny, $npc->getId(), $battle)) continue;
+                if ($battle->isCellOccupied($nx, $ny, $npc->getId())) continue;
 
                 $dist = abs($nx - $target->getX()) + abs($ny - $target->getY());
                 // For defensive, we just want to get as close as possible (no fear penalty)
@@ -154,24 +154,12 @@ class DefensiveBehavior extends BaseHeuristicBehavior
         }
 
         // Dump remaining into blocks
+        // Dump remaining into blocks
         $blocksToPerform = $baseAp + $bonusDefensiveAp;
         if ($blocksToPerform > 0) {
             $actions = array_merge($actions, $this->createBlockActions($npc, $blocksToPerform));
         }
 
         return $actions;
-    }
-
-    private function isCellOccupied(int $x, int $y, int $excludeId, Battle $battle): bool
-    {
-        foreach ($battle->getParticipants() as $participant) {
-            if ($participant->getId() === $excludeId || $participant->getCurrentHp() <= 0) {
-                continue;
-            }
-            if ($participant->getX() === $x && $participant->getY() === $y) {
-                return true;
-            }
-        }
-        return false;
     }
 }

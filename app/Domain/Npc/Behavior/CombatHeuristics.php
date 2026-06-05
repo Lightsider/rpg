@@ -105,4 +105,41 @@ trait CombatHeuristics
 
         return array_map(fn($item) => $item['enemy'], $scored);
     }
+
+    protected function hasTeammateEngagingSameEnemies(Combatant $npc, Battle $battle, int $x, int $y): bool
+    {
+        $myTeam = $battle->getParticipantTeam($npc->getId());
+        $map = $battle->getMap();
+        
+        $adjacentEnemies = [];
+        foreach ($battle->getParticipants() as $p) {
+            if ($p->getId() === $npc->getId() || $p->getCurrentHp() <= 0) {
+                continue;
+            }
+            if ($battle->getParticipantTeam($p->getId()) !== $myTeam) {
+                if ($map->isAdjacent($x, $y, $p->getX(), $p->getY())) {
+                    $adjacentEnemies[] = $p;
+                }
+            }
+        }
+
+        if (empty($adjacentEnemies)) {
+            return false;
+        }
+
+        foreach ($battle->getParticipants() as $teammate) {
+            if ($teammate->getId() === $npc->getId() || $teammate->getCurrentHp() <= 0) {
+                continue;
+            }
+            if ($battle->getParticipantTeam($teammate->getId()) === $myTeam) {
+                foreach ($adjacentEnemies as $enemy) {
+                    if ($map->isAdjacent($teammate->getX(), $teammate->getY(), $enemy->getX(), $enemy->getY())) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
 }
