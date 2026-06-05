@@ -17,6 +17,7 @@ class Battle implements \JsonSerializable
     private const int STARTING_LEFT_X = 0;
     private const int STARTING_RIGHT_OFFSET = 1;
     private const int STARTING_ROW_DIVISOR = 2;
+    private const int BOT_ROUND_FAST_FORWARD_DURATION = 5;
 
     /**
      * @param array<int, Combatant> $participants
@@ -126,7 +127,24 @@ class Battle implements \JsonSerializable
         $now = new DateTimeImmutable();
         $expiryTime = $this->roundStartedAt->modify("+{$this->roundDurationSeconds} seconds");
 
-        return $now >= $expiryTime;
+        if ($now >= $expiryTime) {
+            return true;
+        }
+
+        $hasAliveHuman = false;
+        foreach ($this->participants as $participant) {
+            if (!$participant->isNpc() && $participant->getCurrentHp() > 0) {
+                $hasAliveHuman = true;
+                break;
+            }
+        }
+
+        if (!$hasAliveHuman) {
+            $botExpiryTime = $this->roundStartedAt->modify("+" . self::BOT_ROUND_FAST_FORWARD_DURATION . " seconds");
+            return $now >= $botExpiryTime;
+        }
+
+        return false;
     }
 
     public function commitCharacter(int $characterId): void
