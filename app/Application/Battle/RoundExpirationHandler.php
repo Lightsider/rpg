@@ -101,7 +101,7 @@ class RoundExpirationHandler
                     $battle->startFromLobby();
                     $this->battleRepository->save($battle);
 
-                    $pendingEvents[] = new BattleRemoved($battle->getLocationId(), $battle->getId());
+                    $pendingEvents[] = new BattleRemoved($battle->getLocationId(), $battle->getId(), 'started');
                     $pendingEvents[] = new RoundStarted(
                         battleId: $battle->getId(),
                         round: $battle->getRoundNumber(),

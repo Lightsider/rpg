@@ -21,7 +21,8 @@ class BattleRemoved implements ShouldBroadcast
 
     public function __construct(
         public readonly int $locationId,
-        public readonly int $battleId
+        public readonly int $battleId,
+        public readonly string $reason = 'cancelled'
     ) {
     }
 
@@ -42,6 +43,7 @@ class BattleRemoved implements ShouldBroadcast
         $payload = [
             'battle_id' => $this->battleId,
             'location_id' => $this->locationId,
+            'reason' => $this->reason,
         ];
 
         return array_merge(
