@@ -7,6 +7,7 @@ namespace App\Domain\Npc\Behavior;
 use App\Domain\Battle\ActionType;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\Combatant;
+use App\Domain\Battle\Pathfinder;
 use App\Domain\Battle\TargetZone;
 use App\Domain\Battle\TurnAction;
 
@@ -30,79 +31,33 @@ class DefensiveBehavior extends BaseHeuristicBehavior
                 return [];
             }
 
-            // Low HP and adjacent -> try to move back (retreat)
-            $bestCell = null;
-            $bestScore = PHP_INT_MAX;
-
-            for ($dx = -1; $dx <= 1; $dx++) {
-                for ($dy = -1; $dy <= 1; $dy++) {
-                    if ($dx === 0 && $dy === 0) continue;
-
-                    $nx = $npc->getX() + $dx;
-                    $ny = $npc->getY() + $dy;
-
-                    if (!$map->isWithinBounds($nx, $ny)) continue;
-                    if ($battle->isCellOccupied($nx, $ny, $npc->getId())) continue;
-
-                    // Must NOT be adjacent to the target
-                    if ($map->isAdjacent($nx, $ny, $target->getX(), $target->getY())) continue;
-
-                    $dist = abs($nx - $target->getX()) + abs($ny - $target->getY());
-                    $enemiesAdjacent = $this->getAdjacentEnemiesCount($nx, $ny, $npc, $battle);
-
-                    $score = ($enemiesAdjacent * 10) + $dist;
-
-                    if ($score < $bestScore) {
-                        $bestScore = $score;
-                        $bestCell = ['x' => $nx, 'y' => $ny];
-                    }
-                }
-            }
-
-            if ($bestCell !== null) {
+            // Low HP and adjacent -> try to retreat using BFS
+            $enemies = $this->getAliveEnemies($npc, $battle);
+            $retreatStep = $this->findRetreatStep($npc, $battle, $enemies);
+            if ($retreatStep !== null) {
                 $actions[] = new TurnAction(
                     characterId: $npc->getId(),
                     type: ActionType::MOVE,
                     fromX: $npc->getX(),
                     fromY: $npc->getY(),
-                    toX: $bestCell['x'],
-                    toY: $bestCell['y']
+                    toX: $retreatStep['x'],
+                    toY: $retreatStep['y']
                 );
             }
 
             return $actions;
         }
 
-        $bestCell = null;
-        $bestDist = PHP_INT_MAX;
-
-        for ($dx = -1; $dx <= 1; $dx++) {
-            for ($dy = -1; $dy <= 1; $dy++) {
-                if ($dx === 0 && $dy === 0) continue;
-
-                $nx = $npc->getX() + $dx;
-                $ny = $npc->getY() + $dy;
-
-                if (!$map->isWithinBounds($nx, $ny)) continue;
-                if ($battle->isCellOccupied($nx, $ny, $npc->getId())) continue;
-
-                $dist = abs($nx - $target->getX()) + abs($ny - $target->getY());
-                // For defensive, we just want to get as close as possible (no fear penalty)
-                if ($dist < $bestDist) {
-                    $bestDist = $dist;
-                    $bestCell = ['x' => $nx, 'y' => $ny];
-                }
-            }
-        }
-
-        if ($bestCell !== null) {
+        // Not adjacent — use BFS to approach the target
+        $step = $this->findBestApproachStep($npc, $target, $battle);
+        if ($step !== null) {
             $actions[] = new TurnAction(
                 characterId: $npc->getId(),
                 type: ActionType::MOVE,
                 fromX: $npc->getX(),
                 fromY: $npc->getY(),
-                toX: $bestCell['x'],
-                toY: $bestCell['y']
+                toX: $step['x'],
+                toY: $step['y']
             );
         }
 
@@ -153,7 +108,6 @@ class DefensiveBehavior extends BaseHeuristicBehavior
             $baseAp--;
         }
 
-        // Dump remaining into blocks
         // Dump remaining into blocks
         $blocksToPerform = $baseAp + $bonusDefensiveAp;
         if ($blocksToPerform > 0) {

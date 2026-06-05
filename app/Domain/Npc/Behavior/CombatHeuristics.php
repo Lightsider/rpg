@@ -6,6 +6,7 @@ namespace App\Domain\Npc\Behavior;
 
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\Combatant;
+use App\Domain\Battle\Pathfinder;
 use App\Domain\Weapon\Dagger;
 
 trait CombatHeuristics
@@ -141,5 +142,233 @@ trait CombatHeuristics
         }
 
         return false;
+    }
+
+    /**
+     * Build the "isBlocked" callback for Pathfinder, treating occupied cells as obstacles.
+     *
+     * @return callable(int, int): bool
+     */
+    protected function buildBlockedCallback(Battle $battle, int $npcId): callable
+    {
+        return fn(int $x, int $y): bool => $battle->isCellOccupied($x, $y, $npcId);
+    }
+
+    /**
+     * Find all unoccupied cells adjacent to a target enemy.
+     * These are the "goal cells" the NPC wants to reach to attack.
+     *
+     * @return array<int, array{x: int, y: int}>
+     */
+    protected function getAttackPositionsAround(Combatant $target, Battle $battle, int $npcId): array
+    {
+        $map = $battle->getMap();
+        $positions = [];
+
+        for ($dx = -1; $dx <= 1; $dx++) {
+            for ($dy = -1; $dy <= 1; $dy++) {
+                if ($dx === 0 && $dy === 0) {
+                    continue;
+                }
+                $nx = $target->getX() + $dx;
+                $ny = $target->getY() + $dy;
+
+                if (!$map->isWithinBounds($nx, $ny)) {
+                    continue;
+                }
+                if (!$battle->isCellOccupied($nx, $ny, $npcId)) {
+                    $positions[] = ['x' => $nx, 'y' => $ny];
+                }
+            }
+        }
+
+        return $positions;
+    }
+
+    /**
+     * Use BFS to find the best first step toward attacking the target.
+     * Scores goal cells by flanking bonus and BFS distance, then returns the first step
+     * toward the best reachable goal.
+     *
+     * @return array{x: int, y: int}|null
+     */
+    protected function findBestApproachStep(
+        Combatant $npc,
+        Combatant $target,
+        Battle $battle
+    ): ?array {
+        $map = $battle->getMap();
+        $isBlocked = $this->buildBlockedCallback($battle, $npc->getId());
+
+        // Already adjacent — no move needed
+        if ($map->isAdjacent($npc->getX(), $npc->getY(), $target->getX(), $target->getY())) {
+            return null;
+        }
+
+        // Gather all open tiles adjacent to the target
+        $goalCells = $this->getAttackPositionsAround($target, $battle, $npc->getId());
+        if (empty($goalCells)) {
+            // Target is completely surrounded — just get as close as possible
+            return Pathfinder::findNextStep(
+                $map,
+                $npc->getX(), $npc->getY(),
+                $target->getX(), $target->getY(),
+                $isBlocked
+            );
+        }
+
+        // Use multi-goal BFS: find the first step toward the closest reachable goal
+        $result = Pathfinder::findNextStepToAny(
+            $map,
+            $npc->getX(), $npc->getY(),
+            $goalCells,
+            $isBlocked
+        );
+
+        return $result !== null ? ['x' => $result['x'], 'y' => $result['y']] : null;
+    }
+
+    /**
+     * Find a safe retreat position for a fleeing NPC.
+     * 
+     * The bot wants to fight but not suicide. It will look for a tile that:
+     * - Reduces the number of adjacent enemies (ideally to 1 or 0)
+     * - Is only a few tiles away (not running to the corner)
+     * - Prefers tiles near the map border (harder to surround)
+     * 
+     * Returns the first BFS step toward the best retreat tile, or null if staying is best.
+     *
+     * @param Combatant[] $enemies All alive enemies
+     * @return array{x: int, y: int}|null
+     */
+    protected function findRetreatStep(
+        Combatant $npc,
+        Battle $battle,
+        array $enemies
+    ): ?array {
+        $map = $battle->getMap();
+        $isBlocked = $this->buildBlockedCallback($battle, $npc->getId());
+        $myTeam = $battle->getParticipantTeam($npc->getId());
+
+        // How many enemies are adjacent to us right now
+        $currentAdjacentEnemies = 0;
+        foreach ($enemies as $enemy) {
+            if ($map->isAdjacent($npc->getX(), $npc->getY(), $enemy->getX(), $enemy->getY())) {
+                $currentAdjacentEnemies++;
+            }
+        }
+
+        // Scan tiles within a short radius (up to 3 tiles away via BFS)
+        // to find one that reduces the threat without running away from the fight
+        $maxRetreatDistance = 3;
+        $candidates = $this->findCandidateTilesInRadius(
+            $map, $npc->getX(), $npc->getY(), $maxRetreatDistance, $isBlocked
+        );
+
+        $bestTile = null;
+        $bestScore = PHP_INT_MAX;
+
+        foreach ($candidates as $candidate) {
+            $cx = $candidate['x'];
+            $cy = $candidate['y'];
+            $bfsDist = $candidate['dist'];
+
+            // Count enemies adjacent to this candidate tile
+            $adjacentEnemies = 0;
+            foreach ($enemies as $enemy) {
+                if ($map->isAdjacent($cx, $cy, $enemy->getX(), $enemy->getY())) {
+                    $adjacentEnemies++;
+                }
+            }
+
+            // Skip tiles that are MORE dangerous than where we are now
+            if ($adjacentEnemies >= $currentAdjacentEnemies) {
+                continue;
+            }
+
+            // Score: fewer adjacent enemies is better, closer is better
+            // Adjacent enemies is the primary factor, BFS distance is tiebreaker
+            $score = ($adjacentEnemies * 100) + ($bfsDist * 10);
+
+            // Bonus for border tiles (harder to surround from all sides)
+            $isOnBorder = ($cx === 0 || $cy === 0 || $cx === $map->getWidth() - 1 || $cy === $map->getHeight() - 1);
+            if ($isOnBorder) {
+                $score -= 5;
+            }
+
+            if ($score < $bestScore) {
+                $bestScore = $score;
+                $bestTile = ['x' => $cx, 'y' => $cy];
+            }
+        }
+
+        if ($bestTile === null) {
+            return null;
+        }
+
+        // Use BFS to get the first step toward the best retreat tile
+        return Pathfinder::findNextStep(
+            $map,
+            $npc->getX(), $npc->getY(),
+            $bestTile['x'], $bestTile['y'],
+            $isBlocked
+        );
+    }
+
+    /**
+     * BFS to find all reachable tiles within a given radius.
+     *
+     * @param callable(int, int): bool $isBlocked
+     * @return array<int, array{x: int, y: int, dist: int}>
+     */
+    private function findCandidateTilesInRadius(
+        \App\Domain\Battle\Map $map,
+        int $startX,
+        int $startY,
+        int $maxDist,
+        callable $isBlocked
+    ): array {
+        $directions = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
+            [1, -1],  [1, 0],  [1, 1],
+        ];
+
+        $visited = ["$startX:$startY" => true];
+        $queue = [[$startX, $startY, 0]];
+        $results = [];
+
+        while (!empty($queue)) {
+            [$cx, $cy, $dist] = array_shift($queue);
+
+            if ($dist >= $maxDist) {
+                continue;
+            }
+
+            foreach ($directions as [$dx, $dy]) {
+                $nx = $cx + $dx;
+                $ny = $cy + $dy;
+                $key = "$nx:$ny";
+
+                if (!$map->isWithinBounds($nx, $ny)) {
+                    continue;
+                }
+                if (isset($visited[$key])) {
+                    continue;
+                }
+                if ($isBlocked($nx, $ny)) {
+                    $visited[$key] = true;
+                    continue;
+                }
+
+                $visited[$key] = true;
+                $newDist = $dist + 1;
+                $results[] = ['x' => $nx, 'y' => $ny, 'dist' => $newDist];
+
+                $queue[] = [$nx, $ny, $newDist];
+            }
+        }
+
+        return $results;
     }
 }

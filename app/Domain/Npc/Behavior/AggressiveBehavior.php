@@ -7,6 +7,7 @@ namespace App\Domain\Npc\Behavior;
 use App\Domain\Battle\ActionType;
 use App\Domain\Battle\Battle;
 use App\Domain\Battle\Combatant;
+use App\Domain\Battle\Pathfinder;
 use App\Domain\Battle\TargetZone;
 use App\Domain\Battle\TurnAction;
 
@@ -24,83 +25,43 @@ class AggressiveBehavior extends BaseHeuristicBehavior
 
         $isAdjacent = $map->isAdjacent($npc->getX(), $npc->getY(), $target->getX(), $target->getY());
         $currentAdjacencyCount = $this->getAdjacentEnemiesCount($npc->getX(), $npc->getY(), $npc, $battle);
+        $enemies = $this->getAliveEnemies($npc, $battle);
 
-        // Fear mechanic: If we are adjacent to the target but surrounded by >= 2 enemies, 
-        // we might want to step away into a 1v1 tile if it still keeps us adjacent to the target.
-        // However, if we have a teammate nearby, we fight and do not retreat.
+        // Fear mechanic: If we are adjacent to the target but surrounded by >= 2 enemies,
+        // we might want to retreat — unless a teammate is engaging the same enemies.
         if ($isAdjacent && ($currentAdjacencyCount < 2 || $this->hasTeammateEngagingSameEnemies($npc, $battle, $npc->getX(), $npc->getY()))) {
             return []; // Safe/adjacent, or has teammate nearby -> stay and fight.
         }
 
-        $bestCell = null;
-        $bestScore = PHP_INT_MAX; // Lower score is better
-
-        // Evaluate all 8 surrounding cells for a better position
-        for ($dx = -1; $dx <= 1; $dx++) {
-            for ($dy = -1; $dy <= 1; $dy++) {
-                if ($dx === 0 && $dy === 0) continue;
-
-                $nx = $npc->getX() + $dx;
-                $ny = $npc->getY() + $dy;
-
-                if (!$map->isWithinBounds($nx, $ny)) continue;
-                if ($battle->isCellOccupied($nx, $ny, $npc->getId())) continue;
-
-                $dist = abs($nx - $target->getX()) + abs($ny - $target->getY());
-                $enemiesAdjacent = $this->getAdjacentEnemiesCount($nx, $ny, $npc, $battle);
-
-                // Scoring heuristic:
-                // Base cost is distance to target.
-                // Fear penalty: +10 score for every enemy beyond the first one adjacent to this cell.
-                $fearPenalty = max(0, $enemiesAdjacent - 1) * 10;
-                
-                $score = $dist + $fearPenalty;
-
-                // REWARD: if moving here makes us adjacent to the target,
-                // and a teammate is ALSO adjacent to the target, we heavily prefer this cell!
-                // This satisfies "like 2 mates vs 1 enemy positions"
-                if ($dist <= 1) {
-                    if ($this->hasTeammateEngagingSameEnemies($npc, $battle, $nx, $ny)) {
-                        $score -= 15; // massive bonus for 2v1 positioning
-                    }
-                }
-
-                if ($score < $bestScore) {
-                    $bestScore = $score;
-                    $bestCell = ['x' => $nx, 'y' => $ny];
-                }
+        // If we're in a dangerous position (adjacent to 2+ enemies, no teammate help),
+        // try to retreat to a safer nearby tile using BFS.
+        if ($isAdjacent && $currentAdjacencyCount >= 2) {
+            $retreatStep = $this->findRetreatStep($npc, $battle, $enemies);
+            if ($retreatStep !== null) {
+                $actions[] = new TurnAction(
+                    characterId: $npc->getId(),
+                    type: ActionType::MOVE,
+                    fromX: $npc->getX(),
+                    fromY: $npc->getY(),
+                    toX: $retreatStep['x'],
+                    toY: $retreatStep['y']
+                );
+                return $actions;
             }
+            // No retreat possible — stay and fight
+            return [];
         }
 
-        // Only move if the best cell is actually better than staying put (if we are adjacent but scared)
-        // If we are currently at distance 1, our current score is 1 + max(0, current-1)*10.
-        $currentDist = abs($npc->getX() - $target->getX()) + abs($npc->getY() - $target->getY());
-        $currentScore = $currentDist + (max(0, $currentAdjacencyCount - 1) * 10);
-        
-        if ($currentDist <= 1) {
-            if ($this->hasTeammateEngagingSameEnemies($npc, $battle, $npc->getX(), $npc->getY())) {
-                $currentScore -= 15;
-            }
-        }
-
-        if ($bestCell !== null && $bestScore < $currentScore) {
+        // Not adjacent — use BFS to approach the target
+        $step = $this->findBestApproachStep($npc, $target, $battle);
+        if ($step !== null) {
             $actions[] = new TurnAction(
                 characterId: $npc->getId(),
                 type: ActionType::MOVE,
                 fromX: $npc->getX(),
                 fromY: $npc->getY(),
-                toX: $bestCell['x'],
-                toY: $bestCell['y']
-            );
-        } elseif (!$isAdjacent && $bestCell !== null) {
-            // Even if score isn't strictly better than current, if we are not adjacent, we MUST move to close the gap.
-            $actions[] = new TurnAction(
-                characterId: $npc->getId(),
-                type: ActionType::MOVE,
-                fromX: $npc->getX(),
-                fromY: $npc->getY(),
-                toX: $bestCell['x'],
-                toY: $bestCell['y']
+                toX: $step['x'],
+                toY: $step['y']
             );
         }
 
@@ -180,5 +141,4 @@ class AggressiveBehavior extends BaseHeuristicBehavior
 
         return $actions;
     }
-
 }
