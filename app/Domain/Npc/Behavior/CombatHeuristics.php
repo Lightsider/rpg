@@ -225,7 +225,46 @@ trait CombatHeuristics
             $isBlocked
         );
 
-        return $result !== null ? ['x' => $result['x'], 'y' => $result['y']] : null;
+        if ($result !== null) {
+            return ['x' => $result['x'], 'y' => $result['y']];
+        }
+
+        return $this->findFallbackStep($npc, $target, $battle);
+    }
+
+    /**
+     * Greedy fallback if BFS cannot find a path (e.g. target is completely surrounded by units).
+     * Moves to the adjacent cell that minimizes distance to the target.
+     *
+     * @return array{x: int, y: int}|null
+     */
+    protected function findFallbackStep(
+        Combatant $npc,
+        Combatant $target,
+        Battle $battle
+    ): ?array {
+        $map = $battle->getMap();
+        $bestCell = null;
+        $bestDist = PHP_INT_MAX;
+
+        for ($dx = -1; $dx <= 1; $dx++) {
+            for ($dy = -1; $dy <= 1; $dy++) {
+                if ($dx === 0 && $dy === 0) continue;
+                $nx = $npc->getX() + $dx;
+                $ny = $npc->getY() + $dy;
+                
+                if (!$map->isWithinBounds($nx, $ny)) continue;
+                if ($battle->isCellOccupied($nx, $ny, $npc->getId())) continue;
+
+                $dist = abs($nx - $target->getX()) + abs($ny - $target->getY());
+                if ($dist < $bestDist) {
+                    $bestDist = $dist;
+                    $bestCell = ['x' => $nx, 'y' => $ny];
+                }
+            }
+        }
+
+        return $bestCell;
     }
 
     /**
