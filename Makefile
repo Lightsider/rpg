@@ -1,4 +1,4 @@
-.PHONY: build up down restart shell tinker migrate test front-dev front-build game-websocket
+.PHONY: build up down restart shell tinker migrate test test-all test-functional test-balance front-dev front-build game-websocket
 
 build:
 	docker compose build
@@ -24,6 +24,15 @@ migrate:
 
 test:
 	docker compose exec app php artisan test
+
+test-all:
+	docker compose exec app php artisan test
+
+test-functional:
+	docker compose exec app php artisan test --testsuite=Unit,Feature
+
+test-balance:
+	docker compose exec app php artisan test --testsuite=Balance
 
 front-dev:
 	docker compose exec app npm run dev

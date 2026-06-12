@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature;
+namespace Tests\Balance;
 
 use App\Domain\Battle\ActionType;
 use App\Domain\Battle\Battle;

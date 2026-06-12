@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature;
+namespace Tests\Balance;
 
 use App\Domain\Armor\Armor;
 use App\Domain\Armor\ArmorSubtype;
