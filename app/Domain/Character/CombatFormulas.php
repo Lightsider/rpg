@@ -20,14 +20,16 @@ class CombatFormulas
     private const float BASE_CRIT_MULTIPLIER = 1.5;
     private const float CRIT_MULTIPLIER_PER_WIT = 0.2;
 
-    public static function dodgeChance(int $agility): float
+    public static function dodgeChance(int $agility, int $level = 1): float
     {
-        return $agility * self::DODGE_CHANCE_PER_AGILITY;
+        $levelMultiplier = 1.0 + (($level - 1) * 0.5);
+        return $agility * (self::DODGE_CHANCE_PER_AGILITY / $levelMultiplier);
     }
 
-    public static function critChance(int $wit): float
+    public static function critChance(int $wit, int $level = 1): float
     {
-        return $wit * self::CRIT_CHANCE_PER_WIT;
+        $levelMultiplier = 1.0 + (($level - 1) * 0.5);
+        return $wit * (self::CRIT_CHANCE_PER_WIT / $levelMultiplier);
     }
 
     public static function critFlatBonus(int $wit): float

@@ -57,10 +57,10 @@ class FullEquipmentArchetypeBalanceLvl2Test extends TestCase
     {
         parent::setUp();
 
-        $bpsConfig = new BlockPenetrationConfig(180, 0.95, 0.20);
+        $bpsConfig = new BlockPenetrationConfig(120, 0.95, 0.20);
         $bps = new BlockPenetrationService($bpsConfig);
 
-        $mdsConfig = new MaxDamageConfig(450, 0.80, 0.20);
+        $mdsConfig = new MaxDamageConfig(300, 0.80, 0.20);
         $mds = new MaxDamageService($mdsConfig);
 
         $combatResolver = new CombatResolver($bps, $mds);

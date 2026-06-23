@@ -39,7 +39,9 @@ class MaxDamageService
             return new MaxDamageResult(triggered: false);
         }
 
-        $baseChance = RatingConverter::toChance($rating, $this->config->k);
+        $levelMultiplier = 1.0 + (($attacker->getLevel() - 1) * 0.5);
+        $effectiveK = (int) round($this->config->k * $levelMultiplier);
+        $baseChance = RatingConverter::toChance($rating, $effectiveK);
         $failures = $attacker->getMaxDamageFailStreak();
         $successes = $attacker->getMaxDamageSuccessStreak();
 

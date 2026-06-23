@@ -48,7 +48,9 @@ class BlockPenetrationService
         $defenseRating = $defender->getBlockResistRating();
         $effectiveRating = max(0, $attackRating - $defenseRating);
 
-        $baseChance = RatingConverter::toChance($effectiveRating, $this->config->k);
+        $levelMultiplier = 1.0 + (($defender->getLevel() - 1) * 0.5);
+        $effectiveK = (int) round($this->config->k * $levelMultiplier);
+        $baseChance = RatingConverter::toChance($effectiveRating, $effectiveK);
         
         $failures = $attacker->getPenetrationFailStreak();
         $successes = $attacker->getPenetrationSuccessStreak();

@@ -449,7 +449,7 @@ class Character implements Combatant, \JsonSerializable
 
     public function calculateDodgeChance(?TargetZone $zone = null): float
     {
-        $baseDodge = CombatFormulas::dodgeChance($this->agility);
+        $baseDodge = CombatFormulas::dodgeChance($this->agility, $this->level);
         return $baseDodge + $this->getArmorDodgeBonus($zone);
     }
 
@@ -461,8 +461,10 @@ class Character implements Combatant, \JsonSerializable
         }
 
         // Standard rating-to-chance formula (rating / (rating + K))
-        // 22 rating with K=120 gives ~15.4%
-        return (float) round($rating / ($rating + 120), 4);
+        // 22 rating with base K=120 gives ~15.4%
+        $levelMultiplier = 1.0 + (($this->level - 1) * 0.5);
+        $effectiveK = (int) round(120 * $levelMultiplier);
+        return (float) round($rating / ($rating + $effectiveK), 4);
     }
 
     public function getArmorDodgeBonus(?TargetZone $zone = null): float
@@ -527,7 +529,7 @@ class Character implements Combatant, \JsonSerializable
 
     public function calculateCritChance(): float
     {
-        $baseCritChance = CombatFormulas::critChance($this->wit);
+        $baseCritChance = CombatFormulas::critChance($this->wit, $this->level);
         $baseCritChance += $this->getWeaponCritChanceBonus();
         $baseCritChance += $this->getSealsCritChanceBonus();
 
