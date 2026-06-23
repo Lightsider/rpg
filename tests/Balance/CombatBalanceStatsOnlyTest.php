@@ -244,6 +244,8 @@ class CombatBalanceStatsOnlyTest extends TestCase
         $blocksB = 0;
         $hitsA = 0;
         $hitsB = 0;
+        $deadA = false;
+        $deadB = false;
 
         while (!$battle->isFinished()) {
             $rounds++;
@@ -295,6 +297,11 @@ class CombatBalanceStatsOnlyTest extends TestCase
                         elseif ($log->targetId === $bId) $blocksB++;
                     }
                 }
+
+                if ($log->type === BattleLogType::DEATH) {
+                    if ($log->actorId === $aId) $deadA = true;
+                    if ($log->actorId === $bId) $deadB = true;
+                }
             }
 
             if (!$battle->isFinished()) {
@@ -303,10 +310,10 @@ class CombatBalanceStatsOnlyTest extends TestCase
         }
 
         $winner = null;
-        if ($charA->getCurrentHp() <= 0 && $charB->getCurrentHp() > 0) {
-            $winner = 2;
-        } elseif ($charB->getCurrentHp() <= 0 && $charA->getCurrentHp() > 0) {
+        if ($deadB && !$deadA) {
             $winner = 1;
+        } elseif ($deadA && !$deadB) {
+            $winner = 2;
         }
 
         return [

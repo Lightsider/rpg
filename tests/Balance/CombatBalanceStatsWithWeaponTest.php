@@ -286,6 +286,10 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
         $blocksB = 0;
         $hitsA = 0;
         $hitsB = 0;
+        $damageDealtByA = 0;
+        $damageDealtByB = 0;
+        $deadA = false;
+        $deadB = false;
 
         while (!$battle->isFinished()) {
             $rounds++;
@@ -302,6 +306,11 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
                 $bId = $charB->getId();
 
                 if ($log->type === BattleLogType::ATTACK) {
+                    if ($log->damage !== null && $log->damage > 0) {
+                        if ($log->actorId === $aId) $damageDealtByA += $log->damage;
+                        elseif ($log->actorId === $bId) $damageDealtByB += $log->damage;
+                    }
+
                     if (in_array($log->outcome, ['hit', 'block_break'], true)) {
                         if ($log->actorId === $aId) {
                             $hitsA++;
@@ -345,6 +354,11 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
                             $blocksB++;
                     }
                 }
+
+                if ($log->type === BattleLogType::DEATH) {
+                    if ($log->actorId === $aId) $deadA = true;
+                    if ($log->actorId === $bId) $deadB = true;
+                }
             }
 
             if (!$battle->isFinished()) {
@@ -352,14 +366,11 @@ class CombatBalanceStatsWithWeaponTest extends TestCase
             }
         }
 
-        $damageDealtByA = max(0, $initialHpB - $charB->getCurrentHp());
-        $damageDealtByB = max(0, $initialHpA - $charA->getCurrentHp());
-
         $winner = null;
-        if ($charA->getCurrentHp() <= 0 && $charB->getCurrentHp() > 0) {
-            $winner = 2;
-        } elseif ($charB->getCurrentHp() <= 0 && $charA->getCurrentHp() > 0) {
+        if ($deadB && !$deadA) {
             $winner = 1;
+        } elseif ($deadA && !$deadB) {
+            $winner = 2;
         }
 
         return [

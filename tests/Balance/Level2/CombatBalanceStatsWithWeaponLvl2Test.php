@@ -131,10 +131,10 @@ class CombatBalanceStatsWithWeaponLvl2Test extends TestCase
     {
         parent::setUp();
 
-        $bpsConfig = new BlockPenetrationConfig(120, 0.95, 0.20);
+        $bpsConfig = new BlockPenetrationConfig(180, 0.95, 0.20);
         $bps = new BlockPenetrationService($bpsConfig);
 
-        $mdsConfig = new MaxDamageConfig(300, 0.80, 0.20);
+        $mdsConfig = new MaxDamageConfig(450, 0.80, 0.20);
         $mds = new MaxDamageService($mdsConfig);
 
         $combatResolver = new CombatResolver($bps, $mds);
@@ -288,6 +288,10 @@ class CombatBalanceStatsWithWeaponLvl2Test extends TestCase
         $blocksB = 0;
         $hitsA = 0;
         $hitsB = 0;
+        $damageDealtByA = 0;
+        $damageDealtByB = 0;
+        $deadA = false;
+        $deadB = false;
 
         while (!$battle->isFinished()) {
             $rounds++;
@@ -304,6 +308,11 @@ class CombatBalanceStatsWithWeaponLvl2Test extends TestCase
                 $bId = $charB->getId();
 
                 if ($log->type === BattleLogType::ATTACK) {
+                    if ($log->damage !== null && $log->damage > 0) {
+                        if ($log->actorId === $aId) $damageDealtByA += $log->damage;
+                        elseif ($log->actorId === $bId) $damageDealtByB += $log->damage;
+                    }
+
                     if (in_array($log->outcome, ['hit', 'block_break'], true)) {
                         if ($log->actorId === $aId) {
                             $hitsA++;
@@ -347,6 +356,11 @@ class CombatBalanceStatsWithWeaponLvl2Test extends TestCase
                             $blocksB++;
                     }
                 }
+
+                if ($log->type === BattleLogType::DEATH) {
+                    if ($log->actorId === $aId) $deadA = true;
+                    if ($log->actorId === $bId) $deadB = true;
+                }
             }
 
             if (!$battle->isFinished()) {
@@ -354,14 +368,11 @@ class CombatBalanceStatsWithWeaponLvl2Test extends TestCase
             }
         }
 
-        $damageDealtByA = max(0, $initialHpB - $charB->getCurrentHp());
-        $damageDealtByB = max(0, $initialHpA - $charA->getCurrentHp());
-
         $winner = null;
-        if ($charA->getCurrentHp() <= 0 && $charB->getCurrentHp() > 0) {
-            $winner = 2;
-        } elseif ($charB->getCurrentHp() <= 0 && $charA->getCurrentHp() > 0) {
+        if ($deadB && !$deadA) {
             $winner = 1;
+        } elseif ($deadA && !$deadB) {
+            $winner = 2;
         }
 
         return [
