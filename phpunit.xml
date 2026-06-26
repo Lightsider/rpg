@@ -14,6 +14,13 @@
         <testsuite name="Balance">
             <directory>tests/Balance</directory>
         </testsuite>
+        <testsuite name="BalanceL1">
+            <directory>tests/Balance</directory>
+            <exclude>tests/Balance/Level2</exclude>
+        </testsuite>
+        <testsuite name="BalanceL2">
+            <directory>tests/Balance/Level2</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
