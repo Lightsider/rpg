@@ -11,9 +11,6 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
-        <testsuite name="Balance">
-            <directory>tests/Balance</directory>
-        </testsuite>
         <testsuite name="BalanceL1">
             <directory>tests/Balance</directory>
             <exclude>tests/Balance/Level2</exclude>

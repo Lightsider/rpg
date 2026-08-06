@@ -32,7 +32,7 @@ test-functional:
 	docker compose exec app php artisan test --testsuite=Unit,Feature
 
 test-balance:
-	docker compose exec app php artisan test --testsuite=Balance
+	docker compose exec app php artisan test --testsuite=BalanceL1,BalanceL2
 
 balance-l1:
 	docker compose exec app php artisan test --testsuite=BalanceL1

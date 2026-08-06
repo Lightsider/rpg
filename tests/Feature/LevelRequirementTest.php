@@ -114,4 +114,54 @@ class LevelRequirementTest extends TestCase
         $character->refresh();
         $this->assertEquals($basicWeapon->id, $character->weapon_id);
     }
+
+    public function test_seeded_level_2_items_exist_and_enforce_level_2_requirements(): void
+    {
+        $this->seed(\Database\Seeders\ItemSeeder::class);
+
+        $lvl2Weapon = ItemModel::where('name', 'Steadfast Sword II')->firstOrFail();
+        $this->assertEquals(2, $lvl2Weapon->required_level);
+        $this->assertEquals(12, $lvl2Weapon->required_strength);
+
+        $user1 = User::factory()->create();
+        $level1Char = CharacterModel::factory()->create([
+            'user_id' => $user1->id,
+            'level' => 1,
+            'strength' => 12,
+        ]);
+
+        CharacterItemModel::create([
+            'character_id' => $level1Char->id,
+            'item_id' => $lvl2Weapon->id,
+            'quantity' => 1,
+        ]);
+
+        $resFail = $this->actingAs($user1)->postJson('/api/character/backpack/equip', [
+            'item_id' => $lvl2Weapon->id,
+            'slot' => 'main_hand',
+        ]);
+        $resFail->assertStatus(422);
+
+        $user2 = User::factory()->create();
+        $level2Char = CharacterModel::factory()->create([
+            'user_id' => $user2->id,
+            'level' => 2,
+            'strength' => 12,
+        ]);
+
+        CharacterItemModel::create([
+            'character_id' => $level2Char->id,
+            'item_id' => $lvl2Weapon->id,
+            'quantity' => 1,
+        ]);
+
+        $resSuccess = $this->actingAs($user2)->postJson('/api/character/backpack/equip', [
+            'item_id' => $lvl2Weapon->id,
+            'slot' => 'main_hand',
+        ]);
+        $resSuccess->assertStatus(200);
+
+        $level2Char->refresh();
+        $this->assertEquals($lvl2Weapon->id, $level2Char->weapon_id);
+    }
 }
