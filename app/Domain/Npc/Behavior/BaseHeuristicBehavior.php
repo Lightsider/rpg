@@ -101,18 +101,23 @@ abstract class BaseHeuristicBehavior implements BehaviorModelInterface
     protected function createBlockActions(Combatant $npc, int $count): array
     {
         $actions = [];
-        $zones = TargetZone::cases();
-        
+
         for ($i = 0; $i < $count; $i++) {
-            $zone = $zones[array_rand($zones)];
             $actions[] = new TurnAction(
                 characterId: $npc->getId(),
                 type: ActionType::DEFEND,
-                targetZone: $zone
+                targetZone: $this->selectTargetZone($npc, $i)
             );
         }
 
         return $actions;
+    }
+
+    protected function selectTargetZone(Combatant $npc, int $sequence): TargetZone
+    {
+        $zones = TargetZone::cases();
+
+        return $zones[abs($npc->getId() + $sequence) % count($zones)];
     }
 
     /**

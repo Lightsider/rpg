@@ -24,7 +24,7 @@ class LayerBoundariesTest extends TestCase
     {
         $violations = $this->collectForbiddenContentPatterns(
             basePath: __DIR__ . '/../../../app/Domain',
-            forbiddenPatterns: ['mt_rand(', 'mt_getrandmax('],
+            forbiddenPatterns: ['mt_rand(', 'mt_getrandmax(', 'array_rand('],
             excludedPaths: ['/Battle/Rng/']
         );
 
@@ -36,6 +36,16 @@ class LayerBoundariesTest extends TestCase
         $violations = $this->collectForbiddenImports(
             basePath: __DIR__ . '/../../../app/Application',
             forbiddenPrefixes: ['App\\Infrastructure\\', 'Illuminate\\Support\\Facades\\']
+        );
+
+        $this->assertSame([], $violations, implode(PHP_EOL, $violations));
+    }
+
+    public function test_application_layer_does_not_use_direct_randomness(): void
+    {
+        $violations = $this->collectForbiddenContentPatterns(
+            basePath: __DIR__ . '/../../../app/Application',
+            forbiddenPatterns: ['rand(', 'mt_rand(', 'mt_getrandmax(', '->random(']
         );
 
         $this->assertSame([], $violations, implode(PHP_EOL, $violations));

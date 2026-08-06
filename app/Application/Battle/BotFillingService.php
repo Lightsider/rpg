@@ -55,8 +55,9 @@ class BotFillingService
 
         $allItems = $this->itemRepository->findAll();
 
+        $templateCount = $humanoidTemplates->count();
         for ($i = 0; $i < $needed; $i++) {
-            $template = $humanoidTemplates->random();
+            $template = $humanoidTemplates->get(($battle->getId() + $i) % $templateCount);
             $this->addBot($battle, $template, $allItems, $i);
         }
 
@@ -93,8 +94,8 @@ class BotFillingService
             default => 'stable', // Steadfast
         };
         
-        // 5 Loadout Types
-        $loadoutType = rand(1, 5);
+        // 5 deterministic loadout types, stable for the same battle and bot order.
+        $loadoutType = (($battle->getId() + $combatantId + $i) % 5) + 1;
 
         $this->applyEquipment($bot, $attackArch, $defendArch, $loadoutType, $allItems);
 

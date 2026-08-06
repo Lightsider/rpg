@@ -99,11 +99,10 @@ class AggressiveBehavior extends BaseHeuristicBehavior
             }
             // But we can still use our free offhand AP to attack if we have a dagger!
             if ($bonusOffhandAp > 0) {
-                $zones = TargetZone::cases();
                 $actions[] = new TurnAction(
                     characterId: $npc->getId(),
                     type: ActionType::ATTACK_OFFHAND,
-                    targetZone: $zones[array_rand($zones)],
+                    targetZone: $this->selectTargetZone($npc, 0),
                     targetId: $target->getId()
                 );
             }
@@ -112,13 +111,11 @@ class AggressiveBehavior extends BaseHeuristicBehavior
 
         // Full Aggression Mode
         $attacksToPerform = min($npc->getMaxAttacks(), $baseAp);
-        $zones = TargetZone::cases();
-        
         for ($i = 0; $i < $attacksToPerform; $i++) {
             $actions[] = new TurnAction(
                 characterId: $npc->getId(),
                 type: ActionType::ATTACK,
-                targetZone: $zones[array_rand($zones)],
+                targetZone: $this->selectTargetZone($npc, $i),
                 targetId: $target->getId()
             );
             $baseAp--;
@@ -129,7 +126,7 @@ class AggressiveBehavior extends BaseHeuristicBehavior
             $actions[] = new TurnAction(
                 characterId: $npc->getId(),
                 type: ActionType::ATTACK_OFFHAND,
-                targetZone: $zones[array_rand($zones)],
+                targetZone: $this->selectTargetZone($npc, $attacksToPerform),
                 targetId: $target->getId()
             );
         }

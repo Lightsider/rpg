@@ -60,9 +60,8 @@ class ReachAndHitBehavior implements BehaviorModelInterface
 
         // Attack the target if adjacent
         if ($isAdjacent && !$moved) {
-            $zones = TargetZone::cases();
-            while ($apRemaining > 0 && $attacksUsed < $maxAttacks) {
-                $zone = $zones[array_rand($zones)];
+                while ($apRemaining > 0 && $attacksUsed < $maxAttacks) {
+                $zone = $this->selectTargetZone($npc, $attacksUsed);
                 $actions[] = new TurnAction(
                     characterId: $npcId,
                     type: ActionType::ATTACK,
@@ -112,6 +111,13 @@ class ReachAndHitBehavior implements BehaviorModelInterface
         return $nearest;
     }
 
+    private function selectTargetZone(Combatant $npc, int $sequence): TargetZone
+    {
+        $zones = TargetZone::cases();
+
+        return $zones[abs($npc->getId() + $sequence) % count($zones)];
+    }
+
     private function isAdjacent(Combatant $a, Combatant $b): bool
     {
         $dx = abs($a->getX() - $b->getX());
@@ -126,14 +132,12 @@ class ReachAndHitBehavior implements BehaviorModelInterface
     {
         $actions = [];
         $zones = TargetZone::cases();
-        $used = [];
 
         for ($i = 0; $i < $count && $i < count($zones); $i++) {
-            $zone = $zones[$i % count($zones)];
             $actions[] = new TurnAction(
                 characterId: $npc->getId(),
                 type: ActionType::DEFEND,
-                targetZone: $zone,
+                targetZone: $this->selectTargetZone($npc, $i),
             );
         }
 

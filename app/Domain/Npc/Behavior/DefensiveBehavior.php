@@ -97,12 +97,11 @@ class DefensiveBehavior extends BaseHeuristicBehavior
         // Ensure we don't try to perform more attacks than base AP allows
         $attacksToPerform = min($attacksToPerform, $baseAp);
 
-        $zones = TargetZone::cases();
         for ($i = 0; $i < $attacksToPerform; $i++) {
             $actions[] = new TurnAction(
                 characterId: $npc->getId(),
                 type: ActionType::ATTACK,
-                targetZone: $zones[array_rand($zones)],
+                targetZone: $this->selectTargetZone($npc, $i),
                 targetId: $target->getId()
             );
             $baseAp--;
